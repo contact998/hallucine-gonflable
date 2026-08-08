@@ -1,7 +1,7 @@
 {
   "name": "@hallucine/tente",
-  "version": "0.1.0",
-  "description": "Le module de la tente gonflable X : composition, règles de fabrication, code de configuration, teintes et pose des visuels. Partagé par le site public et le CRM.",
+  "version": "0.2.0",
+  "description": "Le module de la tente gonflable X : composition, règles de fabrication, code de configuration, teintes, pose des visuels et visualiseur 3D. Partagé par le site public et le CRM.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -11,14 +11,33 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist", "src"],
+  "files": [
+    "dist",
+    "src"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "check": "tsc --noEmit",
     "test": "vitest run"
   },
   "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/three": "^0.180.0",
+    "react": "^19.2.8",
+    "three": "^0.180.0",
     "typescript": "^5.9.3",
     "vitest": "^2.1.9"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "three": ">=0.160"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "three": {
+      "optional": true
+    }
   }
 }

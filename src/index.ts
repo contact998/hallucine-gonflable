@@ -19,3 +19,9 @@ export * from "./composition.js";
 export * from "./config.js";
 export * from "./couleurs.js";
 export * from "./pose.js";
+
+/* Le visualiseur 3D et la composition des pans. Ils demandent React et
+   three.js — déclarés en dépendances de pair : chaque application fournit
+   les siens, on n'en embarque pas un deuxième exemplaire. */
+export { default as TenteViewer } from "./Viewer.js";
+export * from "./visuel.js";
