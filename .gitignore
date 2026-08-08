@@ -1,2 +1,13 @@
 node_modules
-dist
+
+# dist/ est VOLONTAIREMENT versionné.
+# Le module s'installe depuis GitHub, pas depuis un registre. Si dist/ n'est pas
+# dans le dépôt, pnpm doit exécuter le script « prepare » chez le consommateur,
+# donc réinstaller les devDependencies du module dans un dossier temporaire, sans
+# lockfile. Cet installe-là résout au plus frais — et le 08/08/2026 il a ramené
+# nanoid publié depuis moins de 24 h, que la politique d'approvisionnement de
+# Railway refuse : ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION, build du site à terre.
+# En versionnant dist/, il n'y a plus d'installation imbriquée du tout.
+#
+# ⚠️ Toute modification de src/ doit être suivie de « npm run build » et le dist/
+# reconstruit doit partir dans le MÊME commit.
