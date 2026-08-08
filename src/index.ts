@@ -15,7 +15,7 @@
  * ⚠️ Le site et le CRM doivent rester sur la MÊME version. Mettre à jour l'un
  * sans l'autre, c'est recréer la divergence qu'on vient de supprimer.
  */
-export * from "./composition";
-export * from "./config";
-export * from "./couleurs";
-export * from "./pose";
+export * from "./composition.js";
+export * from "./config.js";
+export * from "./couleurs.js";
+export * from "./pose.js";

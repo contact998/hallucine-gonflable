@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { encoderConfig, decoderConfig, type ConfigTente } from "./config";
+import { encoderConfig, decoderConfig, type ConfigTente } from "./config.js";
 
 const vide = (): ConfigTente => ({
   taille: "4x4",

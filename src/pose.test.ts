@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { plageTaille, poseInitiale, changerMode, MODES_POSE } from "./pose";
+import { plageTaille, poseInitiale, changerMode, MODES_POSE } from "./pose.js";
 
 describe("plageTaille", () => {
   it("« remplir » n'a AUCUNE plage : c'est ce qui lui retire son curseur", () => {

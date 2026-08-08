@@ -1,8 +1,13 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    // NodeNext, et pas "bundler" : le paquet est publié en ESM et chargé par Node
+    // lui-même (le serveur du site le garde externe au bundle). Node EXIGE
+    // l'extension sur un import relatif ; "bundler" l'autorisait absente, le build
+    // passait et le conteneur mourait au démarrage. NodeNext refuse à la
+    // compilation ce que Node refuse à l'exécution.
+    "module": "NodeNext",
+    "moduleResolution": "nodenext",
     "lib": ["ES2022", "DOM"],
     "strict": true,
     "noUncheckedIndexedAccess": false,

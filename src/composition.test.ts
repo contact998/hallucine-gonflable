@@ -3,7 +3,7 @@ import {
   TYPES_COTE, COTES, TAILLES, auventPossible, typeCote,
   cleTente, cleTypeCote, cleAuvent, cleImpression, cleAccessoire,
   IMPRESSIONS, ACCESSOIRES,
-} from "./composition";
+} from "./composition.js";
 
 describe("les règles de fabrication", () => {
   it("l'auvent se monte sur un côté ouvert ou sur une paroi droite", () => {
