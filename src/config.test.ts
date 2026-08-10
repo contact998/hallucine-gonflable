@@ -128,10 +128,17 @@ describe("codes de configuration multi-modèles", () => {
     expect(decoderConfig("licorne.4x4")).toBeNull();
   });
 
-  it("la N nomme ses côtés par les lettres de Bayes, pas par des positions", () => {
+  it("la N a quatre côtés nommés comme ceux de la X, mais facturés séparément", () => {
     const n = MODELES.find((m) => m.slug === "n")!;
-    expect([...n.cotes]).toEqual(["a", "b", "c", "d"]);
-    const c = decoderConfig("n.4x4.pofc")!;
-    expect(Object.keys(c.cotes)).toEqual(["a", "b", "c", "d"]);
+    expect([...n.cotes]).toEqual(["avant", "droit", "arriere", "gauche"]);
+    expect(n.cleParCote).toBe(true);
+  });
+
+  it("la V a trois côtés identiques : a, b, c, et aucun prix par côté", () => {
+    const v = MODELES.find((m) => m.slug === "v")!;
+    expect([...v.cotes]).toEqual(["a", "b", "c"]);
+    expect(v.cleParCote).toBe(false);
+    const c = decoderConfig("v.5x5.ppp")!;
+    expect(Object.keys(c.cotes)).toEqual(["a", "b", "c"]);
   });
 });

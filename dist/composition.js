@@ -51,24 +51,35 @@ export const MODELES = [
         cleParCote: false,
     },
     {
-        /* Ses côtés portent les lettres de Bayes et pas avant/droit/arrière/gauche :
-           ils ne sont PAS interchangeables (A tient sur 2 679 mm, B sur 2 532, et
-           le C est une paroi courbe qui coiffe le demi-mur D). Une lettre déduite
-           d'une position dans une liste serait fausse dès que l'ordre changerait.
-           Quel côté physique porte quelle lettre se lira sur la 3D au montage du
-           configurateur — ici on ne fait que garder l'identité de Bayes. */
+        /* Quatre côtés nommés comme ceux de la X — mais qui ne sont PAS
+           interchangeables : elle est rectangulaire, donc ses pignons et ses longs
+           côtés n'ont ni les mêmes dimensions ni le même prix. Le catalogue les
+           distingue par les lettres de Bayes, d'où `lettreCote`.
+    
+           ⚠️ Deux correspondances seulement sont ÉTABLIES, et elles le sont par les
+           noms de calques du fournisseur lui-même : `B_Back_…` = arrière,
+           `D_Front_…` = avant. Pour A et C rien ne le dit, et la géométrie de C
+           tombe sur la même face que D — question posée à Kelly. Tant qu'elle n'a
+           pas répondu, ces deux côtés n'ont pas de lettre : `cleTypeCote` rendra
+           `null` plutôt qu'une clé inventée qui trouverait le prix d'un autre côté
+           sans que rien ne le signale. */
         slug: "n",
         libelle: "N",
         tailles: ["3x3", "4x4", "5x5"],
-        cotes: ["a", "b", "c", "d"],
+        cotes: COTES,
+        lettreCote: { arriere: "b", avant: "d" },
         types: ["vide", "paroi", "porte", "fenetre", "courbe"],
         cleParCote: true,
     },
     {
+        /* Trois côtés, et ILS SONT IDENTIQUES — c'est pour ça que Bayes ne facture
+           qu'un seul modèle de paroi, au même prix quel que soit le côté. Ils n'ont
+           donc ni avant ni arrière à distinguer : A, B, C suffisent, et l'ordre
+           n'engage rien. */
         slug: "v",
         libelle: "V",
         tailles: ["4x4", "5x5", "6x6"],
-        cotes: COTES,
+        cotes: ["a", "b", "c"],
         types: ["vide", "paroi"],
         cleParCote: false,
     },
@@ -200,8 +211,18 @@ export function cleTypeCote(m, taille, type, cote) {
     const t = typeCote(type);
     if (!t.slug)
         return null;
-    const parCote = m.cleParCote && cote && !t.slug.startsWith("paroi-courbe");
-    return `tente-${m.slug}-${taille}-${t.slug}${parCote ? `-${cote}` : ""}`;
+    /* La paroi courbe fait exception même chez un modèle facturé par côté : elle
+       n'existe que sur un côté, donc le catalogue la porte sans lettre. */
+    if (!m.cleParCote || t.slug.startsWith("paroi-courbe")) {
+        return `tente-${m.slug}-${taille}-${t.slug}`;
+    }
+    /* Facturé par côté : sans lettre établie, on ne rend PAS de clé. Une clé
+       approchée trouverait le prix d'un AUTRE côté — un devis faux qui a l'air
+       juste est pire qu'un prix manquant, qui se voit. */
+    const lettre = cote ? m.lettreCote?.[cote] : undefined;
+    if (!lettre)
+        return null;
+    return `tente-${m.slug}-${taille}-${t.slug}-${lettre}`;
 }
 export const cleAuvent = (m, taille) => `tente-${m.slug}-${taille}-auvent`;
 export const cleImpression = (m, taille, imp) => `tente-${m.slug}-${taille}-${IMPRESSIONS[imp]}`;

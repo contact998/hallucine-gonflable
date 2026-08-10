@@ -19,18 +19,21 @@ export declare const MODELES: readonly [{
     readonly slug: "n";
     readonly libelle: "N";
     readonly tailles: readonly ["3x3", "4x4", "5x5"];
-    readonly cotes: readonly ["a", "b", "c", "d"];
+    readonly cotes: readonly ["avant", "droit", "arriere", "gauche"];
+    readonly lettreCote: Record<string, string>;
     readonly types: readonly ["vide", "paroi", "porte", "fenetre", "courbe"];
     readonly cleParCote: true;
 }, {
     readonly slug: "v";
     readonly libelle: "V";
     readonly tailles: readonly ["4x4", "5x5", "6x6"];
-    readonly cotes: readonly ["avant", "droit", "arriere", "gauche"];
+    readonly cotes: readonly ["a", "b", "c"];
     readonly types: readonly ["vide", "paroi"];
     readonly cleParCote: false;
 }];
-export type Modele = (typeof MODELES)[number];
+export type Modele = (typeof MODELES)[number] & {
+    lettreCote?: Record<string, string>;
+};
 export type SlugModele = Modele["slug"];
 /** Le modèle historique. Un code de configuration sans modèle est une tente X :
  *  des devis envoyés avant l'ouverture de la gamme pointent dessus. */
