@@ -38,12 +38,28 @@ export interface Vue3D {
   angleNatif: Record<string, number>;
   /** Pièce d'auvent, si le modèle en propose un. */
   pieceAuvent?: string;
+  /**
+   * Pièces qui ne portent AUCUNE coordonnée d'impression, donc sur lesquelles
+   * un visuel ne peut pas se poser.
+   *
+   * Ce n'est pas un choix : c'est d'où vient le fichier. Les toiles sortent du
+   * Rhino de Bayes, qui les déplie sur ses gabarits — elles ont leurs UV. La
+   * quincaillerie (pieds, caches-zip, vitres PVC) n'existe qu'en surfaces dans
+   * ce Rhino ; elle vient du STEP, qui n'en porte pas.
+   *
+   * MESURÉ sur les fichiers, pas listé à la main :
+   *   node --input-type=module < scripts/…  (voir `verifier-uv-modeles.mjs`)
+   * À rejouer à chaque livraison — le jour où Bayes maille sa quincaillerie
+   * dans le Rhino, ces listes se vident toutes seules.
+   */
+  sansImpression: readonly string[];
 }
 
 const SOCLE_COMMUN = ["roof", "LEG", "zipper_cover"] as const;
 
 export const VUE_3D: Record<string, Vue3D> = {
   x: {
+    sansImpression: ["LEG"],
     dossier: "tente-x",
     tailleModele: 3,
     socle: SOCLE_COMMUN,
@@ -59,6 +75,7 @@ export const VUE_3D: Record<string, Vue3D> = {
   },
 
   spider: {
+    sansImpression: ["LEG", "zipper_cover", "window_pvc"],
     dossier: "spider-tent",
     tailleModele: 4,
     socle: SOCLE_COMMUN,
@@ -74,6 +91,7 @@ export const VUE_3D: Record<string, Vue3D> = {
   },
 
   n: {
+    sansImpression: ["LEG", "zipper_cover"],
     /* Ses parois portent le côté dans leur NOM de fichier, parce qu'elles
        diffèrent d'un côté à l'autre. Le viewer choisit donc la pièce d'après le
        côté visé, pas seulement d'après le type — la correspondance côté →
@@ -94,6 +112,7 @@ export const VUE_3D: Record<string, Vue3D> = {
   },
 
   v: {
+    sansImpression: ["LEG", "zipper_cover"],
     /* Trois côtés à 120°, et non quatre : ses parois natives sont mesurées à
        −30° et 90°, la troisième à −150°. Le viewer ne peut donc pas se reposer
        sur les quatre azimuts du configurateur de la X. */
@@ -112,6 +131,11 @@ export const vue3d = (m: Modele): Vue3D => VUE_3D[m.slug] ?? VUE_3D.x;
 /** Adresse d'une pièce sur R2. */
 export const urlPiece = (m: Modele, piece: string) =>
   `${BASE_R2}/${vue3d(m).dossier}/${piece}.glb`;
+
+/** Cette pièce peut-elle recevoir un visuel ? Une case à cocher ou un bouton
+ *  qui ne changerait rien au dessin est une promesse que l'image ne tient pas. */
+export const pieceImprimable = (m: Modele, piece: string): boolean =>
+  !vue3d(m).sansImpression.includes(piece);
 
 /** Facteur d'échelle d'une taille par rapport à celle que Bayes a modélisée. */
 export function echelle(m: Modele, taille: string): number {

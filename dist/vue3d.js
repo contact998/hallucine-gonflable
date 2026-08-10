@@ -21,6 +21,7 @@ export const BASE_R2 = "https://pub-dc19082f8e054e8b8a192d8d29df2aa0.r2.dev/mode
 const SOCLE_COMMUN = ["roof", "LEG", "zipper_cover"];
 export const VUE_3D = {
     x: {
+        sansImpression: ["LEG"],
         dossier: "tente-x",
         tailleModele: 3,
         socle: SOCLE_COMMUN,
@@ -35,6 +36,7 @@ export const VUE_3D = {
         pieceAuvent: "awning",
     },
     spider: {
+        sansImpression: ["LEG", "zipper_cover", "window_pvc"],
         dossier: "spider-tent",
         tailleModele: 4,
         socle: SOCLE_COMMUN,
@@ -49,6 +51,7 @@ export const VUE_3D = {
         pieceAuvent: "awning",
     },
     n: {
+        sansImpression: ["LEG", "zipper_cover"],
         /* Ses parois portent le côté dans leur NOM de fichier, parce qu'elles
            diffèrent d'un côté à l'autre. Le viewer choisit donc la pièce d'après le
            côté visé, pas seulement d'après le type — la correspondance côté →
@@ -68,6 +71,7 @@ export const VUE_3D = {
         },
     },
     v: {
+        sansImpression: ["LEG", "zipper_cover"],
         /* Trois côtés à 120°, et non quatre : ses parois natives sont mesurées à
            −30° et 90°, la troisième à −150°. Le viewer ne peut donc pas se reposer
            sur les quatre azimuts du configurateur de la X. */
@@ -83,6 +87,9 @@ export const VUE_3D = {
 export const vue3d = (m) => VUE_3D[m.slug] ?? VUE_3D.x;
 /** Adresse d'une pièce sur R2. */
 export const urlPiece = (m, piece) => `${BASE_R2}/${vue3d(m).dossier}/${piece}.glb`;
+/** Cette pièce peut-elle recevoir un visuel ? Une case à cocher ou un bouton
+ *  qui ne changerait rien au dessin est une promesse que l'image ne tient pas. */
+export const pieceImprimable = (m, piece) => !vue3d(m).sansImpression.includes(piece);
 /** Facteur d'échelle d'une taille par rapport à celle que Bayes a modélisée. */
 export function echelle(m, taille) {
     const base = vue3d(m).tailleModele;

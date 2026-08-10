@@ -20,6 +20,21 @@ export interface Vue3D {
     angleNatif: Record<string, number>;
     /** Pièce d'auvent, si le modèle en propose un. */
     pieceAuvent?: string;
+    /**
+     * Pièces qui ne portent AUCUNE coordonnée d'impression, donc sur lesquelles
+     * un visuel ne peut pas se poser.
+     *
+     * Ce n'est pas un choix : c'est d'où vient le fichier. Les toiles sortent du
+     * Rhino de Bayes, qui les déplie sur ses gabarits — elles ont leurs UV. La
+     * quincaillerie (pieds, caches-zip, vitres PVC) n'existe qu'en surfaces dans
+     * ce Rhino ; elle vient du STEP, qui n'en porte pas.
+     *
+     * MESURÉ sur les fichiers, pas listé à la main :
+     *   node --input-type=module < scripts/…  (voir `verifier-uv-modeles.mjs`)
+     * À rejouer à chaque livraison — le jour où Bayes maille sa quincaillerie
+     * dans le Rhino, ces listes se vident toutes seules.
+     */
+    sansImpression: readonly string[];
 }
 export declare const VUE_3D: Record<string, Vue3D>;
 /** La vue 3D d'un modèle. Rend celle de la tente X si le modèle n'en a pas —
@@ -27,6 +42,9 @@ export declare const VUE_3D: Record<string, Vue3D>;
 export declare const vue3d: (m: Modele) => Vue3D;
 /** Adresse d'une pièce sur R2. */
 export declare const urlPiece: (m: Modele, piece: string) => string;
+/** Cette pièce peut-elle recevoir un visuel ? Une case à cocher ou un bouton
+ *  qui ne changerait rien au dessin est une promesse que l'image ne tient pas. */
+export declare const pieceImprimable: (m: Modele, piece: string) => boolean;
 /** Facteur d'échelle d'une taille par rapport à celle que Bayes a modélisée. */
 export declare function echelle(m: Modele, taille: string): number;
 /** Tout modèle vendu doit avoir sa vue 3D : sans elle, sa page ne montre rien. */

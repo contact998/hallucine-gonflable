@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { MODELES, modele } from "./composition.js";
-import { VUE_3D, vue3d, urlPiece, echelle, MODELES_SANS_VUE } from "./vue3d.js";
+import { VUE_3D, vue3d, urlPiece, echelle, pieceImprimable, MODELES_SANS_VUE } from "./vue3d.js";
 
 describe("la vue 3D de chaque modèle", () => {
   it("aucun modèle vendu n'est sans vue 3D — sa page ne montrerait rien", () => {
@@ -45,5 +45,26 @@ describe("la vue 3D de chaque modèle", () => {
     for (const m of MODELES)
       for (const [p, a] of Object.entries(vue3d(m).angleNatif))
         expect(Math.abs(a), `${m.slug} · ${p}`).toBeLessThanOrEqual(180);
+  });
+});
+
+describe("les pièces qui ne peuvent pas recevoir d'image", () => {
+  it("la structure n'est imprimable chez AUCUN modèle : elle vient du STEP", () => {
+    for (const m of MODELES) expect(pieceImprimable(m, "LEG"), m.slug).toBe(false);
+  });
+
+  it("le toit l'est chez tous : il vient du Rhino, avec ses gabarits", () => {
+    for (const m of MODELES) expect(pieceImprimable(m, "roof"), m.slug).toBe(true);
+  });
+
+  it("le cache-zip n'est imprimable que sur la tente X", () => {
+    // Bayes le maille dans le Rhino de la X, pas dans celui des trois autres.
+    expect(pieceImprimable(modele("x"), "zipper_cover")).toBe(true);
+    for (const s of ["spider", "n", "v"])
+      expect(pieceImprimable(modele(s), "zipper_cover"), s).toBe(false);
+  });
+
+  it("une pièce non listée est imprimable — on n'interdit que ce qui est mesuré", () => {
+    expect(pieceImprimable(modele("x"), "side_wall")).toBe(true);
   });
 });
