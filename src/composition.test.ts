@@ -110,8 +110,31 @@ describe("la N : quelle lettre du tarif pour quel côté", () => {
     expect(cleTypeCote(N, "3x3", "paroi", "nulle-part")).toBeNull();
   });
 
-  it("la paroi courbe n'a pas de lettre : elle n'existe que sur un côté", () => {
+  it("la paroi courbe n'a pas de lettre : un seul prix pour les deux pignons", () => {
     expect(cleTypeCote(N, "3x3", "courbe", "avant")).toBe("tente-n-3x3-paroi-courbe");
+    expect(cleTypeCote(N, "3x3", "courbe", "arriere")).toBe("tente-n-3x3-paroi-courbe");
+  });
+
+  it("mais elle ne se vend QUE sur les pignons : un long côté n'a pas d'arc", () => {
+    // Le bandeau ferme le haut d'un pignon, de 1 540 à 2 547 mm. Les longs
+    // côtés s'arrêtent à la gouttière, à 1 723, et sont droits.
+    expect(typePossible(N, "courbe", "avant")).toBe(true);
+    expect(typePossible(N, "courbe", "arriere")).toBe(true);
+    expect(typePossible(N, "courbe", "gauche")).toBe(false);
+    expect(typePossible(N, "courbe", "droit")).toBe(false);
+    expect(cleTypeCote(N, "3x3", "courbe", "gauche")).toBeNull();
+  });
+
+  it("les longs côtés gardent tout le reste", () => {
+    for (const type of ["paroi", "porte", "fenetre"])
+      expect(typePossible(N, type, "gauche"), type).toBe(true);
+  });
+
+  it("sans côté, la question reste celle du modèle — pour les menus de la X", () => {
+    // Les modèles à côtés interchangeables interrogent sans préciser ; leur
+    // réponse ne doit pas changer parce que la N, elle, a des côtés distincts.
+    expect(typePossible(N, "courbe")).toBe(true);
+    expect(typePossible(X, "courbe", "gauche")).toBe(true);
   });
 
   it("un type absent du tarif d'un modèle ne rend pas de clé", () => {

@@ -28,12 +28,8 @@ import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 import { ZONES_COULEUR, ZONE_AUVENT, TEINTE_NUE, hexDeTeinte } from "./couleurs.js";
 import { modele as trouverModele } from "./composition.js";
-import { vue3d, urlPiece, echelle } from "./vue3d.js";
+import { vue3d, urlPiece, echelle, angleCote, pieceDeCote, ANGLE_COTE_DEFAUT } from "./vue3d.js";
 import { composerPan, chargerImage } from "./visuel.js";
-/** Où le configurateur veut la poser — même convention que le plan vu de dessus. */
-const ANGLE_COTE = {
-    arriere: 0, droit: 90, avant: 180, gauche: -90,
-};
 const RAD = Math.PI / 180;
 const MM_EN_M = 0.001;
 /** Pièces amovibles : un liseré sombre court sur leur pourtour — c'est la
@@ -799,10 +795,14 @@ export default function TenteViewer({ cotes, auvents, couleurs, couleursCote, vi
     useEffect(() => {
         if (!pret || !actif)
             return;
-        const cible = { avant: -90, droit: 0, arriere: 90, gauche: 180 }[actif];
-        if (cible === undefined)
+        /* La caméra part du MÊME azimut que la pièce, à un quart de tour près —
+           l'écart entre le plan vu de dessus et la sphère de la caméra, rien
+           d'autre. Deux tables séparées auraient divergé au premier modèle dont la
+           façade n'est pas celle de la tente X : la N, justement. */
+        const azimuts = VUE.angleCote ?? ANGLE_COTE_DEFAUT;
+        if (!(actif in azimuts))
             return;
-        azimut.current.cible = cible * RAD;
+        azimut.current.cible = (90 - azimuts[actif]) * RAD;
         azimut.current.anime = true;
     }, [actif, pret]);
     /* ── La taille : le même dessin, agrandi ────────────────────────────── */
@@ -827,7 +827,7 @@ export default function TenteViewer({ cotes, auvents, couleurs, couleursCote, vi
             charger(loader, M, nom).then((g) => {
                 if (!vivant)
                     return;
-                g.rotation.z = (VUE.angleNatif[nom] - (ANGLE_COTE[cote] ?? 0)) * RAD;
+                g.rotation.z = (VUE.angleNatif[nom] - angleCote(M, cote)) * RAD;
                 if (teinte) {
                     const hex = new THREE.Color(hexDeTeinte(teinte));
                     g.traverse((o) => {
@@ -861,7 +861,9 @@ export default function TenteViewer({ cotes, auvents, couleurs, couleursCote, vi
         murs.clear();
         piecesAffichees.current = piecesAffichees.current.filter((p) => VUE.socle.includes(p.nom));
         for (const [cote, choix] of Object.entries(cotes)) {
-            const nom = VUE.piece[choix];
+            /* La pièce dépend du côté, pas seulement du choix : les deux pignons de
+               la N ne portent pas la même toile. */
+            const nom = pieceDeCote(M, cote, choix);
             if (nom)
                 poser(nom, cote, couleursCote[cote]);
             /* L'auvent porte UNE teinte pour toute la tente, pas une par côté : c'est

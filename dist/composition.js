@@ -81,6 +81,16 @@ export const MODELES = [
         cotes: COTES,
         lettreCote: { avant: "d", arriere: "b", gauche: "a", droit: "a" },
         types: ["vide", "paroi", "porte", "fenetre", "courbe"],
+        /* Le bandeau courbe n'est pas une paroi de plus : c'est le croissant qui
+           ferme le haut d'un PIGNON, mesuré de 1 540 à 2 547 mm sur un pignon qui
+           monte à 2 547. Les longs côtés s'arrêtent à la gouttière, à 1 723, et sont
+           droits — aucun arc à combler, donc rien à leur vendre. Il était proposé
+           sur les quatre côtés : sur les deux longs, un choix qui ne pouvait ni se
+           dessiner ni se fabriquer. */
+        typesCote: {
+            gauche: ["vide", "paroi", "porte", "fenetre"],
+            droit: ["vide", "paroi", "porte", "fenetre"],
+        },
         cleParCote: true,
     },
     {
@@ -106,10 +116,15 @@ export const modele = (slug) => MODELES.find((m) => m.slug === slug) ?? MODELES[
 /** Les tailles de la tente X. Conservé pour les appels qui ne connaissent pas
  *  encore la gamme ; dérivé de la table, jamais recopié. */
 export const TAILLES = modele(MODELE_DEFAUT).tailles;
+/** Ce qu'un CÔTÉ de ce modèle accepte. Tous n'acceptent pas forcément la même
+ *  chose : chez la N, le bandeau courbe ferme le haut d'un pignon et n'a rien à
+ *  faire sur un long côté, qui est droit. Sans côté, la réponse est celle du
+ *  modèle — ce qu'il vend, tous côtés confondus. */
+export const typesDuCote = (m, cote) => (cote && m.typesCote?.[cote]) || m.types;
 /** Ce type de côté est-il au catalogue de ce modèle ? Le Spider n'a pas de
  *  paroi courbe, la V n'a qu'un modèle de paroi — demander une clé pour un type
  *  absent ne trouverait aucun prix, autant le dire tout de suite. */
-export const typePossible = (m, type) => m.types.includes(type);
+export const typePossible = (m, type, cote) => typesDuCote(m, cote).includes(type);
 /**
  * Ce qu'un côté peut porter. Un côté porte UN seul type — ils sont exclusifs
  * par construction, ce qui rend inutile toute règle du genre « pas de porte sur
@@ -219,7 +234,7 @@ export const cleTente = (m, taille) => `tente-${m.slug}-${taille}`;
  * besoin de le préciser — et le catalogue la porte sans lettre.
  */
 export function cleTypeCote(m, taille, type, cote) {
-    if (!typePossible(m, type))
+    if (!typePossible(m, type, cote))
         return null;
     const t = typeCote(type);
     if (!t.slug)

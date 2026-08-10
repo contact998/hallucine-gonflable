@@ -20,7 +20,7 @@
  * pointent dans le vide.
  */
 
-import { MODELES, MODELE_DEFAUT, modele as trouverModele, TAILLES, COTES } from "./composition.js";
+import { MODELES, MODELE_DEFAUT, modele as trouverModele, TAILLES, COTES, typePossible } from "./composition.js";
 
 /** Dérivées de la table des modèles — une seule source pour la gamme. */
 export const TAILLES_TENTE = TAILLES;
@@ -132,6 +132,11 @@ export function decoderConfig(code: string | null | undefined): ConfigTente | nu
       return;
     }
     cotes[cote] = LETTRE_COTE[brut.toLowerCase()] ?? "vide";
+    /* Un type que CE côté n'accepte pas retombe à « vide » : un bandeau courbe
+       sur un long côté de la N n'a ni prix ni pièce à dessiner. Ça arrive par
+       un code émis avant qu'on le sache, ou par une URL retouchée à la main —
+       un côté ouvert se voit, un choix fantôme dans un devis, non. */
+    if (!typePossible(m, cotes[cote], cote)) cotes[cote] = "vide";
     // Majuscule = auvent en supplément, jamais sur un côté qui l'exclut
     // (courbe, jonction) — un code trafiqué ne doit pas produire l'impossible.
     auvents[cote] =

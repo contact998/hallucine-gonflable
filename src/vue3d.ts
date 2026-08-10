@@ -34,8 +34,27 @@ export interface Vue3D {
   socle: readonly string[];
   /** Choix du configurateur → fichier. `null` = rien à montrer. */
   piece: Record<string, string | null>;
+  /**
+   * Fichier à afficher pour un choix SUR UN CÔTÉ donné, quand tous les côtés ne
+   * portent pas la même toile. Prime sur `piece`, qui reste le repli.
+   *
+   * Chez la plupart des modèles la question ne se pose pas : un côté vaut
+   * l'autre, une seule pièce sert les quatre par rotation. Chez la N si — ses
+   * deux pignons sont deux produits différents.
+   */
+  pieceParCote?: Record<string, Record<string, string>>;
   /** Azimut où le fournisseur a posé chaque pièce, en degrés. */
   angleNatif: Record<string, number>;
+  /**
+   * Où regarde chaque côté du configurateur chez CE modèle, quand sa façade
+   * n'est pas celle de la tente X. Absent = la convention commune.
+   *
+   * C'est le seul endroit où « avant » et « arrière » se raccrochent à une face
+   * réelle. Le déclarer ici, plutôt que de retourner des azimuts mesurés ou des
+   * lettres de tarif, garde les deux mesures intactes et met le désaccord à un
+   * seul endroit.
+   */
+  angleCote?: Record<string, number>;
   /** Pièce d'auvent, si le modèle en propose un. */
   pieceAuvent?: string;
   /**
@@ -103,6 +122,32 @@ export const VUE_3D: Record<string, Vue3D> = {
       vide: null, paroi: "a_side_wall", porte: "a_door", fenetre: "a_window_wall",
       courbe: "c_banner",
     },
+    /* Les deux pignons ne portent PAS la même toile, et c'est tout le sujet :
+       l'avant est un demi-mur (0 → 1 944 mm) que le bandeau courbe complète
+       au-dessus, l'arrière un pignon plein qui monte jusqu'à la voûte (2 547).
+       Le long côté A sert la gauche et la droite, il reste dans `piece`.
+
+       Sans cette table, les deux pignons recevaient la toile du LONG CÔTÉ :
+       1 723 mm de haut dans une ouverture de 2 547, et 146 mm trop large. Six
+       fichiers livrés par Bayes n'étaient jamais affichés. */
+    pieceParCote: {
+      avant: { paroi: "d_half_wall", porte: "d_half_door", fenetre: "d_half_window_wall" },
+      arriere: { paroi: "b_side_wall", porte: "b_door", fenetre: "b_window_wall" },
+    },
+    /* Bayes a posé SA façade à l'azimut 0, là où la tente X a son arrière :
+       `D_Front_…` et le bandeau `C` sont mesurés sur la face Y = +1 389, celle
+       que la convention de la X appelle « arrière ».
+
+       Plutôt que de retourner des azimuts mesurés ou les lettres du tarif (qui
+       viennent des noms de fichiers du fournisseur), on tourne les quatre NOMS
+       de côté d'un demi-tour pour ce modèle : « avant » désigne alors la face au
+       bandeau courbe, celle que Bayes appelle Front et que le tarif appelle D.
+       Un demi-tour complet, pas un miroir — gauche et droite suivent, sinon la
+       tente serait inversée.
+
+       Sans ça, le prix et le dessin partaient chacun sur un pignon différent :
+       le client voyait le pignon plein et payait le demi-mur, 40 € plus bas. */
+    angleCote: { avant: 0, droit: -90, arriere: 180, gauche: 90 },
     angleNatif: {
       a_side_wall: -90, a_door: -90, a_window_wall: -90,
       b_side_wall: 180, b_door: 180, b_window_wall: 180,
@@ -131,6 +176,25 @@ export const vue3d = (m: Modele): Vue3D => VUE_3D[m.slug] ?? VUE_3D.x;
 /** Adresse d'une pièce sur R2. */
 export const urlPiece = (m: Modele, piece: string) =>
   `${BASE_R2}/${vue3d(m).dossier}/${piece}.glb`;
+
+/** La convention commune, celle de la tente X : quatre côtés interchangeables,
+ *  vus de dessus. Un modèle dont la façade tombe ailleurs la redéclare. */
+export const ANGLE_COTE_DEFAUT: Record<string, number> = {
+  arriere: 0, droit: 90, avant: 180, gauche: -90,
+};
+
+/** Où regarde ce côté, chez ce modèle. C'est la seule traduction entre le nom
+ *  qu'on montre au client et une face de la tente ; le visualiseur s'en sert
+ *  pour tourner la pièce ET pour tourner la caméra, sinon les deux se
+ *  contrediraient au premier modèle qui n'a pas la façade de la X. */
+export const angleCote = (m: Modele, cote: string): number =>
+  (vue3d(m).angleCote ?? ANGLE_COTE_DEFAUT)[cote] ?? ANGLE_COTE_DEFAUT[cote] ?? 0;
+
+/** Le fichier à afficher pour un choix, sur un côté donné. `pieceParCote`
+ *  d'abord — les pignons de la N n'ont pas la toile de ses longs côtés — puis
+ *  `piece`, qui vaut pour les modèles dont un côté vaut l'autre. */
+export const pieceDeCote = (m: Modele, cote: string, choix: string): string | null =>
+  vue3d(m).pieceParCote?.[cote]?.[choix] ?? vue3d(m).piece[choix] ?? null;
 
 /** Cette pièce peut-elle recevoir un visuel ? Une case à cocher ou un bouton
  *  qui ne changerait rien au dessin est une promesse que l'image ne tient pas. */

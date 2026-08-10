@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { MODELES, modele } from "./composition.js";
-import { VUE_3D, vue3d, urlPiece, echelle, pieceImprimable, MODELES_SANS_VUE } from "./vue3d.js";
+import {
+  VUE_3D, vue3d, urlPiece, echelle, pieceImprimable, MODELES_SANS_VUE,
+  angleCote, pieceDeCote, ANGLE_COTE_DEFAUT,
+} from "./vue3d.js";
 
 describe("la vue 3D de chaque modèle", () => {
   it("aucun modèle vendu n'est sans vue 3D — sa page ne montrerait rien", () => {
@@ -20,6 +23,11 @@ describe("la vue 3D de chaque modèle", () => {
         if (!piece) continue;
         expect(v.angleNatif[piece], `${m.slug} · ${choix} → ${piece}`).toBeTypeOf("number");
       }
+      // Les pièces propres à un côté comptent autant : ce sont elles qu'on
+      // oubliait de mesurer, donc de poser.
+      for (const [cote, parType] of Object.entries(v.pieceParCote ?? {}))
+        for (const [choix, piece] of Object.entries(parType))
+          expect(v.angleNatif[piece], `${m.slug} · ${cote} · ${choix} → ${piece}`).toBeTypeOf("number");
       if (v.pieceAuvent) expect(v.angleNatif[v.pieceAuvent]).toBeTypeOf("number");
     }
   });
@@ -45,6 +53,62 @@ describe("la vue 3D de chaque modèle", () => {
     for (const m of MODELES)
       for (const [p, a] of Object.entries(vue3d(m).angleNatif))
         expect(Math.abs(a), `${m.slug} · ${p}`).toBeLessThanOrEqual(180);
+  });
+});
+
+describe("la N : le prix et le dessin sur la même face", () => {
+  const N = modele("n");
+  const V = vue3d(N);
+
+  it("chaque côté reçoit la toile que Bayes a faite pour LUI", () => {
+    // Les deux pignons sont deux produits : demi-mur devant (0 → 1 944 mm),
+    // pignon plein derrière (0 → 2 547). Le long côté A sert les deux autres.
+    expect(pieceDeCote(N, "avant", "paroi")).toBe("d_half_wall");
+    expect(pieceDeCote(N, "arriere", "paroi")).toBe("b_side_wall");
+    expect(pieceDeCote(N, "gauche", "paroi")).toBe("a_side_wall");
+    expect(pieceDeCote(N, "droit", "fenetre")).toBe("a_window_wall");
+  });
+
+  it("la toile posée porte la lettre que le devis facture", () => {
+    /* LE défaut qui coûtait de l'argent : le client voyait un pignon et payait
+       l'autre — 40 € d'écart entre la paroi B et la paroi D en 3 × 3. */
+    for (const cote of N.cotes) {
+      for (const type of ["paroi", "porte", "fenetre"]) {
+        const piece = pieceDeCote(N, cote, type)!;
+        const lettre = N.lettreCote![cote];
+        expect(piece.startsWith(`${lettre}_`), `${cote} · ${type} → ${piece} facturé « ${lettre} »`).toBe(true);
+      }
+    }
+  });
+
+  it("et elle tombe sur la face où le fournisseur l'a modélisée, sans détour", () => {
+    // Rotation nulle = la pièce est déjà au bon endroit.
+    expect(V.angleNatif.d_half_wall - angleCote(N, "avant")).toBe(0);
+    expect(V.angleNatif.b_side_wall - angleCote(N, "arriere")).toBe(0);
+    expect(V.angleNatif.a_side_wall - angleCote(N, "droit")).toBe(0);
+    // Sauf le long côté gauche : un seul fichier retourné sert les deux.
+    expect(Math.abs(V.angleNatif.a_side_wall - angleCote(N, "gauche"))).toBe(180);
+  });
+
+  it("le bandeau courbe se pose sur l'un ou l'autre pignon", () => {
+    expect(V.angleNatif.c_banner - angleCote(N, "avant")).toBe(0);
+    expect(Math.abs(V.angleNatif.c_banner - angleCote(N, "arriere"))).toBe(180);
+  });
+
+  it("son avant est celui de Bayes, pas celui de la tente X", () => {
+    /* Le fournisseur pose sa façade à l'azimut 0, la X y a son arrière. On
+       tourne les NOMS d'un demi-tour plutôt que de toucher à une mesure. */
+    expect(angleCote(N, "avant")).toBe(0);
+    expect(angleCote(modele("x"), "avant")).toBe(180);
+    // Un demi-tour complet, pas un miroir : la gauche et la droite suivent.
+    for (const cote of N.cotes)
+      expect(Math.abs(angleCote(N, cote) - ANGLE_COTE_DEFAUT[cote]), cote).toBe(180);
+  });
+
+  it("les modèles sans façade déclarée gardent la convention commune", () => {
+    for (const s of ["x", "spider"])
+      for (const cote of ["avant", "droit", "arriere", "gauche"])
+        expect(angleCote(modele(s), cote), `${s} · ${cote}`).toBe(ANGLE_COTE_DEFAUT[cote]);
   });
 });
 

@@ -25,6 +25,7 @@ export declare const MODELES: readonly [{
     readonly cotes: readonly ["avant", "droit", "arriere", "gauche"];
     readonly lettreCote: Record<string, string>;
     readonly types: readonly ["vide", "paroi", "porte", "fenetre", "courbe"];
+    readonly typesCote: Record<string, readonly string[]>;
     readonly cleParCote: true;
 }, {
     readonly slug: "v";
@@ -37,6 +38,7 @@ export declare const MODELES: readonly [{
 }];
 export type Modele = (typeof MODELES)[number] & {
     lettreCote?: Record<string, string>;
+    typesCote?: Record<string, readonly string[]>;
 };
 export type SlugModele = Modele["slug"];
 /** Le modèle historique. Un code de configuration sans modèle est une tente X :
@@ -49,10 +51,15 @@ export declare const modele: (slug: string | null | undefined) => Modele;
  *  encore la gamme ; dérivé de la table, jamais recopié. */
 export declare const TAILLES: readonly ["3x3", "4x4", "5x5", "6x6", "7x7", "8x8"] | readonly ["4x4", "6x6", "8x8", "10x10"] | readonly ["3x3", "4x4", "5x5"] | readonly ["4x4", "5x5", "6x6"];
 export type Taille = string;
+/** Ce qu'un CÔTÉ de ce modèle accepte. Tous n'acceptent pas forcément la même
+ *  chose : chez la N, le bandeau courbe ferme le haut d'un pignon et n'a rien à
+ *  faire sur un long côté, qui est droit. Sans côté, la réponse est celle du
+ *  modèle — ce qu'il vend, tous côtés confondus. */
+export declare const typesDuCote: (m: Modele, cote?: string) => readonly string[];
 /** Ce type de côté est-il au catalogue de ce modèle ? Le Spider n'a pas de
  *  paroi courbe, la V n'a qu'un modèle de paroi — demander une clé pour un type
  *  absent ne trouverait aucun prix, autant le dire tout de suite. */
-export declare const typePossible: (m: Modele, type: string) => boolean;
+export declare const typePossible: (m: Modele, type: string, cote?: string) => boolean;
 /**
  * Ce qu'un côté peut porter. Un côté porte UN seul type — ils sont exclusifs
  * par construction, ce qui rend inutile toute règle du genre « pas de porte sur

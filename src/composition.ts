@@ -84,6 +84,16 @@ export const MODELES = [
     cotes: COTES,
     lettreCote: { avant: "d", arriere: "b", gauche: "a", droit: "a" } as Record<string, string>,
     types: ["vide", "paroi", "porte", "fenetre", "courbe"],
+    /* Le bandeau courbe n'est pas une paroi de plus : c'est le croissant qui
+       ferme le haut d'un PIGNON, mesuré de 1 540 à 2 547 mm sur un pignon qui
+       monte à 2 547. Les longs côtés s'arrêtent à la gouttière, à 1 723, et sont
+       droits — aucun arc à combler, donc rien à leur vendre. Il était proposé
+       sur les quatre côtés : sur les deux longs, un choix qui ne pouvait ni se
+       dessiner ni se fabriquer. */
+    typesCote: {
+      gauche: ["vide", "paroi", "porte", "fenetre"],
+      droit: ["vide", "paroi", "porte", "fenetre"],
+    } as Record<string, readonly string[]>,
     cleParCote: true,
   },
   {
@@ -101,7 +111,10 @@ export const MODELES = [
   },
 ] as const;
 
-export type Modele = (typeof MODELES)[number] & { lettreCote?: Record<string, string> };
+export type Modele = (typeof MODELES)[number] & {
+  lettreCote?: Record<string, string>;
+  typesCote?: Record<string, readonly string[]>;
+};
 export type SlugModele = Modele["slug"];
 
 /** Le modèle historique. Un code de configuration sans modèle est une tente X :
@@ -118,11 +131,18 @@ export const modele = (slug: string | null | undefined): Modele =>
 export const TAILLES = modele(MODELE_DEFAUT).tailles;
 export type Taille = string;
 
+/** Ce qu'un CÔTÉ de ce modèle accepte. Tous n'acceptent pas forcément la même
+ *  chose : chez la N, le bandeau courbe ferme le haut d'un pignon et n'a rien à
+ *  faire sur un long côté, qui est droit. Sans côté, la réponse est celle du
+ *  modèle — ce qu'il vend, tous côtés confondus. */
+export const typesDuCote = (m: Modele, cote?: string): readonly string[] =>
+  (cote && m.typesCote?.[cote]) || (m.types as readonly string[]);
+
 /** Ce type de côté est-il au catalogue de ce modèle ? Le Spider n'a pas de
  *  paroi courbe, la V n'a qu'un modèle de paroi — demander une clé pour un type
  *  absent ne trouverait aucun prix, autant le dire tout de suite. */
-export const typePossible = (m: Modele, type: string): boolean =>
-  (m.types as readonly string[]).includes(type);
+export const typePossible = (m: Modele, type: string, cote?: string): boolean =>
+  typesDuCote(m, cote).includes(type);
 
 /**
  * Ce qu'un côté peut porter. Un côté porte UN seul type — ils sont exclusifs
@@ -250,7 +270,7 @@ export const cleTente = (m: Modele, taille: string) => `tente-${m.slug}-${taille
  * besoin de le préciser — et le catalogue la porte sans lettre.
  */
 export function cleTypeCote(m: Modele, taille: string, type: string, cote?: string): string | null {
-  if (!typePossible(m, type)) return null;
+  if (!typePossible(m, type, cote)) return null;
   const t = typeCote(type);
   if (!t.slug) return null;
 

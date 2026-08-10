@@ -128,6 +128,15 @@ describe("codes de configuration multi-modèles", () => {
     expect(decoderConfig("licorne.4x4")).toBeNull();
   });
 
+  it("un bandeau courbe sur un long côté de la N retombe à « vide »", () => {
+    /* Le code peut venir d'un devis émis avant qu'on le sache, ou d'une URL
+       retouchée. Un côté ouvert se voit ; un choix sans prix ni pièce, non. */
+    const c = decoderConfig("n.3x3.cccc");
+    expect(c?.cotes).toEqual({
+      avant: "courbe", arriere: "courbe", gauche: "vide", droit: "vide",
+    });
+  });
+
   it("la N a quatre côtés nommés comme ceux de la X, mais facturés séparément", () => {
     const n = MODELES.find((m) => m.slug === "n")!;
     expect([...n.cotes]).toEqual(["avant", "droit", "arriere", "gauche"]);
