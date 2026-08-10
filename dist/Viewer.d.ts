@@ -14,6 +14,9 @@ export interface TenteViewerProps {
     visuels: Record<string, VisuelPose | null>;
     /** Visuel de la paroi de chaque côté, même règle. */
     visuelsCote: Record<string, VisuelPose | null>;
+    /** Modèle de tente (`x`, `spider`, `n`, `v`). Obligatoire : un défaut
+     *  afficherait silencieusement une tente X à la place d'une autre. */
+    modele: string;
     /** Taille choisie, au format « 5x5 » — sert de facteur d'échelle. */
     taille: string;
     /** Côté mis en avant — légèrement éclairci pour qu'on le repère. */
@@ -23,4 +26,4 @@ export interface TenteViewerProps {
     /** Reçoit la fonction de capture (JPEG data-URL) — jointe à la demande de devis. */
     captureRef?: React.MutableRefObject<(() => string | null) | null>;
 }
-export default function TenteViewer({ cotes, auvents, couleurs, couleursCote, visuels, visuelsCote, taille, actif, labelChargement, captureRef }: TenteViewerProps): import("react").JSX.Element;
+export default function TenteViewer({ cotes, auvents, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, captureRef }: TenteViewerProps): import("react").JSX.Element;

@@ -27,52 +27,15 @@ import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 import { ZONES_COULEUR, ZONE_AUVENT, TEINTE_NUE, hexDeTeinte } from "./couleurs.js";
+import { modele as trouverModele } from "./composition.js";
+import { vue3d, urlPiece, echelle } from "./vue3d.js";
 import { composerPan, chargerImage } from "./visuel.js";
-/* Les modèles vivent sur R2, pas dans le dossier public du site : le CRM doit
-   les lire aussi, et les recopier dans les deux applications recréerait la
-   duplication qu'on vient de supprimer. Une adresse, deux lecteurs. */
-/* Les pièces vivent sur R2, pas dans le dossier public d'une application :
-   le site et le CRM les lisent à la même adresse, et personne ne transporte
-   2,4 Mo de modèles en double. */
-const BASE = "https://pub-dc19082f8e054e8b8a192d8d29df2aa0.r2.dev/models/tente-x";
-/** Pièces toujours présentes : la voûte, les arches, le cache-zip. */
-const SOCLE = ["roof", "LEG", "zipper_cover"];
-/** Choix du configurateur → fichier. `null` = rien à montrer. */
-const PIECE = {
-    vide: null,
-    paroi: "side_wall",
-    porte: "door",
-    fenetre: "window_wall",
-    courbe: "wall_curved1",
-    courbe_fenetre: "wall_curved2", // « Curve Window Wall » du fichier Bayes
-    jonction: "junction",
-};
-/** L'auvent n'est pas un choix exclusif : il se pose PAR-DESSUS l'élément du
- *  côté (porte, fenêtre… ou rien) — case « + Auvent » du configurateur. */
-const PIECE_AUVENT = "awning";
-/** Côté sur lequel le fournisseur a monté chaque pièce (angle horaire depuis l'arrière). */
-const ANGLE_NATIF = {
-    /* Relevé sur le fichier Rhino du fournisseur (scripts/convert-tente-rhino.mjs)
-       — il monte chaque pièce là où elle vit dans SON assemblage, pas au même
-       endroit que notre ancienne conversion depuis le STEP. À revérifier à chaque
-       nouvelle livraison : c'est le seul endroit qui décrit où une pièce est posée. */
-    side_wall: 180, // avant
-    door: -90, // gauche
-    window_wall: 90, // droit
-    wall_curved1: 0, // arrière
-    wall_curved2: 0, // arrière
-    awning: -90, // gauche
-    junction: 180, // avant
-};
 /** Où le configurateur veut la poser — même convention que le plan vu de dessus. */
 const ANGLE_COTE = {
     arriere: 0, droit: 90, avant: 180, gauche: -90,
 };
 const RAD = Math.PI / 180;
 const MM_EN_M = 0.001;
-/** Taille modélisée par le fournisseur ; les autres en découlent. */
-const TAILLE_MODELE = 3;
-const echelle = (taille) => (parseInt(taille, 10) || TAILLE_MODELE) / TAILLE_MODELE;
 /** Pièces amovibles : un liseré sombre court sur leur pourtour — c'est la
  *  fermeture éclair qui fixe le panneau aux arches. Tracé depuis les arêtes
  *  vives du bord (la vraie texture de zip viendra avec le glTF UV fournisseur). */
@@ -370,10 +333,13 @@ function ratioEmprise(groupe) {
     return dim.y === 0 ? 1 : dim.x / dim.y;
 }
 const cache = new Map();
-function charger(loader, nom) {
-    let p = cache.get(nom);
+function charger(loader, m, nom) {
+    /* Clé = l'URL, pas le nom de pièce : le « roof » du Spider n'est pas celui de
+       la X, et un cache par nom servirait le premier chargé aux deux. */
+    const url = urlPiece(m, nom);
+    let p = cache.get(url);
     if (!p) {
-        p = loader.loadAsync(`${BASE}/${nom}.glb`).then((g) => {
+        p = loader.loadAsync(url).then((g) => {
             /* De la toile, pas des volumes : chaque pièce doit se voir des deux faces
                (le client regarde aussi l'intérieur), et le fichier CAO livre des
                normales tournées vers l'intérieur sur certaines parois — sans ça, la
@@ -404,11 +370,13 @@ function charger(loader, nom) {
                 marquerVitre(g.scene);
             return g.scene;
         });
-        cache.set(nom, p);
+        cache.set(url, p);
     }
     return p.then((s) => s.clone(true));
 }
-export default function TenteViewer({ cotes, auvents, couleurs, couleursCote, visuels, visuelsCote, taille, actif, labelChargement, captureRef }) {
+export default function TenteViewer({ cotes, auvents, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, captureRef }) {
+    const M = trouverModele(modele);
+    const VUE = vue3d(M);
     const hote = useRef(null);
     const racineRef = useRef(null);
     const parois = useRef(null);
@@ -510,13 +478,13 @@ export default function TenteViewer({ cotes, auvents, couleurs, couleursCote, vi
         cadrerRef.current = cadrer;
         const loader = new GLTFLoader();
         let vivant = true;
-        Promise.all(SOCLE.map((n) => charger(loader, n))).then((gs) => {
+        Promise.all(VUE.socle.map((n) => charger(loader, M, n))).then((gs) => {
             if (!vivant)
                 return;
             gs.forEach((g, i) => {
                 racine.add(g);
-                piecesSocle.current[SOCLE[i]] = g;
-                piecesAffichees.current.push({ nom: SOCLE[i], groupe: g });
+                piecesSocle.current[VUE.socle[i]] = g;
+                piecesAffichees.current.push({ nom: VUE.socle[i], groupe: g });
             });
             cadrer();
             setPret(true);
@@ -842,7 +810,7 @@ export default function TenteViewer({ cotes, auvents, couleurs, couleursCote, vi
         const racine = racineRef.current;
         if (!racine || !pret)
             return;
-        racine.scale.setScalar(MM_EN_M * echelle(taille));
+        racine.scale.setScalar(MM_EN_M * echelle(M, taille));
         cadrerRef.current();
     }, [taille, pret]);
     /* ── Les parois suivent les choix ───────────────────────────────────── */
@@ -856,10 +824,10 @@ export default function TenteViewer({ cotes, auvents, couleurs, couleursCote, vi
         const loader = new GLTFLoader();
         let vivant = true;
         const poser = (nom, cote, teinte) => {
-            charger(loader, nom).then((g) => {
+            charger(loader, M, nom).then((g) => {
                 if (!vivant)
                     return;
-                g.rotation.z = (ANGLE_NATIF[nom] - (ANGLE_COTE[cote] ?? 0)) * RAD;
+                g.rotation.z = (VUE.angleNatif[nom] - (ANGLE_COTE[cote] ?? 0)) * RAD;
                 if (teinte) {
                     const hex = new THREE.Color(hexDeTeinte(teinte));
                     g.traverse((o) => {
@@ -891,15 +859,15 @@ export default function TenteViewer({ cotes, auvents, couleurs, couleursCote, vi
             });
         };
         murs.clear();
-        piecesAffichees.current = piecesAffichees.current.filter((p) => SOCLE.includes(p.nom));
+        piecesAffichees.current = piecesAffichees.current.filter((p) => VUE.socle.includes(p.nom));
         for (const [cote, choix] of Object.entries(cotes)) {
-            const nom = PIECE[choix];
+            const nom = VUE.piece[choix];
             if (nom)
                 poser(nom, cote, couleursCote[cote]);
             /* L'auvent porte UNE teinte pour toute la tente, pas une par côté : c'est
                la même toile imprimée d'un seul tenant, et le prix est unique. */
-            if (auvents[cote])
-                poser(PIECE_AUVENT, cote, teinteAuvent);
+            if (auvents[cote] && VUE.pieceAuvent)
+                poser(VUE.pieceAuvent, cote, teinteAuvent);
         }
         return () => { vivant = false; };
     }, [cotes, auvents, couleursCote, teinteAuvent, actif, pret]);
