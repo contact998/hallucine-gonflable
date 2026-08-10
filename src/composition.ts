@@ -17,12 +17,88 @@
  * ce fichier ne sait que construire les clés pour aller les y chercher.
  */
 
-export const TAILLES = ["3x3", "4x4", "5x5", "6x6", "7x7", "8x8"] as const;
-export type Taille = (typeof TAILLES)[number];
-
 /** Ordre figé : il sert au code de configuration, qui voyage dans les devis. */
 export const COTES = ["avant", "droit", "arriere", "gauche"] as const;
 export type Cote = (typeof COTES)[number];
+
+/* ── La gamme ───────────────────────────────────────────────────────────────
+ *
+ * UNE ligne par modèle, et tout en dérive : les tailles vendables, ce que
+ * chaque côté accepte, le préfixe des clés du catalogue. Ouvrir un modèle de
+ * plus, c'est ajouter une ligne — pas retoucher dix fichiers.
+ *
+ * `cleParCote` : chez la N, les quatre côtés n'ont pas les mêmes dimensions
+ * (A tient sur le grand côté, B sur le pignon), donc pas le même prix. Sa clé
+ * catalogue porte la lettre du côté — `tente-n-3x3-paroi-b`. Chez les trois
+ * autres, les côtés sont interchangeables et la clé n'en dit rien.
+ *
+ * `types` : ce qu'un côté peut porter, par ordre d'affichage. Le Spider n'a pas
+ * de paroi courbe à son tarif, la V n'a qu'un seul modèle de paroi — ce ne sont
+ * pas des oublis, c'est ce que Bayes fabrique.
+ */
+export const MODELES = [
+  {
+    slug: "x",
+    libelle: "X",
+    tailles: ["3x3", "4x4", "5x5", "6x6", "7x7", "8x8"],
+    cotes: COTES,
+    types: ["vide", "paroi", "porte", "fenetre", "courbe", "courbe_fenetre", "jonction"],
+    cleParCote: false,
+  },
+  {
+    slug: "spider",
+    libelle: "Spider",
+    tailles: ["4x4", "6x6", "8x8", "10x10"],
+    cotes: COTES,
+    types: ["vide", "paroi", "porte", "fenetre", "jonction"],
+    cleParCote: false,
+  },
+  {
+    /* Ses côtés portent les lettres de Bayes et pas avant/droit/arrière/gauche :
+       ils ne sont PAS interchangeables (A tient sur 2 679 mm, B sur 2 532, et
+       le C est une paroi courbe qui coiffe le demi-mur D). Une lettre déduite
+       d'une position dans une liste serait fausse dès que l'ordre changerait.
+       Quel côté physique porte quelle lettre se lira sur la 3D au montage du
+       configurateur — ici on ne fait que garder l'identité de Bayes. */
+    slug: "n",
+    libelle: "N",
+    tailles: ["3x3", "4x4", "5x5"],
+    cotes: ["a", "b", "c", "d"],
+    types: ["vide", "paroi", "porte", "fenetre", "courbe"],
+    cleParCote: true,
+  },
+  {
+    slug: "v",
+    libelle: "V",
+    tailles: ["4x4", "5x5", "6x6"],
+    cotes: COTES,
+    types: ["vide", "paroi"],
+    cleParCote: false,
+  },
+] as const;
+
+export type Modele = (typeof MODELES)[number];
+export type SlugModele = Modele["slug"];
+
+/** Le modèle historique. Un code de configuration sans modèle est une tente X :
+ *  des devis envoyés avant l'ouverture de la gamme pointent dessus. */
+export const MODELE_DEFAUT: SlugModele = "x";
+
+/** Rend toujours un modèle — le défaut si le slug est inconnu, pour qu'un lien
+ *  trafiqué ouvre une tente X plutôt que de casser la page. */
+export const modele = (slug: string | null | undefined): Modele =>
+  MODELES.find((m) => m.slug === slug) ?? MODELES[0];
+
+/** Les tailles de la tente X. Conservé pour les appels qui ne connaissent pas
+ *  encore la gamme ; dérivé de la table, jamais recopié. */
+export const TAILLES = modele(MODELE_DEFAUT).tailles;
+export type Taille = string;
+
+/** Ce type de côté est-il au catalogue de ce modèle ? Le Spider n'a pas de
+ *  paroi courbe, la V n'a qu'un modèle de paroi — demander une clé pour un type
+ *  absent ne trouverait aucun prix, autant le dire tout de suite. */
+export const typePossible = (m: Modele, type: string): boolean =>
+  (m.types as readonly string[]).includes(type);
 
 /**
  * Ce qu'un côté peut porter. Un côté porte UN seul type — ils sont exclusifs
@@ -129,22 +205,42 @@ export type Accessoire = (typeof ACCESSOIRES)[number]["valeur"];
  * l'autre n'en trouve pas — et c'est indétectable à l'œil.
  */
 
-/** La tente nue : toit + structure, sans aucun côté. */
-export const cleTente = (taille: string) => `tente-x-${taille}`;
+/*
+ * Le modèle est un paramètre OBLIGATOIRE, jamais un défaut implicite. Un défaut
+ * laisserait un appelant oublié fabriquer tranquillement des clés de tente X
+ * pour un Spider : il trouverait des prix — les mauvais — et rien ne le
+ * signalerait. En l'exigeant, le compilateur montre tous les appels le jour où
+ * la gamme s'élargit.
+ */
 
-/** Un type de côté. `null` si ce type ne se facture pas (côté ouvert). */
-export function cleTypeCote(taille: string, type: string): string | null {
+/** La tente nue : toit + structure, sans aucun côté. */
+export const cleTente = (m: Modele, taille: string) => `tente-${m.slug}-${taille}`;
+
+/**
+ * Un type de côté. `null` si ce type ne se facture pas (côté ouvert) ou s'il
+ * n'existe pas chez ce modèle.
+ *
+ * `cote` n'est lu que chez les modèles à côtés facturés séparément (la N) ; il
+ * est ignoré ailleurs, où les côtés sont interchangeables. La paroi courbe fait
+ * exception même chez la N : elle n'existe que sur un côté, donc sa clé n'a pas
+ * besoin de le préciser — et le catalogue la porte sans lettre.
+ */
+export function cleTypeCote(m: Modele, taille: string, type: string, cote?: string): string | null {
+  if (!typePossible(m, type)) return null;
   const t = typeCote(type);
-  return t.slug ? `tente-x-${taille}-${t.slug}` : null;
+  if (!t.slug) return null;
+  const parCote = m.cleParCote && cote && !t.slug.startsWith("paroi-courbe");
+  return `tente-${m.slug}-${taille}-${t.slug}${parCote ? `-${cote}` : ""}`;
 }
 
-export const cleAuvent = (taille: string) => `tente-x-${taille}-auvent`;
+export const cleAuvent = (m: Modele, taille: string) => `tente-${m.slug}-${taille}-auvent`;
 
-export const cleImpression = (taille: string, imp: Impression) =>
-  `tente-x-${taille}-${IMPRESSIONS[imp]}`;
+export const cleImpression = (m: Modele, taille: string, imp: Impression) =>
+  `tente-${m.slug}-${taille}-${IMPRESSIONS[imp]}`;
 
-/** Les accessoires ne dépendent pas tous de la taille — le lest, si. */
-export function cleAccessoire(taille: string, acc: string): string {
+/** Les accessoires ne dépendent pas tous de la taille — le lest, si. Et ils ne
+ *  dépendent d'aucun modèle : un sac est un sac. */
+export function cleAccessoire(m: Modele, taille: string, acc: string): string {
   const a = ACCESSOIRES.find((x) => x.valeur === acc);
-  return a?.slug ?? `tente-x-${taille}-lest-eau`;
+  return a?.slug ?? `tente-${m.slug}-${taille}-lest-eau`;
 }

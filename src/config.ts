@@ -20,10 +20,13 @@
  * pointent dans le vide.
  */
 
-export const TAILLES_TENTE = ["3x3", "4x4", "5x5", "6x6", "7x7", "8x8"] as const;
-export type TailleTente = (typeof TAILLES_TENTE)[number];
+import { MODELES, MODELE_DEFAUT, modele as trouverModele, TAILLES, COTES } from "./composition.js";
 
-export const COTES_TENTE = ["avant", "droit", "arriere", "gauche"] as const;
+/** Dérivées de la table des modèles — une seule source pour la gamme. */
+export const TAILLES_TENTE = TAILLES;
+export type TailleTente = string;
+
+export const COTES_TENTE = COTES;
 export type CoteTente = (typeof COTES_TENTE)[number];
 
 /** Lettre ↔ choix de côté. `-` = côté ouvert. Une lettre attribuée ne change
@@ -62,15 +65,31 @@ const ACC_LETTRE: Record<string, string> = Object.fromEntries(
 );
 
 export interface ConfigTente {
+  /** Slug du modèle (`x`, `spider`, `n`, `v`). */
+  modele: string;
   taille: string;
   cotes: Record<string, string>;
   auvents: Record<string, boolean>;
   options: string[];
 }
 
+/*
+ * Le MODÈLE en tête, et seulement s'il n'est pas la tente X.
+ *
+ * Les codes émis avant l'ouverture de la gamme n'ont pas de modèle — ils sont
+ * dans des devis partis chez des clients, et doivent continuer à ouvrir une
+ * tente X. Omettre le segment pour la X garde ces codes-là valides ET laisse
+ * les nouveaux codes de X identiques à ce qu'ils ont toujours été.
+ *
+ * Aucune ambiguïté à la lecture : un slug de modèle ne ressemble jamais à une
+ * taille (« spider » contre « 4x4 »), et l'inverse non plus.
+ */
+
 /** Composition → code d'URL. */
 export function encoderConfig(c: ConfigTente): string {
-  const cotes = COTES_TENTE.map((cote) => {
+  const m = trouverModele(c.modele);
+  const cotesModele = m.cotes as readonly string[];
+  const cotes = cotesModele.map((cote) => {
     const lettre = COTE_LETTRE[c.cotes[cote]] ?? "-";
     if (!c.auvents[cote]) return lettre;
     // « - » n'a pas de majuscule : un côté ouvert SOUS un auvent s'écrit « A ».
@@ -85,19 +104,27 @@ export function encoderConfig(c: ConfigTente): string {
     .map(([, l]) => l)
     .join("");
 
-  return [c.taille, cotes, imps, accs].join(".").replace(/\.+$/, "");
+  const tete = m.slug === MODELE_DEFAUT ? [] : [m.slug];
+  return [...tete, c.taille, cotes, imps, accs].join(".").replace(/\.+$/, "");
 }
 
 /** Code d'URL → composition. Rend `null` si le code est inexploitable :
  *  la page repart alors sur ses valeurs par défaut plutôt que sur du bancal. */
 export function decoderConfig(code: string | null | undefined): ConfigTente | null {
   if (!code) return null;
-  const [taille, cotesStr = "", imps = "", accs = ""] = code.trim().split(".");
-  if (!(TAILLES_TENTE as readonly string[]).includes(taille)) return null;
+  const segments = code.trim().split(".");
+
+  /* Segment de tête = un modèle connu ? Sinon c'est une taille, donc un code
+     d'avant la gamme, donc une tente X. */
+  const enTete = MODELES.some((m) => m.slug === segments[0]) ? segments.shift()! : MODELE_DEFAUT;
+  const m = trouverModele(enTete);
+
+  const [taille, cotesStr = "", imps = "", accs = ""] = segments;
+  if (!(m.tailles as readonly string[]).includes(taille)) return null;
 
   const cotes: Record<string, string> = {};
   const auvents: Record<string, boolean> = {};
-  COTES_TENTE.forEach((cote, i) => {
+  (m.cotes as readonly string[]).forEach((cote, i) => {
     const brut = cotesStr[i] ?? "-";
     if (brut === "A") {
       cotes[cote] = "vide";
@@ -123,5 +150,5 @@ export function decoderConfig(code: string | null | undefined): ConfigTente | nu
     if (k) options.push(k);
   }
 
-  return { taille, cotes, auvents, options };
+  return { modele: m.slug, taille, cotes, auvents, options };
 }

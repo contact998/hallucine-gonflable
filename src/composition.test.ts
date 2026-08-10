@@ -2,8 +2,11 @@ import { describe, it, expect } from "vitest";
 import {
   TYPES_COTE, COTES, TAILLES, auventPossible, typeCote,
   cleTente, cleTypeCote, cleAuvent, cleImpression, cleAccessoire,
+  MODELES, modele, typePossible,
   IMPRESSIONS, ACCESSOIRES,
 } from "./composition.js";
+
+const X = modele("x");
 
 describe("les règles de fabrication", () => {
   it("l'auvent se monte sur un côté ouvert ou sur une paroi droite", () => {
@@ -48,31 +51,31 @@ describe("les règles de fabrication", () => {
 
 describe("les clés du catalogue — le contrat avec le CRM", () => {
   it("la tente nue", () => {
-    expect(cleTente("4x4")).toBe("tente-x-4x4");
+    expect(cleTente(X, "4x4")).toBe("tente-x-4x4");
   });
 
   it("chaque type facturable a sa clé, le côté ouvert n'en a pas", () => {
-    expect(cleTypeCote("4x4", "vide")).toBeNull();
-    expect(cleTypeCote("4x4", "paroi")).toBe("tente-x-4x4-paroi");
-    expect(cleTypeCote("4x4", "porte")).toBe("tente-x-4x4-paroi-porte");
-    expect(cleTypeCote("4x4", "courbe_fenetre")).toBe("tente-x-4x4-paroi-courbe-fenetre");
-    expect(cleTypeCote("4x4", "jonction")).toBe("tente-x-4x4-jonction");
+    expect(cleTypeCote(X, "4x4", "vide")).toBeNull();
+    expect(cleTypeCote(X, "4x4", "paroi")).toBe("tente-x-4x4-paroi");
+    expect(cleTypeCote(X, "4x4", "porte")).toBe("tente-x-4x4-paroi-porte");
+    expect(cleTypeCote(X, "4x4", "courbe_fenetre")).toBe("tente-x-4x4-paroi-courbe-fenetre");
+    expect(cleTypeCote(X, "4x4", "jonction")).toBe("tente-x-4x4-jonction");
   });
 
   it("un type inconnu retombe sur « ouvert » plutôt que de fabriquer une fausse clé", () => {
     expect(typeCote("nimportequoi").valeur).toBe("vide");
-    expect(cleTypeCote("4x4", "nimportequoi")).toBeNull();
+    expect(cleTypeCote(X, "4x4", "nimportequoi")).toBeNull();
   });
 
   it("l'auvent et les impressions", () => {
-    expect(cleAuvent("5x5")).toBe("tente-x-5x5-auvent");
-    expect(cleImpression("5x5", "imp_toit")).toBe("tente-x-5x5-impression-toit");
-    expect(cleImpression("5x5", "imp_auv_toile")).toBe("tente-x-5x5-impression-auvent-toile");
+    expect(cleAuvent(X, "5x5")).toBe("tente-x-5x5-auvent");
+    expect(cleImpression(X, "5x5", "imp_toit")).toBe("tente-x-5x5-impression-toit");
+    expect(cleImpression(X, "5x5", "imp_auv_toile")).toBe("tente-x-5x5-impression-auvent-toile");
   });
 
   it("les accessoires : clé fixe, sauf le lest qui dépend de la taille", () => {
-    expect(cleAccessoire("6x6", "acc_sac")).toBe("tente-accessoire-sac");
-    expect(cleAccessoire("6x6", "acc_lest_eau")).toBe("tente-x-6x6-lest-eau");
+    expect(cleAccessoire(X, "6x6", "acc_sac")).toBe("tente-accessoire-sac");
+    expect(cleAccessoire(X, "6x6", "acc_lest_eau")).toBe("tente-x-6x6-lest-eau");
   });
 
   it("toute impression déclenchée par un type de côté existe dans la table", () => {
@@ -84,7 +87,7 @@ describe("les clés du catalogue — le contrat avec le CRM", () => {
   it("chaque accessoire sait fabriquer une clé pour toutes les tailles", () => {
     for (const taille of TAILLES) {
       for (const a of ACCESSOIRES) {
-        expect(cleAccessoire(taille, a.valeur)).toBeTruthy();
+        expect(cleAccessoire(X, taille, a.valeur)).toBeTruthy();
       }
     }
   });

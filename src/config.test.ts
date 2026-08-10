@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { encoderConfig, decoderConfig, type ConfigTente } from "./config.js";
+import { MODELES } from "./composition.js";
 
 const vide = (): ConfigTente => ({
+  modele: "x",
   taille: "4x4",
   cotes: { avant: "vide", droit: "vide", arriere: "vide", gauche: "vide" },
   auvents: { avant: false, droit: false, arriere: false, gauche: false },
@@ -74,5 +76,62 @@ describe("Code de configuration tente — aller-retour", () => {
     c.options = ["imp_jonction"];
     const rendu = decoderConfig(encoderConfig(c))!;
     expect(rendu.options).toEqual(["imp_jonction"]);
+  });
+});
+
+/* ── La gamme, et la compatibilité des codes déjà envoyés ─────────────────── */
+
+describe("codes de configuration multi-modèles", () => {
+  it("un code SANS modèle reste une tente X — des devis partis pointent dessus", () => {
+    const c = decoderConfig("4x4.pFA-.02.sl");
+    expect(c).not.toBeNull();
+    expect(c!.modele).toBe("x");
+    expect(c!.taille).toBe("4x4");
+  });
+
+  it("un code de tente X ne change pas de forme : pas de segment ajouté", () => {
+    const c = decoderConfig("4x4.pFA-.02.sl")!;
+    expect(encoderConfig(c)).toBe("4x4.pFA-.02.sl");
+  });
+
+  it("les autres modèles portent leur slug en tête", () => {
+    const c = decoderConfig("spider.6x6.pp--")!;
+    expect(c.modele).toBe("spider");
+    expect(c.taille).toBe("6x6");
+    expect(encoderConfig(c)).toBe("spider.6x6.pp--");
+  });
+
+  it("aller-retour sans perte sur les quatre modèles", () => {
+    for (const m of MODELES) {
+      for (const taille of m.tailles) {
+        const code = encoderConfig({
+          modele: m.slug, taille, cotes: {}, auvents: {}, options: [],
+        });
+        const relu = decoderConfig(code);
+        expect(relu, `${m.slug} ${taille}`).not.toBeNull();
+        expect(relu!.modele).toBe(m.slug);
+        expect(relu!.taille).toBe(taille);
+      }
+    }
+  });
+
+  it("une taille qui n'existe pas chez CE modèle est refusée", () => {
+    // 10x10 existe chez le Spider, jamais chez la X
+    expect(decoderConfig("spider.10x10")).not.toBeNull();
+    expect(decoderConfig("10x10")).toBeNull();
+    // 3x3 existe chez la X et la N, pas chez le Spider
+    expect(decoderConfig("3x3")).not.toBeNull();
+    expect(decoderConfig("spider.3x3")).toBeNull();
+  });
+
+  it("un modèle inconnu n'est pas lu comme un modèle, donc le code est refusé", () => {
+    expect(decoderConfig("licorne.4x4")).toBeNull();
+  });
+
+  it("la N nomme ses côtés par les lettres de Bayes, pas par des positions", () => {
+    const n = MODELES.find((m) => m.slug === "n")!;
+    expect([...n.cotes]).toEqual(["a", "b", "c", "d"]);
+    const c = decoderConfig("n.4x4.pofc")!;
+    expect(Object.keys(c.cotes)).toEqual(["a", "b", "c", "d"]);
   });
 });

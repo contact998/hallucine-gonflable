@@ -19,8 +19,10 @@
  * (un ancien code doit continuer à s'ouvrir), sinon les devis déjà envoyés
  * pointent dans le vide.
  */
-export const TAILLES_TENTE = ["3x3", "4x4", "5x5", "6x6", "7x7", "8x8"];
-export const COTES_TENTE = ["avant", "droit", "arriere", "gauche"];
+import { MODELES, MODELE_DEFAUT, modele as trouverModele, TAILLES, COTES } from "./composition.js";
+/** Dérivées de la table des modèles — une seule source pour la gamme. */
+export const TAILLES_TENTE = TAILLES;
+export const COTES_TENTE = COTES;
 /** Lettre ↔ choix de côté. `-` = côté ouvert. Une lettre attribuée ne change
  *  plus jamais : les devis déjà envoyés portent ces codes. */
 const LETTRE_COTE = {
@@ -49,9 +51,22 @@ const LETTRE_ACC = {
     e: "acc_lest_eau",
 };
 const ACC_LETTRE = Object.fromEntries(Object.entries(LETTRE_ACC).map(([l, v]) => [v, l]));
+/*
+ * Le MODÈLE en tête, et seulement s'il n'est pas la tente X.
+ *
+ * Les codes émis avant l'ouverture de la gamme n'ont pas de modèle — ils sont
+ * dans des devis partis chez des clients, et doivent continuer à ouvrir une
+ * tente X. Omettre le segment pour la X garde ces codes-là valides ET laisse
+ * les nouveaux codes de X identiques à ce qu'ils ont toujours été.
+ *
+ * Aucune ambiguïté à la lecture : un slug de modèle ne ressemble jamais à une
+ * taille (« spider » contre « 4x4 »), et l'inverse non plus.
+ */
 /** Composition → code d'URL. */
 export function encoderConfig(c) {
-    const cotes = COTES_TENTE.map((cote) => {
+    const m = trouverModele(c.modele);
+    const cotesModele = m.cotes;
+    const cotes = cotesModele.map((cote) => {
         const lettre = COTE_LETTRE[c.cotes[cote]] ?? "-";
         if (!c.auvents[cote])
             return lettre;
@@ -65,19 +80,25 @@ export function encoderConfig(c) {
         .filter(([cle]) => c.options.includes(cle))
         .map(([, l]) => l)
         .join("");
-    return [c.taille, cotes, imps, accs].join(".").replace(/\.+$/, "");
+    const tete = m.slug === MODELE_DEFAUT ? [] : [m.slug];
+    return [...tete, c.taille, cotes, imps, accs].join(".").replace(/\.+$/, "");
 }
 /** Code d'URL → composition. Rend `null` si le code est inexploitable :
  *  la page repart alors sur ses valeurs par défaut plutôt que sur du bancal. */
 export function decoderConfig(code) {
     if (!code)
         return null;
-    const [taille, cotesStr = "", imps = "", accs = ""] = code.trim().split(".");
-    if (!TAILLES_TENTE.includes(taille))
+    const segments = code.trim().split(".");
+    /* Segment de tête = un modèle connu ? Sinon c'est une taille, donc un code
+       d'avant la gamme, donc une tente X. */
+    const enTete = MODELES.some((m) => m.slug === segments[0]) ? segments.shift() : MODELE_DEFAUT;
+    const m = trouverModele(enTete);
+    const [taille, cotesStr = "", imps = "", accs = ""] = segments;
+    if (!m.tailles.includes(taille))
         return null;
     const cotes = {};
     const auvents = {};
-    COTES_TENTE.forEach((cote, i) => {
+    m.cotes.forEach((cote, i) => {
         const brut = cotesStr[i] ?? "-";
         if (brut === "A") {
             cotes[cote] = "vide";
@@ -103,5 +124,5 @@ export function decoderConfig(code) {
         if (k)
             options.push(k);
     }
-    return { taille, cotes, auvents, options };
+    return { modele: m.slug, taille, cotes, auvents, options };
 }

@@ -1,8 +1,51 @@
-export declare const TAILLES: readonly ["3x3", "4x4", "5x5", "6x6", "7x7", "8x8"];
-export type Taille = (typeof TAILLES)[number];
 /** Ordre figé : il sert au code de configuration, qui voyage dans les devis. */
 export declare const COTES: readonly ["avant", "droit", "arriere", "gauche"];
 export type Cote = (typeof COTES)[number];
+export declare const MODELES: readonly [{
+    readonly slug: "x";
+    readonly libelle: "X";
+    readonly tailles: readonly ["3x3", "4x4", "5x5", "6x6", "7x7", "8x8"];
+    readonly cotes: readonly ["avant", "droit", "arriere", "gauche"];
+    readonly types: readonly ["vide", "paroi", "porte", "fenetre", "courbe", "courbe_fenetre", "jonction"];
+    readonly cleParCote: false;
+}, {
+    readonly slug: "spider";
+    readonly libelle: "Spider";
+    readonly tailles: readonly ["4x4", "6x6", "8x8", "10x10"];
+    readonly cotes: readonly ["avant", "droit", "arriere", "gauche"];
+    readonly types: readonly ["vide", "paroi", "porte", "fenetre", "jonction"];
+    readonly cleParCote: false;
+}, {
+    readonly slug: "n";
+    readonly libelle: "N";
+    readonly tailles: readonly ["3x3", "4x4", "5x5"];
+    readonly cotes: readonly ["a", "b", "c", "d"];
+    readonly types: readonly ["vide", "paroi", "porte", "fenetre", "courbe"];
+    readonly cleParCote: true;
+}, {
+    readonly slug: "v";
+    readonly libelle: "V";
+    readonly tailles: readonly ["4x4", "5x5", "6x6"];
+    readonly cotes: readonly ["avant", "droit", "arriere", "gauche"];
+    readonly types: readonly ["vide", "paroi"];
+    readonly cleParCote: false;
+}];
+export type Modele = (typeof MODELES)[number];
+export type SlugModele = Modele["slug"];
+/** Le modèle historique. Un code de configuration sans modèle est une tente X :
+ *  des devis envoyés avant l'ouverture de la gamme pointent dessus. */
+export declare const MODELE_DEFAUT: SlugModele;
+/** Rend toujours un modèle — le défaut si le slug est inconnu, pour qu'un lien
+ *  trafiqué ouvre une tente X plutôt que de casser la page. */
+export declare const modele: (slug: string | null | undefined) => Modele;
+/** Les tailles de la tente X. Conservé pour les appels qui ne connaissent pas
+ *  encore la gamme ; dérivé de la table, jamais recopié. */
+export declare const TAILLES: readonly ["3x3", "4x4", "5x5", "6x6", "7x7", "8x8"] | readonly ["4x4", "6x6", "8x8", "10x10"] | readonly ["3x3", "4x4", "5x5"] | readonly ["4x4", "5x5", "6x6"];
+export type Taille = string;
+/** Ce type de côté est-il au catalogue de ce modèle ? Le Spider n'a pas de
+ *  paroi courbe, la V n'a qu'un modèle de paroi — demander une clé pour un type
+ *  absent ne trouverait aucun prix, autant le dire tout de suite. */
+export declare const typePossible: (m: Modele, type: string) => boolean;
 /**
  * Ce qu'un côté peut porter. Un côté porte UN seul type — ils sont exclusifs
  * par construction, ce qui rend inutile toute règle du genre « pas de porte sur
@@ -134,10 +177,19 @@ export declare const ACCESSOIRES: readonly [{
 }];
 export type Accessoire = (typeof ACCESSOIRES)[number]["valeur"];
 /** La tente nue : toit + structure, sans aucun côté. */
-export declare const cleTente: (taille: string) => string;
-/** Un type de côté. `null` si ce type ne se facture pas (côté ouvert). */
-export declare function cleTypeCote(taille: string, type: string): string | null;
-export declare const cleAuvent: (taille: string) => string;
-export declare const cleImpression: (taille: string, imp: Impression) => string;
-/** Les accessoires ne dépendent pas tous de la taille — le lest, si. */
-export declare function cleAccessoire(taille: string, acc: string): string;
+export declare const cleTente: (m: Modele, taille: string) => string;
+/**
+ * Un type de côté. `null` si ce type ne se facture pas (côté ouvert) ou s'il
+ * n'existe pas chez ce modèle.
+ *
+ * `cote` n'est lu que chez les modèles à côtés facturés séparément (la N) ; il
+ * est ignoré ailleurs, où les côtés sont interchangeables. La paroi courbe fait
+ * exception même chez la N : elle n'existe que sur un côté, donc sa clé n'a pas
+ * besoin de le préciser — et le catalogue la porte sans lettre.
+ */
+export declare function cleTypeCote(m: Modele, taille: string, type: string, cote?: string): string | null;
+export declare const cleAuvent: (m: Modele, taille: string) => string;
+export declare const cleImpression: (m: Modele, taille: string, imp: Impression) => string;
+/** Les accessoires ne dépendent pas tous de la taille — le lest, si. Et ils ne
+ *  dépendent d'aucun modèle : un sac est un sac. */
+export declare function cleAccessoire(m: Modele, taille: string, acc: string): string;
