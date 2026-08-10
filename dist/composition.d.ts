@@ -5,6 +5,7 @@ export declare const MODELES: readonly [{
     readonly slug: "x";
     readonly libelle: "X";
     readonly tailles: readonly ["3x3", "4x4", "5x5", "6x6", "7x7", "8x8"];
+    readonly tailleDefaut: "4x4";
     readonly cotes: readonly ["avant", "droit", "arriere", "gauche"];
     readonly types: readonly ["vide", "paroi", "porte", "fenetre", "courbe", "courbe_fenetre", "jonction"];
     readonly cleParCote: false;
@@ -12,6 +13,7 @@ export declare const MODELES: readonly [{
     readonly slug: "spider";
     readonly libelle: "Spider";
     readonly tailles: readonly ["4x4", "6x6", "8x8", "10x10"];
+    readonly tailleDefaut: "4x4";
     readonly cotes: readonly ["avant", "droit", "arriere", "gauche"];
     readonly types: readonly ["vide", "paroi", "porte", "fenetre", "jonction"];
     readonly cleParCote: false;
@@ -19,6 +21,7 @@ export declare const MODELES: readonly [{
     readonly slug: "n";
     readonly libelle: "N";
     readonly tailles: readonly ["3x3", "4x4", "5x5"];
+    readonly tailleDefaut: "3x3";
     readonly cotes: readonly ["avant", "droit", "arriere", "gauche"];
     readonly lettreCote: Record<string, string>;
     readonly types: readonly ["vide", "paroi", "porte", "fenetre", "courbe"];
@@ -27,6 +30,7 @@ export declare const MODELES: readonly [{
     readonly slug: "v";
     readonly libelle: "V";
     readonly tailles: readonly ["4x4", "5x5", "6x6"];
+    readonly tailleDefaut: "4x4";
     readonly cotes: readonly ["a", "b", "c"];
     readonly types: readonly ["vide", "paroi"];
     readonly cleParCote: false;

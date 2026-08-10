@@ -41,6 +41,10 @@ export const MODELES = [
     slug: "x",
     libelle: "X",
     tailles: ["3x3", "4x4", "5x5", "6x6", "7x7", "8x8"],
+    /* La 4 × 4 et non la 3 × 3 : c'est la taille sur laquelle les deux écrans
+       s'ouvrent depuis toujours, un choix commercial. La plus petite de la
+       gamme est la taille MODÉLISÉE, ce n'est pas la même chose. */
+    tailleDefaut: "4x4",
     cotes: COTES,
     types: ["vide", "paroi", "porte", "fenetre", "courbe", "courbe_fenetre", "jonction"],
     cleParCote: false,
@@ -49,6 +53,7 @@ export const MODELES = [
     slug: "spider",
     libelle: "Spider",
     tailles: ["4x4", "6x6", "8x8", "10x10"],
+    tailleDefaut: "4x4",
     cotes: COTES,
     types: ["vide", "paroi", "porte", "fenetre", "jonction"],
     cleParCote: false,
@@ -75,6 +80,7 @@ export const MODELES = [
     slug: "n",
     libelle: "N",
     tailles: ["3x3", "4x4", "5x5"],
+    tailleDefaut: "3x3",
     cotes: COTES,
     lettreCote: { avant: "d", arriere: "b", gauche: "a", droit: "a" } as Record<string, string>,
     types: ["vide", "paroi", "porte", "fenetre", "courbe"],
@@ -88,6 +94,7 @@ export const MODELES = [
     slug: "v",
     libelle: "V",
     tailles: ["4x4", "5x5", "6x6"],
+    tailleDefaut: "4x4",
     cotes: ["a", "b", "c"],
     types: ["vide", "paroi"],
     cleParCote: false,

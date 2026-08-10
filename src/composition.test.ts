@@ -119,3 +119,13 @@ describe("la N : quelle lettre du tarif pour quel côté", () => {
     expect(cleTypeCote(modele("v"), "5x5", "porte", "a")).toBeNull();
   });
 });
+
+describe("la taille d'ouverture", () => {
+  it("chaque modèle ouvre sur une taille qu'il vend vraiment", () => {
+    for (const m of MODELES) expect(m.tailles, m.slug).toContain(m.tailleDefaut);
+  });
+
+  it("la tente X ouvre sur la 4 × 4, pas sur la plus petite — choix commercial", () => {
+    expect(modele("x").tailleDefaut).toBe("4x4");
+  });
+});
