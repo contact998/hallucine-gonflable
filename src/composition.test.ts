@@ -93,7 +93,7 @@ describe("les clés du catalogue — le contrat avec le CRM", () => {
   });
 });
 
-describe("la N : pas de clé tant que la lettre du côté n'est pas établie", () => {
+describe("la N : quelle lettre du tarif pour quel côté", () => {
   const N = modele("n");
 
   it("les deux côtés établis par les calques de Bayes donnent leur clé", () => {
@@ -101,9 +101,13 @@ describe("la N : pas de clé tant que la lettre du côté n'est pas établie", (
     expect(cleTypeCote(N, "3x3", "porte", "avant")).toBe("tente-n-3x3-paroi-porte-d");
   });
 
-  it("les deux côtés non établis ne rendent RIEN plutôt qu'une clé approchée", () => {
-    expect(cleTypeCote(N, "3x3", "paroi", "gauche")).toBeNull();
-    expect(cleTypeCote(N, "3x3", "paroi", "droit")).toBeNull();
+  it("les deux longs côtés partagent la lettre A : ils sont identiques", () => {
+    expect(cleTypeCote(N, "3x3", "paroi", "gauche")).toBe("tente-n-3x3-paroi-a");
+    expect(cleTypeCote(N, "3x3", "paroi", "droit")).toBe("tente-n-3x3-paroi-a");
+  });
+
+  it("un côté sans lettre connue ne rend RIEN plutôt qu'une clé approchée", () => {
+    expect(cleTypeCote(N, "3x3", "paroi", "nulle-part")).toBeNull();
   });
 
   it("la paroi courbe n'a pas de lettre : elle n'existe que sur un côté", () => {

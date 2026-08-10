@@ -56,18 +56,24 @@ export const MODELES = [
            côtés n'ont ni les mêmes dimensions ni le même prix. Le catalogue les
            distingue par les lettres de Bayes, d'où `lettreCote`.
     
-           ⚠️ Deux correspondances seulement sont ÉTABLIES, et elles le sont par les
-           noms de calques du fournisseur lui-même : `B_Back_…` = arrière,
-           `D_Front_…` = avant. Pour A et C rien ne le dit, et la géométrie de C
-           tombe sur la même face que D — question posée à Kelly. Tant qu'elle n'a
-           pas répondu, ces deux côtés n'ont pas de lettre : `cleTypeCote` rendra
-           `null` plutôt qu'une clé inventée qui trouverait le prix d'un autre côté
-           sans que rien ne le signale. */
+           Les lettres sont ÉTABLIES sur la géométrie du fichier fournisseur, pas
+           devinées — mesures en millimètres dans son propre repère :
+    
+             · A — face X = ±1 486, haute de 1 723 : la hauteur de gouttière, donc
+               un LONG CÔTÉ. Il n'est modélisé qu'une fois parce que les deux longs
+               côtés sont identiques — d'où un seul prix pour gauche ET droit.
+             · B — face Y = −1 389, haute de 2 547 (jusqu'à la voûte) : un pignon.
+               Bayes l'appelle lui-même `B_Back_…`, donc l'ARRIÈRE.
+             · D — face Y = +1 389, même hauteur de pignon, `D_Front_…` : l'AVANT.
+             · C — n'est PAS un côté : 0,74 kg, posé entre 1 540 et 2 547 mm sur la
+               face avant, au-dessus du demi-mur D. C'est le bandeau courbe, la
+               ligne la moins chère du tarif. Il passe donc par « paroi courbe »,
+               qui n'a pas de lettre. */
         slug: "n",
         libelle: "N",
         tailles: ["3x3", "4x4", "5x5"],
         cotes: COTES,
-        lettreCote: { arriere: "b", avant: "d" },
+        lettreCote: { avant: "d", arriere: "b", gauche: "a", droit: "a" },
         types: ["vide", "paroi", "porte", "fenetre", "courbe"],
         cleParCote: true,
     },
