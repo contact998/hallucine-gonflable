@@ -100,11 +100,30 @@ export const VUE_3D = {
         sansImpression: ["LEG", "zipper_cover"],
         /* Trois côtés à 120°, et non quatre : ses parois natives sont mesurées à
            −30° et 90°, la troisième à −150°. Le viewer ne peut donc pas se reposer
-           sur les quatre azimuts du configurateur de la X. */
+           sur les quatre azimuts du configurateur de la X.
+    
+           ⚠️ `angleCote` n'est pas un supplément d'âme, c'est ce qui fait tenir le
+           dessin : ses côtés s'appellent a, b, c, donc AUCUN n'est dans la table
+           commune (avant/droit/arrière/gauche). Sans cette ligne, `angleCote` rend
+           son défaut — zéro — pour les trois : les trois parois se posaient au même
+           endroit, tournées de 30° de travers, en travers de la tente, et la caméra
+           ne pivotait jamais vers le côté choisi. Livré comme ça le 10/08/2026,
+           corrigé le 11 sur les mesures ci-dessous.
+    
+           Les trois azimuts sont MESURÉS sur les centres de gravité des GLB, avec
+           la formule de ce fichier — azimut = 90° − atan2(y, x) — revérifiée au
+           degré près sur les quatre pièces de la tente X :
+             · côté « porte » de Bayes, centre (1 632, 0)     → +90°
+             · paroi native, centre (−666, 1 195)             → −30°
+             · le troisième par symétrie, centre (−666, −1 195) → −150°
+           Les trois côtés étant identiques (même prix, même toile), quelle lettre
+           va sur quel azimut n'engage rien — mais ne les permute pas : les codes de
+           configuration des devis déjà partis portent ces lettres. */
         dossier: "v-tent",
         tailleModele: 4,
         socle: SOCLE_COMMUN,
         piece: { vide: null, paroi: "side_wall" },
+        angleCote: { a: -30, b: 90, c: -150 },
         angleNatif: { side_wall: -30, door: 90 },
     },
 };

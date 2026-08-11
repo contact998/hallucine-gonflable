@@ -112,6 +112,33 @@ describe("la N : le prix et le dessin sur la même face", () => {
   });
 });
 
+describe("la V : trois côtés à 120°, hors de la table commune", () => {
+  const V = modele("v");
+  const vue = vue3d(V);
+
+  it("aucun de ses côtés n'est dans la table commune — le piège du 10/08", () => {
+    /* a, b, c ne sont ni avant, ni droit, ni arrière, ni gauche : sans azimut
+       déclaré, `angleCote` rendait son défaut, zéro, pour les trois. Les trois
+       parois se posaient au même endroit et de travers. */
+    for (const cote of V.cotes)
+      expect(ANGLE_COTE_DEFAUT[cote], cote).toBeUndefined();
+  });
+
+  it("chacun a donc son azimut mesuré, sinon il retomberait à zéro", () => {
+    for (const cote of V.cotes)
+      expect(vue.angleCote?.[cote], cote).toBeTypeOf("number");
+  });
+
+  it("les trois parois se posent chacune sur SON côté, à 120° l'une de l'autre", () => {
+    // Ce que le viewer applique : angle du fichier − angle du côté visé.
+    const rotation = (cote: string) => vue.angleNatif.side_wall - angleCote(V, cote);
+    expect(rotation("a")).toBe(0); // la paroi est déjà là dans le fichier
+    expect(rotation("b")).toBe(-120);
+    expect(rotation("c")).toBe(120);
+    expect(new Set(V.cotes.map(rotation)).size).toBe(3);
+  });
+});
+
 describe("les pièces qui ne peuvent pas recevoir d'image", () => {
   it("la structure n'est imprimable chez AUCUN modèle : elle vient du STEP", () => {
     for (const m of MODELES) expect(pieceImprimable(m, "LEG"), m.slug).toBe(false);
