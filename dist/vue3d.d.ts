@@ -83,3 +83,13 @@ export declare const pieceImprimable: (m: Modele, piece: string) => boolean;
 export declare function echelle(m: Modele, taille: string): number;
 /** Tout modèle vendu doit avoir sa vue 3D : sans elle, sa page ne montre rien. */
 export declare const MODELES_SANS_VUE: ("x" | "spider" | "n" | "v")[];
+export declare const estPiece: (piece: string, nature: string) => boolean;
+/** Natures qui portent un liseré de fermeture éclair — les panneaux amovibles.
+ *  La quincaillerie (pieds, caches-zip) n'en a pas : elle ne se dézippe pas. */
+export declare const NATURES_ZIPPEES: readonly ["side_wall", "half_wall", "door", "half_door", "window_wall", "half_window_wall", "wall_curved1", "wall_curved2", "banner", "awning", "junction"];
+/** Natures dont la VITRE est un morceau distinct dans le fichier fournisseur.
+ *  Elle partage la matière de la toile — sans repérage, teindre la paroi
+ *  peindrait la fenêtre avec, et la fenêtre se lirait comme un mur plein. */
+export declare const NATURES_VITREES: readonly ["window_wall"];
+export declare const porteLisere: (piece: string) => boolean;
+export declare const porteVitre: (piece: string) => boolean;

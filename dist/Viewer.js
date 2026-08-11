@@ -28,26 +28,19 @@ import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 import { ZONES_COULEUR, ZONE_AUVENT, TEINTE_NUE, hexDeTeinte } from "./couleurs.js";
 import { modele as trouverModele } from "./composition.js";
-import { vue3d, urlPiece, echelle, angleCote, pieceDeCote, ANGLE_COTE_DEFAUT } from "./vue3d.js";
+import { vue3d, urlPiece, echelle, angleCote, pieceDeCote, porteLisere, porteVitre, ANGLE_COTE_DEFAUT } from "./vue3d.js";
 import { composerPan, chargerImage } from "./visuel.js";
 const RAD = Math.PI / 180;
 const MM_EN_M = 0.001;
-/** Pièces amovibles : un liseré sombre court sur leur pourtour — c'est la
- *  fermeture éclair qui fixe le panneau aux arches. Tracé depuis les arêtes
- *  vives du bord (la vraie texture de zip viendra avec le glTF UV fournisseur). */
-const AVEC_LISERE = new Set(["side_wall", "door", "window_wall", "wall_curved1", "wall_curved2", "awning", "junction"]);
+/* Pièces amovibles : un liseré sombre court sur leur pourtour — c'est la
+   fermeture éclair qui fixe le panneau aux arches, tracée depuis les arêtes
+   vives du bord. Quelles pièces en portent, et lesquelles ont une vitre à part,
+   se décide sur la NATURE de la pièce et non sur son nom complet : la règle vit
+   dans `vue3d.ts`, où elle se teste sans navigateur. */
 /* Lignes « grasses » : WebGL plafonne les lignes natives à 1 px — trop fin pour
    lire une couture. Largeur en pixels d'écran ; la résolution est renseignée
    par le viewer à chaque redimensionnement. */
 const LISERE_MAT = new LineMaterial({ color: 0x2f353d, linewidth: 2.5, worldUnits: false });
-/** Pièces où la vitre est un morceau distinct dans le fichier fournisseur.
- *  Bayes la livre bien à part — même géométrie qu'au temps du STEP, 210 × 1559
- *  × 447 mm — mais elle PARTAGE la matière de la toile : sans ça, teindre la
- *  paroi peignait la fenêtre avec.
- *  `wall_curved2` (bandeau courbe à fenêtre) n'y est pas : sa fenêtre est fondue
- *  dans un morceau unique, elle ne se lit qu'au liseré tant qu'ils ne la
- *  séparent pas. Rien à inventer ici. */
-const AVEC_VITRE = new Set(["window_wall"]);
 /** Toile blanche translucide — l'opacité 0,42 est celle que portait la matière
  *  « vitre » du STEP, reprise telle quelle plutôt que redevinée. */
 const VITRE_MAT = new THREE.MeshStandardMaterial({
@@ -63,7 +56,13 @@ const VITRE_MAT = new THREE.MeshStandardMaterial({
  *  réordonne ses exports. La vitre est le morceau dont la boîte est la plus
  *  petite ET tient entièrement dans celle du plus grand. Si rien ne correspond
  *  — nouvel export, découpe différente — on ne marque rien : la paroi reste
- *  unie, elle ne casse pas. */
+ *  unie, elle ne casse pas.
+ *
+ *  On compare des AIRES, pas des volumes. Les panneaux de la N sont des plans
+ *  d'épaisseur nulle : leur volume vaut zéro, celui de la toile comme celui de
+ *  la vitre, et la comparaison ne départageait rien. L'aire de la plus grande
+ *  face vaut pour les deux découpes — 697 000 contre 5 762 000 mm² sur la X,
+ *  880 000 contre 4 617 000 sur la N. */
 function marquerVitre(scene) {
     const mailles = [];
     scene.traverse((o) => {
@@ -80,15 +79,16 @@ function marquerVitre(scene) {
         m.geometry.computeBoundingBox();
         return m.geometry.boundingBox.clone().applyMatrix4(m.matrixWorld);
     });
-    const volume = (b) => {
+    const aire = (b) => {
         const d = b.getSize(new THREE.Vector3());
-        return d.x * d.y * d.z;
+        const [a, deux] = [d.x, d.y, d.z].sort((x, y) => y - x);
+        return a * deux;
     };
     let iPetit = 0, iGrand = 0;
     boites.forEach((b, i) => {
-        if (volume(b) < volume(boites[iPetit]))
+        if (aire(b) < aire(boites[iPetit]))
             iPetit = i;
-        if (volume(b) > volume(boites[iGrand]))
+        if (aire(b) > aire(boites[iGrand]))
             iGrand = i;
     });
     if (iPetit === iGrand)
@@ -348,7 +348,7 @@ function charger(loader, m, nom) {
                     mat.side = THREE.DoubleSide;
                 if (!maille.isMesh)
                     return;
-                if (AVEC_LISERE.has(nom)) {
+                if (porteLisere(nom)) {
                     /* Seulement les grands pans de toile — pas la quincaillerie des pieds
                        d'auvent, dont les arêtes feraient du bruit. */
                     maille.geometry.computeBoundingBox();
@@ -362,7 +362,7 @@ function charger(loader, m, nom) {
                 }
             });
             lignes.forEach(([m, l]) => m.add(l));
-            if (AVEC_VITRE.has(nom))
+            if (porteVitre(nom))
                 marquerVitre(g.scene);
             return g.scene;
         });

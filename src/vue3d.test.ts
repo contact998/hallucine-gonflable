@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { MODELES, modele } from "./composition.js";
 import {
   VUE_3D, vue3d, urlPiece, echelle, pieceImprimable, MODELES_SANS_VUE,
-  angleCote, pieceDeCote, ANGLE_COTE_DEFAUT,
+  angleCote, pieceDeCote, ANGLE_COTE_DEFAUT, estPiece, porteLisere, porteVitre,
 } from "./vue3d.js";
 
 describe("la vue 3D de chaque modèle", () => {
@@ -136,6 +136,45 @@ describe("la V : trois côtés à 120°, hors de la table commune", () => {
     expect(rotation("b")).toBe(-120);
     expect(rotation("c")).toBe(120);
     expect(new Set(V.cotes.map(rotation)).size).toBe(3);
+  });
+});
+
+describe("zip et vitre : la NATURE de la pièce, pas son nom", () => {
+  it("les panneaux de la tente X gardent leur liseré", () => {
+    for (const p of ["side_wall", "door", "window_wall", "wall_curved1", "awning", "junction"])
+      expect(porteLisere(p), p).toBe(true);
+  });
+
+  it("ceux de la N aussi, alors qu'ils portent leur côté en préfixe", () => {
+    /* LE défaut : la règle était en égalité stricte sur les noms de la X. Une
+       porte de la N s'affichait donc sans la moindre couture — un mur plein. */
+    for (const p of ["a_side_wall", "a_door", "b_door", "b_window_wall", "d_half_wall", "d_half_door", "c_banner"])
+      expect(porteLisere(p), p).toBe(true);
+  });
+
+  it("la quincaillerie n'en porte pas : elle ne se dézippe pas", () => {
+    for (const p of ["roof", "LEG", "zipper_cover", "window_pvc"])
+      expect(porteLisere(p), p).toBe(false);
+  });
+
+  it("la vitre se cherche sur toute paroi à fenêtre, quel que soit son côté", () => {
+    expect(porteVitre("window_wall")).toBe(true);
+    expect(porteVitre("a_window_wall")).toBe(true);
+    expect(porteVitre("b_window_wall")).toBe(true);
+    // Fondue dans un morceau unique chez Bayes : rien à repérer, mais la règle
+    // le laisse passer — `marquerVitre` s'arrête tout seul faute de morceaux.
+    expect(porteVitre("d_half_window_wall")).toBe(true);
+  });
+
+  it("mais pas sur une paroi pleine ni sur une porte", () => {
+    for (const p of ["side_wall", "a_side_wall", "door", "a_door", "c_banner"])
+      expect(porteVitre(p), p).toBe(false);
+  });
+
+  it("un préfixe n'est pas un suffixe : « window_wall_bis » n'est pas une fenêtre", () => {
+    expect(porteVitre("window_wall_bis")).toBe(false);
+    expect(estPiece("a_side_wall", "side_wall")).toBe(true);
+    expect(estPiece("aside_wall", "side_wall")).toBe(false);
   });
 });
 

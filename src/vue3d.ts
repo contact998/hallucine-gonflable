@@ -234,3 +234,36 @@ export function echelle(m: Modele, taille: string): number {
 
 /** Tout modèle vendu doit avoir sa vue 3D : sans elle, sa page ne montre rien. */
 export const MODELES_SANS_VUE = MODELES.filter((m) => !VUE_3D[m.slug]).map((m) => m.slug);
+
+/* ── La NATURE d'une pièce ──────────────────────────────────────────────────
+ *
+ * Bayes colle le côté devant le nom chez la N : `a_side_wall`, `b_door`,
+ * `d_half_window_wall`. Tout ce qui décrit une pièce — son zip, sa vitre —
+ * porte donc sur sa NATURE, jamais sur son nom complet.
+ *
+ * Écrites en égalité stricte, ces règles ne reconnaissaient que les noms de la
+ * tente X. La N y perdait ses fermetures éclair et ses vitres, sans que rien ne
+ * le signale : une paroi à fenêtre s'affichait comme une paroi pleine, une
+ * porte comme un mur. C'est ce qui se voit sur une capture, et seulement là.
+ */
+export const estPiece = (piece: string, nature: string): boolean =>
+  piece === nature || piece.endsWith(`_${nature}`);
+
+/** Natures qui portent un liseré de fermeture éclair — les panneaux amovibles.
+ *  La quincaillerie (pieds, caches-zip) n'en a pas : elle ne se dézippe pas. */
+export const NATURES_ZIPPEES = [
+  "side_wall", "half_wall", "door", "half_door",
+  "window_wall", "half_window_wall",
+  "wall_curved1", "wall_curved2", "banner", "awning", "junction",
+] as const;
+
+/** Natures dont la VITRE est un morceau distinct dans le fichier fournisseur.
+ *  Elle partage la matière de la toile — sans repérage, teindre la paroi
+ *  peindrait la fenêtre avec, et la fenêtre se lirait comme un mur plein. */
+export const NATURES_VITREES = ["window_wall"] as const;
+
+export const porteLisere = (piece: string): boolean =>
+  NATURES_ZIPPEES.some((n) => estPiece(piece, n));
+
+export const porteVitre = (piece: string): boolean =>
+  NATURES_VITREES.some((n) => estPiece(piece, n));
