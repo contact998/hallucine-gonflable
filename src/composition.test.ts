@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   TYPES_COTE, COTES, TAILLES, auventPossible, typeCote,
   cleTente, cleTypeCote, cleAuvent, cleImpression, cleAccessoire,
-  MODELES, modele, typePossible, bandeauPossible, cleBandeau, cleRepliCote,
+  MODELES, modele, typePossible, demiMurPossible, typesDemiMur, cleDemiMur, cleRepliCote,
   IMPRESSIONS, ACCESSOIRES,
 } from "./composition.js";
 
@@ -96,9 +96,12 @@ describe("les clés du catalogue — le contrat avec le CRM", () => {
 describe("la N : quelle lettre du tarif pour quel côté", () => {
   const N = modele("n");
 
-  it("les deux côtés établis par les calques de Bayes donnent leur clé", () => {
+  it("les DEUX pignons portent la paroi entière B — dit par Bayes le 11/08", () => {
+    /* Le D n'est pas la paroi du pignon avant : c'est le demi-mur en option
+       sous le bandeau. La confusion facturait l'avant 430 € au lieu de 470. */
     expect(cleTypeCote(N, "3x3", "paroi", "arriere")).toBe("tente-n-3x3-paroi-b");
-    expect(cleTypeCote(N, "3x3", "porte", "avant")).toBe("tente-n-3x3-paroi-porte-d");
+    expect(cleTypeCote(N, "3x3", "paroi", "avant")).toBe("tente-n-3x3-paroi-b");
+    expect(cleTypeCote(N, "3x3", "porte", "avant")).toBe("tente-n-3x3-paroi-porte-b");
   });
 
   it("les deux longs côtés partagent la lettre A : ils sont identiques", () => {
@@ -110,36 +113,38 @@ describe("la N : quelle lettre du tarif pour quel côté", () => {
     expect(cleTypeCote(N, "3x3", "paroi", "nulle-part")).toBeNull();
   });
 
-  it("le bandeau n'est plus un CHOIX de côté : c'est un second étage", () => {
-    /* Il ne remplace pas la paroi, il se pose au-dessus. Le demander comme un
-       type ne rend donc plus rien — c'est `cleBandeau` qui le facture. */
-    expect(typePossible(N, "courbe")).toBe(false);
-    expect(cleTypeCote(N, "3x3", "courbe", "avant")).toBeNull();
-    expect(cleBandeau(N, "3x3")).toBe("tente-n-3x3-paroi-courbe");
-    expect(cleBandeau(N, "5x5")).toBe("tente-n-5x5-paroi-courbe");
+  it("le bandeau courbe est un CHOIX de pignon, sans lettre au tarif", () => {
+    expect(typePossible(N, "courbe", "avant")).toBe(true);
+    expect(cleTypeCote(N, "3x3", "courbe", "avant")).toBe("tente-n-3x3-paroi-courbe");
   });
 
-  it("le pignon AVANT le prend avec n'importe quelle paroi — sa toile s'arrête à 1 944", () => {
-    // Ouverture 2 547, toile 0 → 1 944 : sans le bandeau, un trou de 603 mm.
-    for (const type of ["vide", "paroi", "porte", "fenetre"])
-      expect(bandeauPossible(N, "avant", type), type).toBe(true);
-  });
-
-  it("le pignon ARRIÈRE seulement s'il reste ouvert — sa toile monte déjà à 2 547", () => {
-    expect(bandeauPossible(N, "arriere", "vide")).toBe(true);
-    for (const type of ["paroi", "porte", "fenetre"])
-      expect(bandeauPossible(N, "arriere", type), type).toBe(false);
-  });
-
-  it("jamais sur un long côté : sa toile fait la hauteur de son ouverture", () => {
+  it("mais pas sur un long côté : il n'y a pas d'arc à fermer", () => {
     for (const cote of ["gauche", "droit"])
-      for (const type of ["vide", "paroi", "porte", "fenetre"])
-        expect(bandeauPossible(N, cote, type), `${cote} ${type}`).toBe(false);
+      expect(typePossible(N, "courbe", cote), cote).toBe(false);
   });
 
-  it("les modèles sans bandeau n'en portent nulle part, et n'ont pas de clé", () => {
-    for (const cote of X.cotes) expect(bandeauPossible(X, cote, "paroi"), cote).toBe(false);
-    expect(cleBandeau(X, "4x4")).toBeNull();
+  it("le DEMI-MUR ne se pose que sous le bandeau, et que sur le pignon avant", () => {
+    /* C'est le bandeau qui porte la bande de zip sur laquelle il s'accroche —
+       dit par Bayes : « quand l'avant porte le bandeau C, il y a une bande de
+       zip et le demi-mur D devient une option ». */
+    expect(demiMurPossible(N, "avant", "courbe")).toBe(true);
+    for (const type of ["vide", "paroi", "porte", "fenetre"])
+      expect(demiMurPossible(N, "avant", type), type).toBe(false);
+    expect(demiMurPossible(N, "arriere", "courbe")).toBe(false);
+    expect(demiMurPossible(N, "gauche", "courbe")).toBe(false);
+  });
+
+  it("il a ses trois variantes au tarif, comme une paroi", () => {
+    expect(cleDemiMur(N, "3x3", "paroi")).toBe("tente-n-3x3-paroi-d");
+    expect(cleDemiMur(N, "3x3", "porte")).toBe("tente-n-3x3-paroi-porte-d");
+    expect(cleDemiMur(N, "3x3", "fenetre")).toBe("tente-n-3x3-paroi-fenetre-d");
+    expect(cleDemiMur(N, "3x3", "vide")).toBeNull();
+    expect(typesDemiMur(N)).toContain("porte");
+  });
+
+  it("les modèles sans demi-mur n'en portent nulle part", () => {
+    for (const cote of X.cotes) expect(demiMurPossible(X, cote, "courbe"), cote).toBe(false);
+    expect(cleDemiMur(X, "4x4", "paroi")).toBeNull();
     // La X garde SA paroi courbe, qui est une paroi entière — 35 → 1 919 mm —
     // et non un bandeau : deux produits différents sous un nom voisin.
     expect(typePossible(X, "courbe")).toBe(true);
@@ -178,7 +183,7 @@ describe("le dessin fait foi : un choix livré mais pas encore tarifé", () => {
 
   it("le repli suit le côté chez un modèle facturé par côté", () => {
     // Chez la N, un repli sans lettre trouverait le prix d'un AUTRE pignon.
-    expect(cleRepliCote(modele("n"), "3x3", "avant")).toBe("tente-n-3x3-paroi-d");
+    expect(cleRepliCote(modele("n"), "3x3", "avant")).toBe("tente-n-3x3-paroi-b");
     expect(cleRepliCote(modele("n"), "3x3", "arriere")).toBe("tente-n-3x3-paroi-b");
     expect(cleRepliCote(modele("n"), "3x3")).toBeNull();
   });

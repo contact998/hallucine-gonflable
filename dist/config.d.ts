@@ -12,9 +12,9 @@ export interface ConfigTente {
     taille: string;
     cotes: Record<string, string>;
     auvents: Record<string, boolean>;
-    /** Côtés qui portent un bandeau courbe EN PLUS de leur paroi. Voir
-     *  `BandeauModele` : c'est un second étage, pas un choix de côté. */
-    bandeaux: Record<string, boolean>;
+    /** Ce que porte le demi-mur de chaque côté, quand ce côté peut en recevoir un
+     *  — « vide » ou absent = pas de demi-mur. Voir `DemiMurModele`. */
+    demiMurs: Record<string, string>;
     options: string[];
 }
 /** Composition → code d'URL. */

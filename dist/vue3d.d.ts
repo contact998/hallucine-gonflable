@@ -39,9 +39,9 @@ export interface Vue3D {
     angleCote?: Record<string, number>;
     /** Pièce d'auvent, si le modèle en propose un. */
     pieceAuvent?: string;
-    /** Pièce du bandeau — le second étage d'un côté, posé au-dessus de sa paroi
-     *  sans la remplacer. Voir `BandeauModele` dans `composition.ts`. */
-    pieceBandeau?: string;
+    /** Pièces du DEMI-MUR, par type — le second étage qui se pose SOUS le choix
+     *  du côté. Voir `DemiMurModele` dans `composition.ts`. */
+    pieceDemiMur?: Record<string, string>;
     /**
      * Portions d'une pièce du SOCLE qui appartiennent à un côté, et qui
      * apparaissent et disparaissent avec sa paroi.
@@ -57,6 +57,7 @@ export interface Vue3D {
     socleParCote?: {
         piece: string;
         cotes: readonly string[];
+        avecChoix: string;
     };
     /**
      * Pièces qui ne portent AUCUNE coordonnée d'impression, donc sur lesquelles
@@ -94,6 +95,8 @@ export declare const angleCote: (m: Modele, cote: string) => number;
  *  pleine, en rouge, jusqu'à ce qu'il donne le sien. Cacher un produit qui
  *  existe coûte plus cher qu'afficher un prix à confirmer. */
 export declare const dessinable: (m: Modele, cote: string, choix: string) => boolean;
+/** Le fichier du demi-mur pour ce type. `null` si le modèle n'en a pas. */
+export declare const pieceDemiMur: (m: Modele, type: string) => string | null;
 /** Le fichier à afficher pour un choix, sur un côté donné. `pieceParCote`
  *  d'abord — les pignons de la N n'ont pas la toile de ses longs côtés — puis
  *  `piece`, qui vaut pour les modèles dont un côté vaut l'autre. */

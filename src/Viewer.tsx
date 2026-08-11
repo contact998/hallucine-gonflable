@@ -28,7 +28,7 @@ import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeome
 import { ZONES_COULEUR, ZONE_AUVENT, TEINTE_NUE, hexDeTeinte } from "./couleurs.js";
 import type { VisuelPose } from "./pose.js";
 import { modele as trouverModele } from "./composition.js";
-import { vue3d, urlPiece, echelle, angleCote, pieceDeCote, porteLisere, porteVitre, ANGLE_COTE_DEFAUT } from "./vue3d.js";
+import { vue3d, urlPiece, echelle, angleCote, pieceDeCote, pieceDemiMur, porteLisere, porteVitre, ANGLE_COTE_DEFAUT } from "./vue3d.js";
 import { composerPan, chargerImage } from "./visuel.js";
 
 const RAD = Math.PI / 180;
@@ -422,8 +422,9 @@ export interface TenteViewerProps {
   cotes: Record<string, string>;
   /** Auvent coché par côté — se cumule avec l'élément du côté. */
   auvents: Record<string, boolean>;
-  /** Bandeau coché par côté — le second étage, posé au-dessus de la paroi. */
-  bandeaux?: Record<string, boolean>;
+  /** Ce que porte le demi-mur de chaque côté — le second étage posé SOUS le
+   *  choix du côté. « vide » ou absent = pas de demi-mur. */
+  demiMurs?: Record<string, string>;
   /** Teinte choisie par zone (« toit », « structure ») — clé du nuancier. */
   couleurs: Record<string, string>;
   /** Teinte de la paroi de chaque côté — une case d'impression par côté. */
@@ -447,7 +448,7 @@ export interface TenteViewerProps {
   captureRef?: React.MutableRefObject<(() => string | null) | null>;
 }
 
-export default function TenteViewer({ cotes, auvents, bandeaux, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, captureRef }: TenteViewerProps) {
+export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, captureRef }: TenteViewerProps) {
   const M = trouverModele(modele);
   const VUE = vue3d(M);
 
@@ -955,22 +956,23 @@ export default function TenteViewer({ cotes, auvents, bandeaux, couleurs, couleu
          la N ne portent pas la même toile. */
       const nom = pieceDeCote(M, cote, choix);
       if (nom) poser(nom, cote, couleursCote[cote]);
-      /* Le bandeau se pose EN PLUS de la paroi, sur le même côté et avec sa
-         teinte : c'est le haut de la même façade, pas une pièce indépendante. */
-      if (bandeaux?.[cote] && VUE.pieceBandeau) poser(VUE.pieceBandeau, cote, couleursCote[cote]);
+      /* Le demi-mur se pose SOUS le choix du côté, sur la même face et avec sa
+         teinte : c'est le bas de la même façade, pas une pièce indépendante. */
+      const basNom = pieceDemiMur(M, demiMurs?.[cote] ?? "vide");
+      if (basNom) poser(basNom, cote, couleursCote[cote]);
       /* L'auvent porte UNE teinte pour toute la tente, pas une par côté : c'est
          la même toile imprimée d'un seul tenant, et le prix est unique. */
       if (auvents[cote] && VUE.pieceAuvent) poser(VUE.pieceAuvent, cote, teinteAuvent);
     }
     return () => { vivant = false; };
-  }, [cotes, auvents, bandeaux, couleursCote, teinteAuvent, actif, pret]);
+  }, [cotes, auvents, demiMurs, couleursCote, teinteAuvent, actif, pret]);
 
-  /* ── La sangle de zip suit la paroi de son côté ──────────────────────── */
-  /* Elle n'existe que POUR elle : sous une paroi c'est ce qu'on voit du zip,
-     sur un côté ouvert c'est une toile tendue en travers de l'ouverture. Elle
-     appartient pourtant au socle, chargé une fois pour toutes — d'où ce réglage
-     de visibilité à part, plutôt qu'un découpage à la volée qui ne saurait pas
-     revenir quand le client repose une paroi. */
+  /* ── La sangle de zip suit le BANDEAU de son côté ────────────────────── */
+  /* Dit par Bayes : la bande du pignon avant arrive avec le bandeau courbe,
+     c'est elle qui porte le demi-mur. Sans bandeau, il n'y a pas de bande —
+     elle restait tendue en travers de l'ouverture. Elle appartient pourtant au
+     socle, chargé une fois pour toutes : d'où ce réglage de visibilité à part
+     plutôt qu'un découpage, qui ne saurait pas revenir. */
   useEffect(() => {
     const parCote = VUE.socleParCote;
     if (!parCote || !pret) return;
@@ -978,7 +980,7 @@ export default function TenteViewer({ cotes, auvents, bandeaux, couleurs, couleu
     if (!piece) return;
     piece.traverse((o) => {
       const cote = o.userData.cote as string | undefined;
-      if (cote) o.visible = (cotes[cote] ?? "vide") !== "vide";
+      if (cote) o.visible = cotes[cote] === parCote.avecChoix;
     });
   }, [cotes, pret]);
 

@@ -24,8 +24,9 @@ export declare const MODELES: readonly [{
     readonly tailleDefaut: "3x3";
     readonly cotes: readonly ["avant", "droit", "arriere", "gauche"];
     readonly lettreCote: Record<string, string>;
-    readonly types: readonly ["vide", "paroi", "porte", "fenetre"];
-    readonly bandeau: BandeauModele;
+    readonly types: readonly ["vide", "paroi", "porte", "fenetre", "courbe"];
+    readonly typesCote: Record<string, readonly string[]>;
+    readonly demiMur: DemiMurModele;
     readonly cleParCote: true;
 }, {
     readonly slug: "v";
@@ -37,25 +38,32 @@ export declare const MODELES: readonly [{
     readonly cleParCote: false;
 }];
 /**
- * Un SECOND ÉTAGE au-dessus de la paroi d'un côté — le bandeau courbe de la N.
+ * Le DEMI-MUR : un second étage qui se pose SOUS un choix de côté.
  *
- * Ce n'est pas un choix de côté de plus : le côté garde sa paroi, et le bandeau
- * se cumule par-dessus, comme l'auvent se cumule par-devant. C'est ce que le
- * dessin impose, pas une commodité d'affichage : une toile qui s'arrête à
- * 1 944 mm sous une ouverture de 2 547 ne ferme rien toute seule.
+ * Chez la N, sous le bandeau courbe. Un pignon avant se compose donc de deux
+ * façons — une paroi entière (type B, du sol à la voûte), ou le bandeau seul,
+ * avec ou sans son demi-mur en dessous. C'est Bayes qui l'a dit, et c'est ce
+ * que le fichier montre : le demi-mur s'arrête à 1 944 mm sous une ouverture de
+ * 2 547, et la bande de zip sur laquelle il s'accroche arrive avec le bandeau.
  */
-export interface BandeauModele {
-    /** Suffixe de la clé catalogue : `tente-<modele>-<taille>-<slug>`. */
-    slug: string;
-    /** L'option d'impression que le bandeau déclenche quand son côté est habillé. */
+export interface DemiMurModele {
+    /** Lettre du tarif : `tente-n-3x3-paroi-porte-d`. */
+    lettre: string;
+    /** Le choix de côté SOUS lequel il se pose. Chez la N, le bandeau courbe :
+     *  c'est lui qui porte la bande de zip sur laquelle le demi-mur s'accroche,
+     *  donc il n'existe pas sans lui. */
+    sousChoix: string;
+    /** Les côtés où il existe. */
+    cotes: readonly string[];
+    /** Ce qu'il peut porter, comme une paroi — « vide » = pas de demi-mur. */
+    types: readonly string[];
+    /** L'option d'impression qu'il déclenche quand son côté est habillé. */
     impression: string;
-    /** Par côté, les choix de paroi AVEC lesquels il se pose. Un côté absent n'en
-     *  porte jamais. */
-    cotes: Record<string, readonly string[]>;
 }
 export type Modele = (typeof MODELES)[number] & {
     lettreCote?: Record<string, string>;
-    bandeau?: BandeauModele;
+    typesCote?: Record<string, readonly string[]>;
+    demiMur?: DemiMurModele;
 };
 export type SlugModele = Modele["slug"];
 /** Le modèle historique. Un code de configuration sans modèle est une tente X :
@@ -71,7 +79,8 @@ export type Taille = string;
 /** Ce type de côté est-il au catalogue de ce modèle ? Le Spider n'a pas de
  *  paroi courbe, la V n'a qu'un modèle de paroi — demander une clé pour un type
  *  absent ne trouverait aucun prix, autant le dire tout de suite. */
-export declare const typePossible: (m: Modele, type: string) => boolean;
+export declare const typesDuCote: (m: Modele, cote?: string) => readonly string[];
+export declare const typePossible: (m: Modele, type: string, cote?: string) => boolean;
 /**
  * Clé de REPLI quand le tarif n'a pas encore la ligne d'un choix que le dessin
  * sait pourtant montrer : la paroi pleine du même modèle et de la même taille.
@@ -88,10 +97,13 @@ export declare const cleRepliCote: (m: Modele, taille: string, cote?: string) =>
 /** Le bandeau se pose-t-il sur CE côté, au-dessus de CE choix de paroi ?
  *  Voir `BandeauModele` : la réponse vient des hauteurs mesurées, côté par
  *  côté, pas d'une règle générale. */
-export declare const bandeauPossible: (m: Modele, cote: string, type: string) => boolean;
+export declare const demiMurPossible: (m: Modele, cote: string, choixCote: string) => boolean;
+/** Ce que le demi-mur peut porter — les mêmes types qu'une paroi. */
+export declare const typesDemiMur: (m: Modele) => readonly string[];
+/** Clé catalogue d'un demi-mur : `tente-n-3x3-paroi-porte-d`. */
+export declare function cleDemiMur(m: Modele, taille: string, type: string): string | null;
 /** Clé catalogue du bandeau — sans lettre de côté : le même se pose sur l'un ou
  *  l'autre pignon, et le tarif n'en porte qu'un. `null` si le modèle n'en a pas. */
-export declare const cleBandeau: (m: Modele, taille: string) => string | null;
 /**
  * Ce qu'un côté peut porter. Un côté porte UN seul type — ils sont exclusifs
  * par construction, ce qui rend inutile toute règle du genre « pas de porte sur

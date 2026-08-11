@@ -7,7 +7,7 @@ const vide = (): ConfigTente => ({
   taille: "4x4",
   cotes: { avant: "vide", droit: "vide", arriere: "vide", gauche: "vide" },
   auvents: { avant: false, droit: false, arriere: false, gauche: false },
-  bandeaux: { avant: false, droit: false, arriere: false, gauche: false },
+  demiMurs: { avant: "vide", droit: "vide", arriere: "vide", gauche: "vide" },
   options: [],
 });
 
@@ -129,32 +129,30 @@ describe("codes de configuration multi-modèles", () => {
     expect(decoderConfig("licorne.4x4")).toBeNull();
   });
 
-  it("le bandeau de la N voyage avec sa paroi, dans la même lettre", () => {
-    // « s » = porte + bandeau sur le pignon avant : les deux étages en un signe.
-    const c = decoderConfig("n.3x3.s-p-")!;
-    expect(c.cotes.avant).toBe("porte");
-    expect(c.bandeaux.avant).toBe(true);
-    expect(encoderConfig(c)).toBe("n.3x3.s-p-");
+  it("le demi-mur de la N voyage avec son bandeau, dans la même lettre", () => {
+    // « r » = bandeau + demi-mur à porte : les deux étages en un signe.
+    const c = decoderConfig("n.3x3.r-p-")!;
+    expect(c.cotes.avant).toBe("courbe");
+    expect(c.demiMurs.avant).toBe("porte");
+    expect(encoderConfig(c)).toBe("n.3x3.r-p-");
   });
 
-  it("un bandeau là où le dessin n'en veut pas est ignoré, pas inventé", () => {
-    /* « r » = paroi + bandeau. Sur un long côté il n'y a pas d'arc à fermer, et
-       sur le pignon arrière la toile monte déjà à la voûte : la paroi reste, le
-       bandeau tombe. Ça arrive par une URL retouchée à la main. */
-    const c = decoderConfig("n.3x3.-rr-")!;
-    expect(c.cotes.droit).toBe("paroi");
-    expect(c.bandeaux.droit).toBe(false);
-    expect(c.cotes.arriere).toBe("paroi");
-    expect(c.bandeaux.arriere).toBe(false);
-  });
-
-  it("un vieux code « c » de la N se relit en bandeau seul", () => {
-    /* Du temps où le bandeau était un choix de côté, il s'écrivait « c ». Il a
-       toujours voulu dire « le haut fermé, le bas ouvert » : c'est ce qu'on en
-       fait, plutôt que de le jeter. */
+  it("« c » reste le bandeau SEUL, comme depuis le premier jour", () => {
     const c = decoderConfig("n.3x3.c---")!;
-    expect(c.cotes.avant).toBe("vide");
-    expect(c.bandeaux.avant).toBe(true);
+    expect(c.cotes.avant).toBe("courbe");
+    expect(c.demiMurs.avant).toBe("vide");
+    expect(encoderConfig(c)).toBe("n.3x3.c---");
+  });
+
+  it("un demi-mur là où le dessin n'en veut pas est ignoré, pas inventé", () => {
+    /* Le demi-mur n'existe que sous le bandeau, et que sur le pignon avant.
+       Ailleurs la lettre retombe sur le bandeau seul — et le bandeau lui-même
+       tombe sur un long côté, qui n'a pas d'arc à fermer. */
+    const c = decoderConfig("n.3x3.-qq-")!;
+    expect(c.cotes.droit).toBe("vide");
+    expect(c.demiMurs.droit).toBe("vide");
+    expect(c.cotes.arriere).toBe("courbe");
+    expect(c.demiMurs.arriere).toBe("vide");
   });
 
   it("la N a quatre côtés nommés comme ceux de la X, mais facturés séparément", () => {

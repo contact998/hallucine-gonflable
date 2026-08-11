@@ -3,6 +3,7 @@ import { MODELES, modele } from "./composition.js";
 import {
   VUE_3D, vue3d, urlPiece, echelle, pieceImprimable, MODELES_SANS_VUE,
   angleCote, pieceDeCote, ANGLE_COTE_DEFAUT, estPiece, porteLisere, porteVitre, dessinable,
+  pieceDemiMur as pieceDemiMurDe,
 } from "./vue3d.js";
 
 describe("la vue 3D de chaque modèle", () => {
@@ -61,12 +62,22 @@ describe("la N : le prix et le dessin sur la même face", () => {
   const V = vue3d(N);
 
   it("chaque côté reçoit la toile que Bayes a faite pour LUI", () => {
-    // Les deux pignons sont deux produits : demi-mur devant (0 → 1 944 mm),
-    // pignon plein derrière (0 → 2 547). Le long côté A sert les deux autres.
-    expect(pieceDeCote(N, "avant", "paroi")).toBe("d_half_wall");
+    /* Les deux pignons portent la MÊME paroi entière — la B, 0 → 2 547 mm,
+       jusqu'à la voûte. Le long côté A, droit et plus bas, sert les deux
+       autres. Le demi-mur D n'est pas une paroi de pignon : il se pose sous le
+       bandeau, et il a sa propre table. */
+    expect(pieceDeCote(N, "avant", "paroi")).toBe("b_side_wall");
     expect(pieceDeCote(N, "arriere", "paroi")).toBe("b_side_wall");
     expect(pieceDeCote(N, "gauche", "paroi")).toBe("a_side_wall");
     expect(pieceDeCote(N, "droit", "fenetre")).toBe("a_window_wall");
+  });
+
+  it("le demi-mur a ses trois toiles, et elles ne servent qu'à lui", () => {
+    expect(pieceDemiMurDe(N, "paroi")).toBe("d_half_wall");
+    expect(pieceDemiMurDe(N, "porte")).toBe("d_half_door");
+    expect(pieceDemiMurDe(N, "fenetre")).toBe("d_half_window_wall");
+    expect(pieceDemiMurDe(N, "vide")).toBeNull();
+    expect(pieceDemiMurDe(modele("x"), "paroi")).toBeNull();
   });
 
   it("la toile posée porte la lettre que le devis facture", () => {
@@ -214,8 +225,9 @@ describe("les pièces qui dormaient dans les dossiers", () => {
   it("un choix sans pièce reste indessinable — on n'invente pas de produit", () => {
     expect(dessinable(modele("v"), "a", "fenetre")).toBe(false);
     expect(dessinable(modele("v"), "a", "jonction")).toBe(false);
-    // Chez la N, le bandeau n'est plus un choix de côté mais un second étage.
-    expect(dessinable(modele("n"), "avant", "courbe")).toBe(false);
+    // Le bandeau de la N est un choix de PIGNON, jamais de long côté.
+    expect(dessinable(modele("n"), "avant", "courbe")).toBe(true);
+    expect(dessinable(modele("n"), "avant", "jonction")).toBe(false);
   });
 
   it("« ouvert » ne se dessine jamais : c'est l'absence de pièce", () => {

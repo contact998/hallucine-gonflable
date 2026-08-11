@@ -4,8 +4,9 @@ export interface TenteViewerProps {
     cotes: Record<string, string>;
     /** Auvent coché par côté — se cumule avec l'élément du côté. */
     auvents: Record<string, boolean>;
-    /** Bandeau coché par côté — le second étage, posé au-dessus de la paroi. */
-    bandeaux?: Record<string, boolean>;
+    /** Ce que porte le demi-mur de chaque côté — le second étage posé SOUS le
+     *  choix du côté. « vide » ou absent = pas de demi-mur. */
+    demiMurs?: Record<string, string>;
     /** Teinte choisie par zone (« toit », « structure ») — clé du nuancier. */
     couleurs: Record<string, string>;
     /** Teinte de la paroi de chaque côté — une case d'impression par côté. */
@@ -28,4 +29,4 @@ export interface TenteViewerProps {
     /** Reçoit la fonction de capture (JPEG data-URL) — jointe à la demande de devis. */
     captureRef?: React.MutableRefObject<(() => string | null) | null>;
 }
-export default function TenteViewer({ cotes, auvents, bandeaux, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, captureRef }: TenteViewerProps): import("react").JSX.Element;
+export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, captureRef }: TenteViewerProps): import("react").JSX.Element;

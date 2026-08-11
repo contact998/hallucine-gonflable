@@ -28,7 +28,7 @@ import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 import { ZONES_COULEUR, ZONE_AUVENT, TEINTE_NUE, hexDeTeinte } from "./couleurs.js";
 import { modele as trouverModele } from "./composition.js";
-import { vue3d, urlPiece, echelle, angleCote, pieceDeCote, porteLisere, porteVitre, ANGLE_COTE_DEFAUT } from "./vue3d.js";
+import { vue3d, urlPiece, echelle, angleCote, pieceDeCote, pieceDemiMur, porteLisere, porteVitre, ANGLE_COTE_DEFAUT } from "./vue3d.js";
 import { composerPan, chargerImage } from "./visuel.js";
 const RAD = Math.PI / 180;
 const MM_EN_M = 0.001;
@@ -420,7 +420,7 @@ function charger(loader, m, nom) {
     }
     return p.then((s) => s.clone(true));
 }
-export default function TenteViewer({ cotes, auvents, bandeaux, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, captureRef }) {
+export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, captureRef }) {
     const M = trouverModele(modele);
     const VUE = vue3d(M);
     const hote = useRef(null);
@@ -916,23 +916,24 @@ export default function TenteViewer({ cotes, auvents, bandeaux, couleurs, couleu
             const nom = pieceDeCote(M, cote, choix);
             if (nom)
                 poser(nom, cote, couleursCote[cote]);
-            /* Le bandeau se pose EN PLUS de la paroi, sur le même côté et avec sa
-               teinte : c'est le haut de la même façade, pas une pièce indépendante. */
-            if (bandeaux?.[cote] && VUE.pieceBandeau)
-                poser(VUE.pieceBandeau, cote, couleursCote[cote]);
+            /* Le demi-mur se pose SOUS le choix du côté, sur la même face et avec sa
+               teinte : c'est le bas de la même façade, pas une pièce indépendante. */
+            const basNom = pieceDemiMur(M, demiMurs?.[cote] ?? "vide");
+            if (basNom)
+                poser(basNom, cote, couleursCote[cote]);
             /* L'auvent porte UNE teinte pour toute la tente, pas une par côté : c'est
                la même toile imprimée d'un seul tenant, et le prix est unique. */
             if (auvents[cote] && VUE.pieceAuvent)
                 poser(VUE.pieceAuvent, cote, teinteAuvent);
         }
         return () => { vivant = false; };
-    }, [cotes, auvents, bandeaux, couleursCote, teinteAuvent, actif, pret]);
-    /* ── La sangle de zip suit la paroi de son côté ──────────────────────── */
-    /* Elle n'existe que POUR elle : sous une paroi c'est ce qu'on voit du zip,
-       sur un côté ouvert c'est une toile tendue en travers de l'ouverture. Elle
-       appartient pourtant au socle, chargé une fois pour toutes — d'où ce réglage
-       de visibilité à part, plutôt qu'un découpage à la volée qui ne saurait pas
-       revenir quand le client repose une paroi. */
+    }, [cotes, auvents, demiMurs, couleursCote, teinteAuvent, actif, pret]);
+    /* ── La sangle de zip suit le BANDEAU de son côté ────────────────────── */
+    /* Dit par Bayes : la bande du pignon avant arrive avec le bandeau courbe,
+       c'est elle qui porte le demi-mur. Sans bandeau, il n'y a pas de bande —
+       elle restait tendue en travers de l'ouverture. Elle appartient pourtant au
+       socle, chargé une fois pour toutes : d'où ce réglage de visibilité à part
+       plutôt qu'un découpage, qui ne saurait pas revenir. */
     useEffect(() => {
         const parCote = VUE.socleParCote;
         if (!parCote || !pret)
@@ -943,7 +944,7 @@ export default function TenteViewer({ cotes, auvents, bandeaux, couleurs, couleu
         piece.traverse((o) => {
             const cote = o.userData.cote;
             if (cote)
-                o.visible = (cotes[cote] ?? "vide") !== "vide";
+                o.visible = cotes[cote] === parCote.avecChoix;
         });
     }, [cotes, pret]);
     return (_jsx("div", { ref: hote, className: "relative w-full h-full min-h-[300px]", children: !pret && (_jsx("div", { className: "absolute inset-0 grid place-items-center pointer-events-none", children: _jsx("p", { className: "text-[#2E4A5E]/60 text-sm", children: labelChargement }) })) }));

@@ -57,9 +57,9 @@ export interface Vue3D {
   angleCote?: Record<string, number>;
   /** Pièce d'auvent, si le modèle en propose un. */
   pieceAuvent?: string;
-  /** Pièce du bandeau — le second étage d'un côté, posé au-dessus de sa paroi
-   *  sans la remplacer. Voir `BandeauModele` dans `composition.ts`. */
-  pieceBandeau?: string;
+  /** Pièces du DEMI-MUR, par type — le second étage qui se pose SOUS le choix
+   *  du côté. Voir `DemiMurModele` dans `composition.ts`. */
+  pieceDemiMur?: Record<string, string>;
   /**
    * Portions d'une pièce du SOCLE qui appartiennent à un côté, et qui
    * apparaissent et disparaissent avec sa paroi.
@@ -72,7 +72,7 @@ export interface Vue3D {
    * Déclaré par modèle et par côté, jamais en général : c'est une observation
    * sur un fichier précis, et les autres tentes n'ont pas à en hériter.
    */
-  socleParCote?: { piece: string; cotes: readonly string[] };
+  socleParCote?: { piece: string; cotes: readonly string[]; avecChoix: string };
   /**
    * Pièces qui ne portent AUCUNE coordonnée d'impression, donc sur lesquelles
    * un visuel ne peut pas se poser.
@@ -141,21 +141,24 @@ export const VUE_3D: Record<string, Vue3D> = {
     socle: SOCLE_COMMUN,
     piece: {
       vide: null, paroi: "a_side_wall", porte: "a_door", fenetre: "a_window_wall",
+      courbe: "c_banner",
     },
-    /* Le bandeau se pose PAR-DESSUS la paroi du côté, il ne la remplace pas :
-       de 1 540 à 2 547 mm quand la toile du pignon avant s'arrête à 1 944. Les
-       404 mm de recouvrement sont le zip qui les tient ensemble. */
-    pieceBandeau: "c_banner",
-    /* Les deux pignons ne portent PAS la même toile, et c'est tout le sujet :
-       l'avant est un demi-mur (0 → 1 944 mm) que le bandeau courbe complète
-       au-dessus, l'arrière un pignon plein qui monte jusqu'à la voûte (2 547).
-       Le long côté A sert la gauche et la droite, il reste dans `piece`.
+    /* Le DEMI-MUR vient sous le bandeau, et seulement là. Il s'arrête à
+       1 944 mm ; le bandeau va de 1 540 à 2 547, et les 404 mm de recouvrement
+       sont la bande de zip qui les tient — celle qui arrive AVEC le bandeau. */
+    pieceDemiMur: {
+      paroi: "d_half_wall", porte: "d_half_door", fenetre: "d_half_window_wall",
+    },
+    /* Les deux PIGNONS portent la même toile entière — la B, de 0 à 2 547 mm,
+       jusqu'à la voûte. Dit par Bayes le 11/08/2026 : « quand l'avant est une
+       paroi entière, c'est une paroi de type B ». Le fichier ne la pose qu'une
+       fois, sur l'arrière ; elle arrive devant par un demi-tour.
 
-       Sans cette table, les deux pignons recevaient la toile du LONG CÔTÉ :
-       1 723 mm de haut dans une ouverture de 2 547, et 146 mm trop large. Six
-       fichiers livrés par Bayes n'étaient jamais affichés. */
+       Le long côté A sert la gauche et la droite, il reste dans `piece`. Sans
+       cette table, les deux pignons recevaient sa toile : 1 723 mm de haut dans
+       une ouverture de 2 547, et 146 mm trop large. */
     pieceParCote: {
-      avant: { paroi: "d_half_wall", porte: "d_half_door", fenetre: "d_half_window_wall" },
+      avant: { paroi: "b_side_wall", porte: "b_door", fenetre: "b_window_wall" },
       arriere: { paroi: "b_side_wall", porte: "b_door", fenetre: "b_window_wall" },
     },
     /* Bayes a posé SA façade à l'azimut 0, là où la tente X a son arrière :
@@ -172,12 +175,11 @@ export const VUE_3D: Record<string, Vue3D> = {
        Sans ça, le prix et le dessin partaient chacun sur un pignon différent :
        le client voyait le pignon plein et payait le demi-mur, 40 € plus bas. */
     angleCote: { avant: 0, droit: -90, arriere: 180, gauche: 90 },
-    /* La sangle du pignon AVANT seulement — 60 points, de 0 à 1 994 mm, soit le
-       haut du demi-mur. Elle suit désormais la paroi de ce côté : présente
-       quand il est fermé, absente quand il est ouvert. Les deux longs côtés
-       gardent la leur en permanence : elle court le long des pieds, où elle se
-       lit comme une couture et non comme une toile tendue. */
-    socleParCote: { piece: "zipper_cover", cotes: ["avant"] },
+    /* La sangle du pignon AVANT — 60 points, de 0 à 1 994 mm — arrive AVEC LE
+       BANDEAU, dit par Bayes : c'est elle qui porte le demi-mur. Elle suit donc
+       le bandeau, pas la paroi. Les deux longs côtés gardent la leur en
+       permanence : eux seuls ont leur bande fixée au toit. */
+    socleParCote: { piece: "zipper_cover", cotes: ["avant"], avecChoix: "courbe" },
     angleNatif: {
       a_side_wall: -90, a_door: -90, a_window_wall: -90,
       b_side_wall: 180, b_door: 180, b_window_wall: 180,
@@ -250,6 +252,10 @@ export const angleCote = (m: Modele, cote: string): number =>
  *  existe coûte plus cher qu'afficher un prix à confirmer. */
 export const dessinable = (m: Modele, cote: string, choix: string): boolean =>
   pieceDeCote(m, cote, choix) !== null;
+
+/** Le fichier du demi-mur pour ce type. `null` si le modèle n'en a pas. */
+export const pieceDemiMur = (m: Modele, type: string): string | null =>
+  vue3d(m).pieceDemiMur?.[type] ?? null;
 
 /** Le fichier à afficher pour un choix, sur un côté donné. `pieceParCote`
  *  d'abord — les pignons de la N n'ont pas la toile de ses longs côtés — puis

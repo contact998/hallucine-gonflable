@@ -19,7 +19,7 @@
  * (un ancien code doit continuer à s'ouvrir), sinon les devis déjà envoyés
  * pointent dans le vide.
  */
-import { MODELES, MODELE_DEFAUT, modele as trouverModele, TAILLES, COTES, typePossible, bandeauPossible, } from "./composition.js";
+import { MODELES, MODELE_DEFAUT, modele as trouverModele, TAILLES, COTES, typePossible, demiMurPossible, typesDemiMur, } from "./composition.js";
 /** Dérivées de la table des modèles — une seule source pour la gamme. */
 export const TAILLES_TENTE = TAILLES;
 export const COTES_TENTE = COTES;
@@ -37,20 +37,20 @@ const LETTRE_COTE = {
 };
 const COTE_LETTRE = Object.fromEntries(Object.entries(LETTRE_COTE).map(([l, v]) => [v, l]));
 /**
- * Le BANDEAU se cumule avec la paroi : il faut donc écrire deux informations
- * dans le caractère d'un côté. Plutôt qu'un segment de plus — qui obligerait à
- * relire tout le format — chaque combinaison reçoit sa propre lettre. Une lettre
- * attribuée ne change plus jamais, celles-ci s'AJOUTENT aux précédentes.
+ * Le DEMI-MUR se pose sous le bandeau : il faut donc écrire deux informations
+ * dans le caractère d'un côté — le choix du côté, et ce que porte le demi-mur.
+ * Plutôt qu'un segment de plus, qui obligerait à relire tout le format, chaque
+ * combinaison reçoit sa lettre. Une lettre attribuée ne change plus jamais :
+ * celles-ci s'AJOUTENT, et « c » garde son sens de bandeau seul.
  *
  * La majuscule reste l'auvent, et se cumule encore par-dessus.
  */
-const LETTRE_BANDEAU = {
-    q: "vide",
-    r: "paroi",
-    s: "porte",
-    t: "fenetre",
+const LETTRE_DEMI_MUR = {
+    q: "paroi",
+    r: "porte",
+    s: "fenetre",
 };
-const BANDEAU_LETTRE = Object.fromEntries(Object.entries(LETTRE_BANDEAU).map(([l, v]) => [v, l]));
+const DEMI_MUR_LETTRE = Object.fromEntries(Object.entries(LETTRE_DEMI_MUR).map(([l, v]) => [v, l]));
 /** Ordre figé : la POSITION sert de code (en base 36, un seul caractère même
  *  au-delà de la dixième), ne jamais réordonner ni insérer au milieu. */
 export const IMPRESSIONS_TENTE = [
@@ -83,11 +83,12 @@ export function encoderConfig(c) {
     const cotesModele = m.cotes;
     const cotes = cotesModele.map((cote) => {
         const type = c.cotes[cote] ?? "vide";
-        /* Bandeau posé ET compatible avec la paroi choisie : la lettre du couple.
-           Sinon la lettre de la paroi seule — un bandeau impossible ne s'écrit pas,
-           il ne se relirait pas. */
-        const lettre = c.bandeaux?.[cote] && bandeauPossible(m, cote, type)
-            ? BANDEAU_LETTRE[type] ?? COTE_LETTRE[type] ?? "-"
+        /* Demi-mur posé ET possible sous ce choix : la lettre du couple. Sinon la
+           lettre du choix seul — un demi-mur impossible ne s'écrit pas, il ne se
+           relirait pas. */
+        const dm = c.demiMurs?.[cote] ?? "vide";
+        const lettre = dm !== "vide" && demiMurPossible(m, cote, type) && DEMI_MUR_LETTRE[dm]
+            ? DEMI_MUR_LETTRE[dm]
             : COTE_LETTRE[type] ?? "-";
         if (!c.auvents[cote])
             return lettre;
@@ -119,30 +120,30 @@ export function decoderConfig(code) {
         return null;
     const cotes = {};
     const auvents = {};
-    const bandeaux = {};
+    const demiMurs = {};
     m.cotes.forEach((cote, i) => {
         const brut = cotesStr[i] ?? "-";
         if (brut === "A") {
             cotes[cote] = "vide";
             auvents[cote] = true;
-            bandeaux[cote] = false;
+            demiMurs[cote] = "vide";
             return;
         }
         const bas = brut.toLowerCase();
-        /* Une lettre de couple = paroi + bandeau. Un ancien code de la N écrivait
-           « c » pour le bandeau seul, du temps où c'était un choix de côté : on le
-           relit comme un côté ouvert surmonté du bandeau, ce qu'il a toujours
-           voulu dire. */
-        const couple = LETTRE_BANDEAU[bas] ?? (bas === "c" && m.bandeau ? "vide" : undefined);
-        cotes[cote] = couple ?? LETTRE_COTE[bas] ?? "vide";
+        /* Une lettre de couple = bandeau + demi-mur. Le bandeau seul reste « c »,
+           comme depuis le premier jour : les codes déjà partis dans des devis le
+           portent, et il veut toujours dire la même chose. */
+        const dm = LETTRE_DEMI_MUR[bas];
+        cotes[cote] = dm ? m.demiMur?.sousChoix ?? "vide" : LETTRE_COTE[bas] ?? "vide";
         /* Un type que ce modèle ne vend pas retombe à « vide » : ça arrive par un
            code émis avant qu'on le sache, ou par une URL retouchée à la main. Un
            côté ouvert se voit ; un choix fantôme dans un devis, non. */
-        if (!typePossible(m, cotes[cote]))
+        if (!typePossible(m, cotes[cote], cote))
             cotes[cote] = "vide";
-        /* Le bandeau ne survit que là où le dessin le permet — jamais sur un long
-           côté, jamais par-dessus une toile qui monte déjà jusqu'à la voûte. */
-        bandeaux[cote] = couple !== undefined && bandeauPossible(m, cote, cotes[cote]);
+        /* Le demi-mur ne survit que là où le dessin le permet : sous le bandeau, et
+           sur le seul pignon qui en a un. */
+        demiMurs[cote] =
+            dm && demiMurPossible(m, cote, cotes[cote]) && typesDemiMur(m).includes(dm) ? dm : "vide";
         // Majuscule = auvent en supplément, jamais sur un côté qui l'exclut
         // (courbe, jonction) — un code trafiqué ne doit pas produire l'impossible.
         auvents[cote] =
@@ -161,5 +162,5 @@ export function decoderConfig(code) {
         if (k)
             options.push(k);
     }
-    return { modele: m.slug, taille, cotes, auvents, bandeaux, options };
+    return { modele: m.slug, taille, cotes, auvents, demiMurs, options };
 }
