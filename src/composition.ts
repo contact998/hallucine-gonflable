@@ -81,8 +81,14 @@ export const MODELES = [
     libelle: "N",
     tailles: ["3x3", "4x4", "5x5"],
     tailleDefaut: "3x3",
-    cotes: COTES,
-    lettreCote: { avant: "d", arriere: "b", gauche: "a", droit: "a" } as Record<string, string>,
+    /* TROIS côtés, pas quatre — dit par Daniel le 11/08/2026, et confirmé par
+       les fermetures éclair du fichier fournisseur : le cache-zip porte 104 et
+       106 points sur les deux longs côtés, 60 sur le pignon avant, et ZÉRO sur
+       le pignon arrière. Rien ne peut s'y accrocher, donc rien ne s'y vend.
+       Ce pignon-là est la paroi FIXE de la tente : il est toujours dessiné, il
+       ne se choisit pas. Voir `socle` dans `vue3d.ts`. */
+    cotes: ["avant", "droit", "gauche"],
+    lettreCote: { avant: "d", gauche: "a", droit: "a" } as Record<string, string>,
     types: ["vide", "paroi", "porte", "fenetre", "courbe"],
     /* Le bandeau courbe n'est pas une paroi de plus : c'est le croissant qui
        ferme le haut d'un PIGNON, mesuré de 1 540 à 2 547 mm sur un pignon qui

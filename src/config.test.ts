@@ -131,15 +131,13 @@ describe("codes de configuration multi-modèles", () => {
   it("un bandeau courbe sur un long côté de la N retombe à « vide »", () => {
     /* Le code peut venir d'un devis émis avant qu'on le sache, ou d'une URL
        retouchée. Un côté ouvert se voit ; un choix sans prix ni pièce, non. */
-    const c = decoderConfig("n.3x3.cccc");
-    expect(c?.cotes).toEqual({
-      avant: "courbe", arriere: "courbe", gauche: "vide", droit: "vide",
-    });
+    const c = decoderConfig("n.3x3.ccc");
+    expect(c?.cotes).toEqual({ avant: "courbe", droit: "vide", gauche: "vide" });
   });
 
-  it("la N a quatre côtés nommés comme ceux de la X, mais facturés séparément", () => {
+  it("la N a TROIS côtés : son pignon arrière n'a pas de fermeture éclair", () => {
     const n = MODELES.find((m) => m.slug === "n")!;
-    expect([...n.cotes]).toEqual(["avant", "droit", "arriere", "gauche"]);
+    expect([...n.cotes]).toEqual(["avant", "droit", "gauche"]);
     expect(n.cleParCote).toBe(true);
   });
 

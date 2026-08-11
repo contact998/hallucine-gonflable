@@ -61,12 +61,18 @@ describe("la N : le prix et le dessin sur la même face", () => {
   const V = vue3d(N);
 
   it("chaque côté reçoit la toile que Bayes a faite pour LUI", () => {
-    // Les deux pignons sont deux produits : demi-mur devant (0 → 1 944 mm),
-    // pignon plein derrière (0 → 2 547). Le long côté A sert les deux autres.
+    // Le pignon avant est un demi-mur (0 → 1 944 mm) que le bandeau complète ;
+    // le long côté A, droit, sert la gauche et la droite.
     expect(pieceDeCote(N, "avant", "paroi")).toBe("d_half_wall");
-    expect(pieceDeCote(N, "arriere", "paroi")).toBe("b_side_wall");
     expect(pieceDeCote(N, "gauche", "paroi")).toBe("a_side_wall");
     expect(pieceDeCote(N, "droit", "fenetre")).toBe("a_window_wall");
+  });
+
+  it("le pignon arrière est toujours dessiné, il ne se choisit pas", () => {
+    // Zéro point de fermeture éclair sur cette face : c'est la tente, pas une
+    // option. Il rejoint donc le socle, avec le toit et les pieds.
+    expect(V.socle).toContain("b_side_wall");
+    expect([...N.cotes]).not.toContain("arriere");
   });
 
   it("la toile posée porte la lettre que le devis facture", () => {
@@ -84,15 +90,10 @@ describe("la N : le prix et le dessin sur la même face", () => {
   it("et elle tombe sur la face où le fournisseur l'a modélisée, sans détour", () => {
     // Rotation nulle = la pièce est déjà au bon endroit.
     expect(V.angleNatif.d_half_wall - angleCote(N, "avant")).toBe(0);
-    expect(V.angleNatif.b_side_wall - angleCote(N, "arriere")).toBe(0);
+    expect(V.angleNatif.c_banner - angleCote(N, "avant")).toBe(0);
     expect(V.angleNatif.a_side_wall - angleCote(N, "droit")).toBe(0);
     // Sauf le long côté gauche : un seul fichier retourné sert les deux.
     expect(Math.abs(V.angleNatif.a_side_wall - angleCote(N, "gauche"))).toBe(180);
-  });
-
-  it("le bandeau courbe se pose sur l'un ou l'autre pignon", () => {
-    expect(V.angleNatif.c_banner - angleCote(N, "avant")).toBe(0);
-    expect(Math.abs(V.angleNatif.c_banner - angleCote(N, "arriere"))).toBe(180);
   });
 
   it("son avant est celui de Bayes, pas celui de la tente X", () => {

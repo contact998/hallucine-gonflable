@@ -22,7 +22,7 @@ export declare const MODELES: readonly [{
     readonly libelle: "N";
     readonly tailles: readonly ["3x3", "4x4", "5x5"];
     readonly tailleDefaut: "3x3";
-    readonly cotes: readonly ["avant", "droit", "arriere", "gauche"];
+    readonly cotes: readonly ["avant", "droit", "gauche"];
     readonly lettreCote: Record<string, string>;
     readonly types: readonly ["vide", "paroi", "porte", "fenetre", "courbe"];
     readonly typesCote: Record<string, readonly string[]>;

@@ -58,22 +58,28 @@ export const VUE_3D = {
            lettre vit dans `composition.ts`, avec ses mesures. */
         dossier: "n-tent",
         tailleModele: 3,
-        socle: SOCLE_COMMUN,
+        /* Le pignon arrière fait partie de la TENTE, pas des choix : le cache-zip
+           n'a aucun point sur cette face (104 et 106 sur les longs côtés, 60 sur le
+           pignon avant, 0 ici), donc aucune toile ne s'y accroche. Il est toujours
+           dessiné, comme le toit et les pieds. */
+        socle: [...SOCLE_COMMUN, "b_side_wall"],
         piece: {
             vide: null, paroi: "a_side_wall", porte: "a_door", fenetre: "a_window_wall",
             courbe: "c_banner",
         },
-        /* Les deux pignons ne portent PAS la même toile, et c'est tout le sujet :
-           l'avant est un demi-mur (0 → 1 944 mm) que le bandeau courbe complète
-           au-dessus, l'arrière un pignon plein qui monte jusqu'à la voûte (2 547).
-           Le long côté A sert la gauche et la droite, il reste dans `piece`.
+        /* Le pignon avant ne porte PAS la toile des longs côtés : c'est un demi-mur
+           (0 → 1 944 mm) que le bandeau courbe complète au-dessus, quand les longs
+           côtés sont droits et s'arrêtent à la gouttière, à 1 723.
     
-           Sans cette table, les deux pignons recevaient la toile du LONG CÔTÉ :
-           1 723 mm de haut dans une ouverture de 2 547, et 146 mm trop large. Six
-           fichiers livrés par Bayes n'étaient jamais affichés. */
+           Sans cette table, il recevait la toile du LONG CÔTÉ : 1 723 mm de haut
+           dans une ouverture de 2 547, et 146 mm trop large.
+    
+           `b_door` et `b_window_wall` existent chez Bayes et restent inutilisés :
+           ils habillent le pignon FIXE, qui se choisit à la commande de la tente et
+           non côté par côté. Les remettre ici rouvrirait un quatrième côté qui n'a
+           pas de fermeture éclair. */
         pieceParCote: {
             avant: { paroi: "d_half_wall", porte: "d_half_door", fenetre: "d_half_window_wall" },
-            arriere: { paroi: "b_side_wall", porte: "b_door", fenetre: "b_window_wall" },
         },
         /* Bayes a posé SA façade à l'azimut 0, là où la tente X a son arrière :
            `D_Front_…` et le bandeau `C` sont mesurés sur la face Y = +1 389, celle

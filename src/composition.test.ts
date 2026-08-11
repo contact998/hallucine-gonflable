@@ -96,9 +96,13 @@ describe("les clés du catalogue — le contrat avec le CRM", () => {
 describe("la N : quelle lettre du tarif pour quel côté", () => {
   const N = modele("n");
 
-  it("les deux côtés établis par les calques de Bayes donnent leur clé", () => {
-    expect(cleTypeCote(N, "3x3", "paroi", "arriere")).toBe("tente-n-3x3-paroi-b");
+  it("ses trois côtés, et pas un de plus", () => {
+    /* Le pignon arrière n'a AUCUN point de fermeture éclair dans le fichier de
+       Bayes (104 et 106 sur les longs côtés, 60 sur le pignon avant, 0 ici) :
+       aucune toile ne s'y accroche, il fait partie de la tente. */
+    expect([...N.cotes]).toEqual(["avant", "droit", "gauche"]);
     expect(cleTypeCote(N, "3x3", "porte", "avant")).toBe("tente-n-3x3-paroi-porte-d");
+    expect(cleTypeCote(N, "3x3", "paroi", "arriere")).toBeNull();
   });
 
   it("les deux longs côtés partagent la lettre A : ils sont identiques", () => {
@@ -110,16 +114,14 @@ describe("la N : quelle lettre du tarif pour quel côté", () => {
     expect(cleTypeCote(N, "3x3", "paroi", "nulle-part")).toBeNull();
   });
 
-  it("la paroi courbe n'a pas de lettre : un seul prix pour les deux pignons", () => {
+  it("la paroi courbe n'a pas de lettre : elle n'existe que sur le pignon avant", () => {
     expect(cleTypeCote(N, "3x3", "courbe", "avant")).toBe("tente-n-3x3-paroi-courbe");
-    expect(cleTypeCote(N, "3x3", "courbe", "arriere")).toBe("tente-n-3x3-paroi-courbe");
   });
 
-  it("mais elle ne se vend QUE sur les pignons : un long côté n'a pas d'arc", () => {
-    // Le bandeau ferme le haut d'un pignon, de 1 540 à 2 547 mm. Les longs
+  it("et elle ne se vend QUE là : un long côté n'a pas d'arc à fermer", () => {
+    // Le bandeau ferme le haut du pignon, de 1 540 à 2 547 mm. Les longs
     // côtés s'arrêtent à la gouttière, à 1 723, et sont droits.
     expect(typePossible(N, "courbe", "avant")).toBe(true);
-    expect(typePossible(N, "courbe", "arriere")).toBe(true);
     expect(typePossible(N, "courbe", "gauche")).toBe(false);
     expect(typePossible(N, "courbe", "droit")).toBe(false);
     expect(cleTypeCote(N, "3x3", "courbe", "gauche")).toBeNull();
