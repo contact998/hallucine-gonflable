@@ -1,6 +1,6 @@
 {
   "name": "@hallucine/tente",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "description": "Le module de la tente gonflable X : composition, règles de fabrication, code de configuration, teintes, pose des visuels et visualiseur 3D. Partagé par le site public et le CRM.",
   "type": "module",
   "main": "./dist/index.js",

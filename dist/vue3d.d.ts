@@ -88,6 +88,12 @@ export declare const ANGLE_COTE_DEFAUT: Record<string, number>;
  *  pour tourner la pièce ET pour tourner la caméra, sinon les deux se
  *  contrediraient au premier modèle qui n'a pas la façade de la X. */
 export declare const angleCote: (m: Modele, cote: string) => number;
+/** Ce choix se dessine-t-il chez ce modèle ? C'est le DESSIN qui décide de ce
+ *  qui existe : une pièce que Bayes livre est un produit, même si le tarif n'a
+ *  pas encore sa ligne — elle se vend alors au prix provisoire de la paroi
+ *  pleine, en rouge, jusqu'à ce qu'il donne le sien. Cacher un produit qui
+ *  existe coûte plus cher qu'afficher un prix à confirmer. */
+export declare const dessinable: (m: Modele, cote: string, choix: string) => boolean;
 /** Le fichier à afficher pour un choix, sur un côté donné. `pieceParCote`
  *  d'abord — les pignons de la N n'ont pas la toile de ses longs côtés — puis
  *  `piece`, qui vaut pour les modèles dont un côté vaut l'autre. */

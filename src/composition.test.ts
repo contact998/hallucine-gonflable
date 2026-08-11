@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   TYPES_COTE, COTES, TAILLES, auventPossible, typeCote,
   cleTente, cleTypeCote, cleAuvent, cleImpression, cleAccessoire,
-  MODELES, modele, typePossible, bandeauPossible, cleBandeau,
+  MODELES, modele, typePossible, bandeauPossible, cleBandeau, cleRepliCote,
   IMPRESSIONS, ACCESSOIRES,
 } from "./composition.js";
 
@@ -159,5 +159,31 @@ describe("la taille d'ouverture", () => {
 
   it("la tente X ouvre sur la 4 × 4, pas sur la plus petite — choix commercial", () => {
     expect(modele("x").tailleDefaut).toBe("4x4");
+  });
+});
+
+describe("le dessin fait foi : un choix livré mais pas encore tarifé", () => {
+  /* Décision de Daniel, 11/08/2026. Une pièce que Bayes modélise est un
+     produit. La cacher parce qu'une ligne manque au tarif coûte plus cher
+     qu'afficher un prix à confirmer — vécu sur la porte de la V et les deux
+     parois courbes du Spider, dormantes depuis l'ouverture de la gamme. */
+  it("la V n'a pas de porte au tarif, donc pas de clé directe", () => {
+    expect(cleTypeCote(modele("v"), "4x4", "porte", "a")).toBeNull();
+  });
+
+  it("mais elle a un repli : la paroi pleine de la même taille", () => {
+    expect(cleRepliCote(modele("v"), "4x4")).toBe("tente-v-4x4-paroi");
+    expect(cleRepliCote(modele("v"), "6x6")).toBe("tente-v-6x6-paroi");
+  });
+
+  it("le repli suit le côté chez un modèle facturé par côté", () => {
+    // Chez la N, un repli sans lettre trouverait le prix d'un AUTRE pignon.
+    expect(cleRepliCote(modele("n"), "3x3", "avant")).toBe("tente-n-3x3-paroi-d");
+    expect(cleRepliCote(modele("n"), "3x3", "arriere")).toBe("tente-n-3x3-paroi-b");
+    expect(cleRepliCote(modele("n"), "3x3")).toBeNull();
+  });
+
+  it("un modèle qui vend déjà le choix n'a pas besoin du repli", () => {
+    expect(cleTypeCote(X, "4x4", "porte")).toBe("tente-x-4x4-paroi-porte");
   });
 });

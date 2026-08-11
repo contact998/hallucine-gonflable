@@ -114,8 +114,13 @@ export const VUE_3D: Record<string, Vue3D> = {
     dossier: "spider-tent",
     tailleModele: 4,
     socle: SOCLE_COMMUN,
+    /* `wall_curved1` et `wall_curved2` sont livrées par Bayes et dormaient :
+       aucune ligne à son tarif, donc le configurateur ne les montrait pas. Le
+       DESSIN fait foi (décision de Daniel, 11/08/2026) — elles sont proposées,
+       au prix provisoire de la paroi pleine, jusqu'à ce qu'il donne le vrai. */
     piece: {
       vide: null, paroi: "side_wall", porte: "door", fenetre: "window_wall",
+      courbe: "wall_curved1", courbe_fenetre: "wall_curved2",
       jonction: "junction",
     },
     angleNatif: {
@@ -207,7 +212,11 @@ export const VUE_3D: Record<string, Vue3D> = {
     dossier: "v-tent",
     tailleModele: 4,
     socle: SOCLE_COMMUN,
-    piece: { vide: null, paroi: "side_wall" },
+    /* Sa PORTE est livrée elle aussi — 3 morceaux, 1 487 triangles, 5 → 2 255 mm,
+       soit exactement la hauteur de sa paroi pleine — et elle dormait faute de
+       ligne au tarif. Le dessin fait foi : on la propose, au prix provisoire de
+       la paroi pleine. */
+    piece: { vide: null, paroi: "side_wall", porte: "door" },
     angleCote: { a: -30, b: 90, c: -150 },
     angleNatif: { side_wall: -30, door: 90 },
   },
@@ -233,6 +242,14 @@ export const ANGLE_COTE_DEFAUT: Record<string, number> = {
  *  contrediraient au premier modèle qui n'a pas la façade de la X. */
 export const angleCote = (m: Modele, cote: string): number =>
   (vue3d(m).angleCote ?? ANGLE_COTE_DEFAUT)[cote] ?? ANGLE_COTE_DEFAUT[cote] ?? 0;
+
+/** Ce choix se dessine-t-il chez ce modèle ? C'est le DESSIN qui décide de ce
+ *  qui existe : une pièce que Bayes livre est un produit, même si le tarif n'a
+ *  pas encore sa ligne — elle se vend alors au prix provisoire de la paroi
+ *  pleine, en rouge, jusqu'à ce qu'il donne le sien. Cacher un produit qui
+ *  existe coûte plus cher qu'afficher un prix à confirmer. */
+export const dessinable = (m: Modele, cote: string, choix: string): boolean =>
+  pieceDeCote(m, cote, choix) !== null;
 
 /** Le fichier à afficher pour un choix, sur un côté donné. `pieceParCote`
  *  d'abord — les pignons de la N n'ont pas la toile de ses longs côtés — puis

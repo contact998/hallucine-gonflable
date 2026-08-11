@@ -72,6 +72,19 @@ export type Taille = string;
  *  paroi courbe, la V n'a qu'un modèle de paroi — demander une clé pour un type
  *  absent ne trouverait aucun prix, autant le dire tout de suite. */
 export declare const typePossible: (m: Modele, type: string) => boolean;
+/**
+ * Clé de REPLI quand le tarif n'a pas encore la ligne d'un choix que le dessin
+ * sait pourtant montrer : la paroi pleine du même modèle et de la même taille.
+ *
+ * Le dessin fait foi (décision de Daniel, 11/08/2026). Une pièce que Bayes
+ * livre est un produit : la cacher parce qu'une ligne manque au tarif coûte
+ * plus cher qu'afficher un prix à confirmer. L'écran DOIT le dire — en rouge —
+ * et le commercial va chercher le vrai prix avant d'envoyer le devis.
+ *
+ * Cas vécus : la porte de la V, les deux parois courbes du Spider — modélisées,
+ * dépliées, prêtes, et invisibles depuis l'ouverture de la gamme.
+ */
+export declare const cleRepliCote: (m: Modele, taille: string, cote?: string) => string | null;
 /** Le bandeau se pose-t-il sur CE côté, au-dessus de CE choix de paroi ?
  *  Voir `BandeauModele` : la réponse vient des hauteurs mesurées, côté par
  *  côté, pas d'une règle générale. */

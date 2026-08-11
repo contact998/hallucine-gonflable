@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { MODELES, modele } from "./composition.js";
 import {
   VUE_3D, vue3d, urlPiece, echelle, pieceImprimable, MODELES_SANS_VUE,
-  angleCote, pieceDeCote, ANGLE_COTE_DEFAUT, estPiece, porteLisere, porteVitre,
+  angleCote, pieceDeCote, ANGLE_COTE_DEFAUT, estPiece, porteLisere, porteVitre, dessinable,
 } from "./vue3d.js";
 
 describe("la vue 3D de chaque modèle", () => {
@@ -196,5 +196,29 @@ describe("les pièces qui ne peuvent pas recevoir d'image", () => {
 
   it("une pièce non listée est imprimable — on n'interdit que ce qui est mesuré", () => {
     expect(pieceImprimable(modele("x"), "side_wall")).toBe(true);
+  });
+});
+
+describe("les pièces qui dormaient dans les dossiers", () => {
+  it("la V sait dessiner sa porte — le fichier est là depuis le début", () => {
+    // 3 morceaux, 1 487 triangles, 5 → 2 255 mm : la hauteur de sa paroi pleine.
+    expect(pieceDeCote(modele("v"), "a", "porte")).toBe("door");
+    expect(dessinable(modele("v"), "a", "porte")).toBe(true);
+  });
+
+  it("le Spider sait dessiner ses deux parois courbes", () => {
+    for (const choix of ["courbe", "courbe_fenetre"])
+      expect(dessinable(modele("spider"), "avant", choix), choix).toBe(true);
+  });
+
+  it("un choix sans pièce reste indessinable — on n'invente pas de produit", () => {
+    expect(dessinable(modele("v"), "a", "fenetre")).toBe(false);
+    expect(dessinable(modele("v"), "a", "jonction")).toBe(false);
+    // Chez la N, le bandeau n'est plus un choix de côté mais un second étage.
+    expect(dessinable(modele("n"), "avant", "courbe")).toBe(false);
+  });
+
+  it("« ouvert » ne se dessine jamais : c'est l'absence de pièce", () => {
+    for (const m of MODELES) expect(dessinable(m, m.cotes[0], "vide"), m.slug).toBe(false);
   });
 });
