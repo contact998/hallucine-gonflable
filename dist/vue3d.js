@@ -61,8 +61,11 @@ export const VUE_3D = {
         socle: SOCLE_COMMUN,
         piece: {
             vide: null, paroi: "a_side_wall", porte: "a_door", fenetre: "a_window_wall",
-            courbe: "c_banner",
         },
+        /* Le bandeau se pose PAR-DESSUS la paroi du côté, il ne la remplace pas :
+           de 1 540 à 2 547 mm quand la toile du pignon avant s'arrête à 1 944. Les
+           404 mm de recouvrement sont le zip qui les tient ensemble. */
+        pieceBandeau: "c_banner",
         /* Les deux pignons ne portent PAS la même toile, et c'est tout le sujet :
            l'avant est un demi-mur (0 → 1 944 mm) que le bandeau courbe complète
            au-dessus, l'arrière un pignon plein qui monte jusqu'à la voûte (2 547).

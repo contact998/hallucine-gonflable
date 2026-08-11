@@ -12,6 +12,9 @@ export interface ConfigTente {
     taille: string;
     cotes: Record<string, string>;
     auvents: Record<string, boolean>;
+    /** Côtés qui portent un bandeau courbe EN PLUS de leur paroi. Voir
+     *  `BandeauModele` : c'est un second étage, pas un choix de côté. */
+    bandeaux: Record<string, boolean>;
     options: string[];
 }
 /** Composition → code d'URL. */

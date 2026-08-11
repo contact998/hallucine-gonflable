@@ -7,6 +7,7 @@ const vide = (): ConfigTente => ({
   taille: "4x4",
   cotes: { avant: "vide", droit: "vide", arriere: "vide", gauche: "vide" },
   auvents: { avant: false, droit: false, arriere: false, gauche: false },
+  bandeaux: { avant: false, droit: false, arriere: false, gauche: false },
   options: [],
 });
 
@@ -128,13 +129,32 @@ describe("codes de configuration multi-modèles", () => {
     expect(decoderConfig("licorne.4x4")).toBeNull();
   });
 
-  it("un bandeau courbe sur un long côté de la N retombe à « vide »", () => {
-    /* Le code peut venir d'un devis émis avant qu'on le sache, ou d'une URL
-       retouchée. Un côté ouvert se voit ; un choix sans prix ni pièce, non. */
-    const c = decoderConfig("n.3x3.cccc");
-    expect(c?.cotes).toEqual({
-      avant: "courbe", arriere: "courbe", gauche: "vide", droit: "vide",
-    });
+  it("le bandeau de la N voyage avec sa paroi, dans la même lettre", () => {
+    // « s » = porte + bandeau sur le pignon avant : les deux étages en un signe.
+    const c = decoderConfig("n.3x3.s-p-")!;
+    expect(c.cotes.avant).toBe("porte");
+    expect(c.bandeaux.avant).toBe(true);
+    expect(encoderConfig(c)).toBe("n.3x3.s-p-");
+  });
+
+  it("un bandeau là où le dessin n'en veut pas est ignoré, pas inventé", () => {
+    /* « r » = paroi + bandeau. Sur un long côté il n'y a pas d'arc à fermer, et
+       sur le pignon arrière la toile monte déjà à la voûte : la paroi reste, le
+       bandeau tombe. Ça arrive par une URL retouchée à la main. */
+    const c = decoderConfig("n.3x3.-rr-")!;
+    expect(c.cotes.droit).toBe("paroi");
+    expect(c.bandeaux.droit).toBe(false);
+    expect(c.cotes.arriere).toBe("paroi");
+    expect(c.bandeaux.arriere).toBe(false);
+  });
+
+  it("un vieux code « c » de la N se relit en bandeau seul", () => {
+    /* Du temps où le bandeau était un choix de côté, il s'écrivait « c ». Il a
+       toujours voulu dire « le haut fermé, le bas ouvert » : c'est ce qu'on en
+       fait, plutôt que de le jeter. */
+    const c = decoderConfig("n.3x3.c---")!;
+    expect(c.cotes.avant).toBe("vide");
+    expect(c.bandeaux.avant).toBe(true);
   });
 
   it("la N a quatre côtés nommés comme ceux de la X, mais facturés séparément", () => {

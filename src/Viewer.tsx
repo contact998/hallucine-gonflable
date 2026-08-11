@@ -377,6 +377,8 @@ export interface TenteViewerProps {
   cotes: Record<string, string>;
   /** Auvent coché par côté — se cumule avec l'élément du côté. */
   auvents: Record<string, boolean>;
+  /** Bandeau coché par côté — le second étage, posé au-dessus de la paroi. */
+  bandeaux?: Record<string, boolean>;
   /** Teinte choisie par zone (« toit », « structure ») — clé du nuancier. */
   couleurs: Record<string, string>;
   /** Teinte de la paroi de chaque côté — une case d'impression par côté. */
@@ -400,7 +402,7 @@ export interface TenteViewerProps {
   captureRef?: React.MutableRefObject<(() => string | null) | null>;
 }
 
-export default function TenteViewer({ cotes, auvents, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, captureRef }: TenteViewerProps) {
+export default function TenteViewer({ cotes, auvents, bandeaux, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, captureRef }: TenteViewerProps) {
   const M = trouverModele(modele);
   const VUE = vue3d(M);
 
@@ -908,12 +910,15 @@ export default function TenteViewer({ cotes, auvents, couleurs, couleursCote, vi
          la N ne portent pas la même toile. */
       const nom = pieceDeCote(M, cote, choix);
       if (nom) poser(nom, cote, couleursCote[cote]);
+      /* Le bandeau se pose EN PLUS de la paroi, sur le même côté et avec sa
+         teinte : c'est le haut de la même façade, pas une pièce indépendante. */
+      if (bandeaux?.[cote] && VUE.pieceBandeau) poser(VUE.pieceBandeau, cote, couleursCote[cote]);
       /* L'auvent porte UNE teinte pour toute la tente, pas une par côté : c'est
          la même toile imprimée d'un seul tenant, et le prix est unique. */
       if (auvents[cote] && VUE.pieceAuvent) poser(VUE.pieceAuvent, cote, teinteAuvent);
     }
     return () => { vivant = false; };
-  }, [cotes, auvents, couleursCote, teinteAuvent, actif, pret]);
+  }, [cotes, auvents, bandeaux, couleursCote, teinteAuvent, actif, pret]);
 
   return (
     <div ref={hote} className="relative w-full h-full min-h-[300px]">

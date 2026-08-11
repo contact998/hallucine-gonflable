@@ -20,7 +20,10 @@
  * pointent dans le vide.
  */
 
-import { MODELES, MODELE_DEFAUT, modele as trouverModele, TAILLES, COTES, typePossible } from "./composition.js";
+import {
+  MODELES, MODELE_DEFAUT, modele as trouverModele, TAILLES, COTES,
+  typePossible, bandeauPossible,
+} from "./composition.js";
 
 /** Dérivées de la table des modèles — une seule source pour la gamme. */
 export const TAILLES_TENTE = TAILLES;
@@ -43,6 +46,24 @@ const LETTRE_COTE: Record<string, string> = {
 };
 const COTE_LETTRE: Record<string, string> = Object.fromEntries(
   Object.entries(LETTRE_COTE).map(([l, v]) => [v, l]),
+);
+
+/**
+ * Le BANDEAU se cumule avec la paroi : il faut donc écrire deux informations
+ * dans le caractère d'un côté. Plutôt qu'un segment de plus — qui obligerait à
+ * relire tout le format — chaque combinaison reçoit sa propre lettre. Une lettre
+ * attribuée ne change plus jamais, celles-ci s'AJOUTENT aux précédentes.
+ *
+ * La majuscule reste l'auvent, et se cumule encore par-dessus.
+ */
+const LETTRE_BANDEAU: Record<string, string> = {
+  q: "vide",
+  r: "paroi",
+  s: "porte",
+  t: "fenetre",
+};
+const BANDEAU_LETTRE: Record<string, string> = Object.fromEntries(
+  Object.entries(LETTRE_BANDEAU).map(([l, v]) => [v, l]),
 );
 
 /** Ordre figé : la POSITION sert de code (en base 36, un seul caractère même
@@ -70,6 +91,9 @@ export interface ConfigTente {
   taille: string;
   cotes: Record<string, string>;
   auvents: Record<string, boolean>;
+  /** Côtés qui portent un bandeau courbe EN PLUS de leur paroi. Voir
+   *  `BandeauModele` : c'est un second étage, pas un choix de côté. */
+  bandeaux: Record<string, boolean>;
   options: string[];
 }
 
@@ -90,7 +114,14 @@ export function encoderConfig(c: ConfigTente): string {
   const m = trouverModele(c.modele);
   const cotesModele = m.cotes as readonly string[];
   const cotes = cotesModele.map((cote) => {
-    const lettre = COTE_LETTRE[c.cotes[cote]] ?? "-";
+    const type = c.cotes[cote] ?? "vide";
+    /* Bandeau posé ET compatible avec la paroi choisie : la lettre du couple.
+       Sinon la lettre de la paroi seule — un bandeau impossible ne s'écrit pas,
+       il ne se relirait pas. */
+    const lettre =
+      c.bandeaux?.[cote] && bandeauPossible(m, cote, type)
+        ? BANDEAU_LETTRE[type] ?? COTE_LETTRE[type] ?? "-"
+        : COTE_LETTRE[type] ?? "-";
     if (!c.auvents[cote]) return lettre;
     // « - » n'a pas de majuscule : un côté ouvert SOUS un auvent s'écrit « A ».
     return lettre === "-" ? "A" : lettre.toUpperCase();
@@ -124,19 +155,29 @@ export function decoderConfig(code: string | null | undefined): ConfigTente | nu
 
   const cotes: Record<string, string> = {};
   const auvents: Record<string, boolean> = {};
+  const bandeaux: Record<string, boolean> = {};
   (m.cotes as readonly string[]).forEach((cote, i) => {
     const brut = cotesStr[i] ?? "-";
     if (brut === "A") {
       cotes[cote] = "vide";
       auvents[cote] = true;
+      bandeaux[cote] = false;
       return;
     }
-    cotes[cote] = LETTRE_COTE[brut.toLowerCase()] ?? "vide";
-    /* Un type que CE côté n'accepte pas retombe à « vide » : un bandeau courbe
-       sur un long côté de la N n'a ni prix ni pièce à dessiner. Ça arrive par
-       un code émis avant qu'on le sache, ou par une URL retouchée à la main —
-       un côté ouvert se voit, un choix fantôme dans un devis, non. */
-    if (!typePossible(m, cotes[cote], cote)) cotes[cote] = "vide";
+    const bas = brut.toLowerCase();
+    /* Une lettre de couple = paroi + bandeau. Un ancien code de la N écrivait
+       « c » pour le bandeau seul, du temps où c'était un choix de côté : on le
+       relit comme un côté ouvert surmonté du bandeau, ce qu'il a toujours
+       voulu dire. */
+    const couple = LETTRE_BANDEAU[bas] ?? (bas === "c" && m.bandeau ? "vide" : undefined);
+    cotes[cote] = couple ?? LETTRE_COTE[bas] ?? "vide";
+    /* Un type que ce modèle ne vend pas retombe à « vide » : ça arrive par un
+       code émis avant qu'on le sache, ou par une URL retouchée à la main. Un
+       côté ouvert se voit ; un choix fantôme dans un devis, non. */
+    if (!typePossible(m, cotes[cote])) cotes[cote] = "vide";
+    /* Le bandeau ne survit que là où le dessin le permet — jamais sur un long
+       côté, jamais par-dessus une toile qui monte déjà jusqu'à la voûte. */
+    bandeaux[cote] = couple !== undefined && bandeauPossible(m, cote, cotes[cote]);
     // Majuscule = auvent en supplément, jamais sur un côté qui l'exclut
     // (courbe, jonction) — un code trafiqué ne doit pas produire l'impossible.
     auvents[cote] =
@@ -155,5 +196,5 @@ export function decoderConfig(code: string | null | undefined): ConfigTente | nu
     if (k) options.push(k);
   }
 
-  return { modele: m.slug, taille, cotes, auvents, options };
+  return { modele: m.slug, taille, cotes, auvents, bandeaux, options };
 }

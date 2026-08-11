@@ -24,8 +24,8 @@ export declare const MODELES: readonly [{
     readonly tailleDefaut: "3x3";
     readonly cotes: readonly ["avant", "droit", "arriere", "gauche"];
     readonly lettreCote: Record<string, string>;
-    readonly types: readonly ["vide", "paroi", "porte", "fenetre", "courbe"];
-    readonly typesCote: Record<string, readonly string[]>;
+    readonly types: readonly ["vide", "paroi", "porte", "fenetre"];
+    readonly bandeau: BandeauModele;
     readonly cleParCote: true;
 }, {
     readonly slug: "v";
@@ -36,9 +36,26 @@ export declare const MODELES: readonly [{
     readonly types: readonly ["vide", "paroi"];
     readonly cleParCote: false;
 }];
+/**
+ * Un SECOND ÉTAGE au-dessus de la paroi d'un côté — le bandeau courbe de la N.
+ *
+ * Ce n'est pas un choix de côté de plus : le côté garde sa paroi, et le bandeau
+ * se cumule par-dessus, comme l'auvent se cumule par-devant. C'est ce que le
+ * dessin impose, pas une commodité d'affichage : une toile qui s'arrête à
+ * 1 944 mm sous une ouverture de 2 547 ne ferme rien toute seule.
+ */
+export interface BandeauModele {
+    /** Suffixe de la clé catalogue : `tente-<modele>-<taille>-<slug>`. */
+    slug: string;
+    /** L'option d'impression que le bandeau déclenche quand son côté est habillé. */
+    impression: string;
+    /** Par côté, les choix de paroi AVEC lesquels il se pose. Un côté absent n'en
+     *  porte jamais. */
+    cotes: Record<string, readonly string[]>;
+}
 export type Modele = (typeof MODELES)[number] & {
     lettreCote?: Record<string, string>;
-    typesCote?: Record<string, readonly string[]>;
+    bandeau?: BandeauModele;
 };
 export type SlugModele = Modele["slug"];
 /** Le modèle historique. Un code de configuration sans modèle est une tente X :
@@ -51,15 +68,17 @@ export declare const modele: (slug: string | null | undefined) => Modele;
  *  encore la gamme ; dérivé de la table, jamais recopié. */
 export declare const TAILLES: readonly ["3x3", "4x4", "5x5", "6x6", "7x7", "8x8"] | readonly ["4x4", "6x6", "8x8", "10x10"] | readonly ["3x3", "4x4", "5x5"] | readonly ["4x4", "5x5", "6x6"];
 export type Taille = string;
-/** Ce qu'un CÔTÉ de ce modèle accepte. Tous n'acceptent pas forcément la même
- *  chose : chez la N, le bandeau courbe ferme le haut d'un pignon et n'a rien à
- *  faire sur un long côté, qui est droit. Sans côté, la réponse est celle du
- *  modèle — ce qu'il vend, tous côtés confondus. */
-export declare const typesDuCote: (m: Modele, cote?: string) => readonly string[];
 /** Ce type de côté est-il au catalogue de ce modèle ? Le Spider n'a pas de
  *  paroi courbe, la V n'a qu'un modèle de paroi — demander une clé pour un type
  *  absent ne trouverait aucun prix, autant le dire tout de suite. */
-export declare const typePossible: (m: Modele, type: string, cote?: string) => boolean;
+export declare const typePossible: (m: Modele, type: string) => boolean;
+/** Le bandeau se pose-t-il sur CE côté, au-dessus de CE choix de paroi ?
+ *  Voir `BandeauModele` : la réponse vient des hauteurs mesurées, côté par
+ *  côté, pas d'une règle générale. */
+export declare const bandeauPossible: (m: Modele, cote: string, type: string) => boolean;
+/** Clé catalogue du bandeau — sans lettre de côté : le même se pose sur l'un ou
+ *  l'autre pignon, et le tarif n'en porte qu'un. `null` si le modèle n'en a pas. */
+export declare const cleBandeau: (m: Modele, taille: string) => string | null;
 /**
  * Ce qu'un côté peut porter. Un côté porte UN seul type — ils sont exclusifs
  * par construction, ce qui rend inutile toute règle du genre « pas de porte sur

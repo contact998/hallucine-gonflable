@@ -39,6 +39,9 @@ export interface Vue3D {
     angleCote?: Record<string, number>;
     /** Pièce d'auvent, si le modèle en propose un. */
     pieceAuvent?: string;
+    /** Pièce du bandeau — le second étage d'un côté, posé au-dessus de sa paroi
+     *  sans la remplacer. Voir `BandeauModele` dans `composition.ts`. */
+    pieceBandeau?: string;
     /**
      * Pièces qui ne portent AUCUNE coordonnée d'impression, donc sur lesquelles
      * un visuel ne peut pas se poser.

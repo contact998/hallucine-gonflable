@@ -83,17 +83,32 @@ export const MODELES = [
     tailleDefaut: "3x3",
     cotes: COTES,
     lettreCote: { avant: "d", arriere: "b", gauche: "a", droit: "a" } as Record<string, string>,
-    types: ["vide", "paroi", "porte", "fenetre", "courbe"],
-    /* Le bandeau courbe n'est pas une paroi de plus : c'est le croissant qui
-       ferme le haut d'un PIGNON, mesuré de 1 540 à 2 547 mm sur un pignon qui
-       monte à 2 547. Les longs côtés s'arrêtent à la gouttière, à 1 723, et sont
-       droits — aucun arc à combler, donc rien à leur vendre. Il était proposé
-       sur les quatre côtés : sur les deux longs, un choix qui ne pouvait ni se
-       dessiner ni se fabriquer. */
-    typesCote: {
-      gauche: ["vide", "paroi", "porte", "fenetre"],
-      droit: ["vide", "paroi", "porte", "fenetre"],
-    } as Record<string, readonly string[]>,
+    types: ["vide", "paroi", "porte", "fenetre"],
+    /* LE BANDEAU COURBE N'EST PAS UN CHOIX DE CÔTÉ, C'EST UN SECOND ÉTAGE.
+       C'est ce que le fichier de Bayes dit, hauteur par hauteur :
+
+         · pignon AVANT — sa toile va de 0 à 1 944 mm, son ouverture monte à
+           2 547. Une paroi seule y laisse un trou de 603 mm : le bandeau
+           (1 540 → 2 547) le ferme, et les 404 mm de recouvrement sont là pour
+           qu'ils se zippent l'un à l'autre. Il se cumule donc avec n'importe
+           quelle paroi — et se pose aussi seul, au-dessus d'un côté ouvert.
+         · pignon ARRIÈRE — sa toile fait 0 → 2 547 d'un seul tenant : elle
+           ferme toute seule. Le bandeau ne s'y ajoute que sur un côté OUVERT,
+           sinon il doublerait la toile déjà posée.
+         · longs côtés — 0 → 1 723, soit exactement la hauteur de l'ouverture.
+           Rien à ajouter par-dessus, jamais.
+
+       La règle générale, valable pour toute tente à venir : un côté a plusieurs
+       étages dès qu'aucune pièce seule ne va du sol au sommet de l'ouverture.
+       Ça se mesure sur les fichiers, ça ne se demande pas. */
+    bandeau: {
+      slug: "paroi-courbe",
+      impression: "imp_courbe",
+      cotes: {
+        avant: ["vide", "paroi", "porte", "fenetre"],
+        arriere: ["vide"],
+      },
+    } as BandeauModele,
     cleParCote: true,
   },
   {
@@ -111,9 +126,27 @@ export const MODELES = [
   },
 ] as const;
 
+/**
+ * Un SECOND ÉTAGE au-dessus de la paroi d'un côté — le bandeau courbe de la N.
+ *
+ * Ce n'est pas un choix de côté de plus : le côté garde sa paroi, et le bandeau
+ * se cumule par-dessus, comme l'auvent se cumule par-devant. C'est ce que le
+ * dessin impose, pas une commodité d'affichage : une toile qui s'arrête à
+ * 1 944 mm sous une ouverture de 2 547 ne ferme rien toute seule.
+ */
+export interface BandeauModele {
+  /** Suffixe de la clé catalogue : `tente-<modele>-<taille>-<slug>`. */
+  slug: string;
+  /** L'option d'impression que le bandeau déclenche quand son côté est habillé. */
+  impression: string;
+  /** Par côté, les choix de paroi AVEC lesquels il se pose. Un côté absent n'en
+   *  porte jamais. */
+  cotes: Record<string, readonly string[]>;
+}
+
 export type Modele = (typeof MODELES)[number] & {
   lettreCote?: Record<string, string>;
-  typesCote?: Record<string, readonly string[]>;
+  bandeau?: BandeauModele;
 };
 export type SlugModele = Modele["slug"];
 
@@ -131,18 +164,22 @@ export const modele = (slug: string | null | undefined): Modele =>
 export const TAILLES = modele(MODELE_DEFAUT).tailles;
 export type Taille = string;
 
-/** Ce qu'un CÔTÉ de ce modèle accepte. Tous n'acceptent pas forcément la même
- *  chose : chez la N, le bandeau courbe ferme le haut d'un pignon et n'a rien à
- *  faire sur un long côté, qui est droit. Sans côté, la réponse est celle du
- *  modèle — ce qu'il vend, tous côtés confondus. */
-export const typesDuCote = (m: Modele, cote?: string): readonly string[] =>
-  (cote && m.typesCote?.[cote]) || (m.types as readonly string[]);
-
 /** Ce type de côté est-il au catalogue de ce modèle ? Le Spider n'a pas de
  *  paroi courbe, la V n'a qu'un modèle de paroi — demander une clé pour un type
  *  absent ne trouverait aucun prix, autant le dire tout de suite. */
-export const typePossible = (m: Modele, type: string, cote?: string): boolean =>
-  typesDuCote(m, cote).includes(type);
+export const typePossible = (m: Modele, type: string): boolean =>
+  (m.types as readonly string[]).includes(type);
+
+/** Le bandeau se pose-t-il sur CE côté, au-dessus de CE choix de paroi ?
+ *  Voir `BandeauModele` : la réponse vient des hauteurs mesurées, côté par
+ *  côté, pas d'une règle générale. */
+export const bandeauPossible = (m: Modele, cote: string, type: string): boolean =>
+  (m.bandeau?.cotes[cote] ?? []).includes(type);
+
+/** Clé catalogue du bandeau — sans lettre de côté : le même se pose sur l'un ou
+ *  l'autre pignon, et le tarif n'en porte qu'un. `null` si le modèle n'en a pas. */
+export const cleBandeau = (m: Modele, taille: string): string | null =>
+  m.bandeau ? `tente-${m.slug}-${taille}-${m.bandeau.slug}` : null;
 
 /**
  * Ce qu'un côté peut porter. Un côté porte UN seul type — ils sont exclusifs
@@ -270,7 +307,7 @@ export const cleTente = (m: Modele, taille: string) => `tente-${m.slug}-${taille
  * besoin de le préciser — et le catalogue la porte sans lettre.
  */
 export function cleTypeCote(m: Modele, taille: string, type: string, cote?: string): string | null {
-  if (!typePossible(m, type, cote)) return null;
+  if (!typePossible(m, type)) return null;
   const t = typeCote(type);
   if (!t.slug) return null;
 

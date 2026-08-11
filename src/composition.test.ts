@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   TYPES_COTE, COTES, TAILLES, auventPossible, typeCote,
   cleTente, cleTypeCote, cleAuvent, cleImpression, cleAccessoire,
-  MODELES, modele, typePossible,
+  MODELES, modele, typePossible, bandeauPossible, cleBandeau,
   IMPRESSIONS, ACCESSOIRES,
 } from "./composition.js";
 
@@ -110,31 +110,40 @@ describe("la N : quelle lettre du tarif pour quel côté", () => {
     expect(cleTypeCote(N, "3x3", "paroi", "nulle-part")).toBeNull();
   });
 
-  it("la paroi courbe n'a pas de lettre : un seul prix pour les deux pignons", () => {
-    expect(cleTypeCote(N, "3x3", "courbe", "avant")).toBe("tente-n-3x3-paroi-courbe");
-    expect(cleTypeCote(N, "3x3", "courbe", "arriere")).toBe("tente-n-3x3-paroi-courbe");
+  it("le bandeau n'est plus un CHOIX de côté : c'est un second étage", () => {
+    /* Il ne remplace pas la paroi, il se pose au-dessus. Le demander comme un
+       type ne rend donc plus rien — c'est `cleBandeau` qui le facture. */
+    expect(typePossible(N, "courbe")).toBe(false);
+    expect(cleTypeCote(N, "3x3", "courbe", "avant")).toBeNull();
+    expect(cleBandeau(N, "3x3")).toBe("tente-n-3x3-paroi-courbe");
+    expect(cleBandeau(N, "5x5")).toBe("tente-n-5x5-paroi-courbe");
   });
 
-  it("mais elle ne se vend QUE sur les pignons : un long côté n'a pas d'arc", () => {
-    // Le bandeau ferme le haut d'un pignon, de 1 540 à 2 547 mm. Les longs
-    // côtés s'arrêtent à la gouttière, à 1 723, et sont droits.
-    expect(typePossible(N, "courbe", "avant")).toBe(true);
-    expect(typePossible(N, "courbe", "arriere")).toBe(true);
-    expect(typePossible(N, "courbe", "gauche")).toBe(false);
-    expect(typePossible(N, "courbe", "droit")).toBe(false);
-    expect(cleTypeCote(N, "3x3", "courbe", "gauche")).toBeNull();
+  it("le pignon AVANT le prend avec n'importe quelle paroi — sa toile s'arrête à 1 944", () => {
+    // Ouverture 2 547, toile 0 → 1 944 : sans le bandeau, un trou de 603 mm.
+    for (const type of ["vide", "paroi", "porte", "fenetre"])
+      expect(bandeauPossible(N, "avant", type), type).toBe(true);
   });
 
-  it("les longs côtés gardent tout le reste", () => {
+  it("le pignon ARRIÈRE seulement s'il reste ouvert — sa toile monte déjà à 2 547", () => {
+    expect(bandeauPossible(N, "arriere", "vide")).toBe(true);
     for (const type of ["paroi", "porte", "fenetre"])
-      expect(typePossible(N, type, "gauche"), type).toBe(true);
+      expect(bandeauPossible(N, "arriere", type), type).toBe(false);
   });
 
-  it("sans côté, la question reste celle du modèle — pour les menus de la X", () => {
-    // Les modèles à côtés interchangeables interrogent sans préciser ; leur
-    // réponse ne doit pas changer parce que la N, elle, a des côtés distincts.
-    expect(typePossible(N, "courbe")).toBe(true);
-    expect(typePossible(X, "courbe", "gauche")).toBe(true);
+  it("jamais sur un long côté : sa toile fait la hauteur de son ouverture", () => {
+    for (const cote of ["gauche", "droit"])
+      for (const type of ["vide", "paroi", "porte", "fenetre"])
+        expect(bandeauPossible(N, cote, type), `${cote} ${type}`).toBe(false);
+  });
+
+  it("les modèles sans bandeau n'en portent nulle part, et n'ont pas de clé", () => {
+    for (const cote of X.cotes) expect(bandeauPossible(X, cote, "paroi"), cote).toBe(false);
+    expect(cleBandeau(X, "4x4")).toBeNull();
+    // La X garde SA paroi courbe, qui est une paroi entière — 35 → 1 919 mm —
+    // et non un bandeau : deux produits différents sous un nom voisin.
+    expect(typePossible(X, "courbe")).toBe(true);
+    expect(cleTypeCote(X, "4x4", "courbe")).toBe("tente-x-4x4-paroi-courbe");
   });
 
   it("un type absent du tarif d'un modèle ne rend pas de clé", () => {
