@@ -107,16 +107,20 @@ function marquerVitre(scene: THREE.Object3D): void {
 const estVitre = (o: THREE.Object3D) => o.userData.vitre === true;
 
 /**
- * Retire d'une pièce du socle les triangles posés sur UNE face de la tente.
+ * Marque, dans une pièce du socle, les morceaux posés sur UNE face de la tente.
  *
- * Sert au cache-zip de la N, dont la sangle du pignon avant barrait l'arche.
+ * Sert au cache-zip de la N : la sangle du pignon avant doit suivre la paroi de
+ * ce côté — présente sous elle, absente quand le côté est ouvert. On la MARQUE
+ * plutôt que de la couper : la pièce est mise en cache et partagée, et surtout
+ * une sangle supprimée ne reviendrait pas quand le client repose une paroi.
+ *
  * Rien n'est écrit en dur : la direction de la face vient de l'azimut du côté,
- * et le plan de la face de la boîte de la pièce elle-même. Un triangle n'est
- * retiré que si ses TROIS points sont dans ce plan à 30 mm près — les sangles
- * des longs côtés s'approchent à 1 339 mm du pignon sans y toucher, et elles
- * doivent rester.
+ * et le plan de la face de la boîte de la pièce elle-même. Un morceau n'est
+ * marqué que si TOUS ses points sont dans ce plan à 30 mm près — les sangles
+ * des longs côtés s'approchent à 1 339 mm du pignon sans y toucher, et elles ne
+ * doivent jamais bouger.
  */
-function retirerFace(scene: THREE.Object3D, azimut: number): void {
+function marquerFace(scene: THREE.Object3D, azimut: number, cote: string): void {
   const dir = new THREE.Vector3(Math.sin(azimut * RAD), Math.cos(azimut * RAD), 0);
   scene.traverse((o) => {
     const maille = o as THREE.Mesh;
@@ -133,17 +137,13 @@ function retirerFace(scene: THREE.Object3D, azimut: number): void {
       const s = index ? index.getX(i) : i;
       return plan - p.fromBufferAttribute(pos, s).dot(dir) < 30;
     };
-    const gardes: number[] = [];
-    for (let i = 0; i + 2 < nb; i += 3) {
-      if (surLaFace(i) && surLaFace(i + 1) && surLaFace(i + 2)) continue;
-      for (const j of [i, i + 1, i + 2]) gardes.push(index ? index.getX(j) : j);
-    }
-    if (gardes.length === nb) return; // rien sur cette face : on ne touche à rien
-    /* Bayes découpe sa sangle en un morceau par face — celle du pignon avant en
-       est un à elle seule. On le retire d'un coup plutôt que de lui laisser une
-       géométrie vide, qui partirait quand même au rendu. */
-    if (gardes.length === 0) { maille.visible = false; return; }
-    geo.setIndex(gardes);
+    /* Bayes découpe sa sangle en UN MORCEAU PAR FACE : celui du pignon avant y
+       est tout entier, les autres pas du tout. On marque donc le morceau, pas
+       le triangle — si un export mélangeait les faces dans un même morceau, il
+       ne serait pas marqué et resterait visible, ce qui est le comportement
+       d'avant, jamais une pièce à moitié effacée. */
+    for (let i = 0; i < nb; i++) if (!surLaFace(i)) return;
+    maille.userData.cote = cote;
   });
 }
 
@@ -406,9 +406,9 @@ function charger(loader: GLTFLoader, m: ReturnType<typeof trouverModele>, nom: s
       });
       lignes.forEach(([m, l]) => m.add(l));
       if (porteVitre(nom)) marquerVitre(g.scene);
-      const sans = vue3d(m).socleSansCote;
-      if (sans?.piece === nom) {
-        for (const cote of sans.cotes) retirerFace(g.scene, angleCote(m, cote));
+      const parCote = vue3d(m).socleParCote;
+      if (parCote?.piece === nom) {
+        for (const cote of parCote.cotes) marquerFace(g.scene, angleCote(m, cote), cote);
       }
       return g.scene;
     });
@@ -964,6 +964,23 @@ export default function TenteViewer({ cotes, auvents, bandeaux, couleurs, couleu
     }
     return () => { vivant = false; };
   }, [cotes, auvents, bandeaux, couleursCote, teinteAuvent, actif, pret]);
+
+  /* ── La sangle de zip suit la paroi de son côté ──────────────────────── */
+  /* Elle n'existe que POUR elle : sous une paroi c'est ce qu'on voit du zip,
+     sur un côté ouvert c'est une toile tendue en travers de l'ouverture. Elle
+     appartient pourtant au socle, chargé une fois pour toutes — d'où ce réglage
+     de visibilité à part, plutôt qu'un découpage à la volée qui ne saurait pas
+     revenir quand le client repose une paroi. */
+  useEffect(() => {
+    const parCote = VUE.socleParCote;
+    if (!parCote || !pret) return;
+    const piece = piecesSocle.current[parCote.piece];
+    if (!piece) return;
+    piece.traverse((o) => {
+      const cote = o.userData.cote as string | undefined;
+      if (cote) o.visible = (cotes[cote] ?? "vide") !== "vide";
+    });
+  }, [cotes, pret]);
 
   return (
     <div ref={hote} className="relative w-full h-full min-h-[300px]">

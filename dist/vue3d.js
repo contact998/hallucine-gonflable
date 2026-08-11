@@ -92,11 +92,12 @@ export const VUE_3D = {
            Sans ça, le prix et le dessin partaient chacun sur un pignon différent :
            le client voyait le pignon plein et payait le demi-mur, 40 € plus bas. */
         angleCote: { avant: 0, droit: -90, arriere: 180, gauche: 90 },
-        /* La sangle du pignon AVANT seulement — 60 points, de 0 à 1 994 mm, soit
-           le haut du demi-mur. C'est elle qui barrait l'arche quand le côté restait
-           ouvert. Les deux longs côtés gardent la leur : elle court le long des
-           pieds, où elle se lit comme une couture et non comme une toile. */
-        socleSansCote: { piece: "zipper_cover", cotes: ["avant"] },
+        /* La sangle du pignon AVANT seulement — 60 points, de 0 à 1 994 mm, soit le
+           haut du demi-mur. Elle suit désormais la paroi de ce côté : présente
+           quand il est fermé, absente quand il est ouvert. Les deux longs côtés
+           gardent la leur en permanence : elle court le long des pieds, où elle se
+           lit comme une couture et non comme une toile tendue. */
+        socleParCote: { piece: "zipper_cover", cotes: ["avant"] },
         angleNatif: {
             a_side_wall: -90, a_door: -90, a_window_wall: -90,
             b_side_wall: 180, b_door: 180, b_window_wall: 180,
