@@ -61,6 +61,18 @@ export interface Vue3D {
    *  sans la remplacer. Voir `BandeauModele` dans `composition.ts`. */
   pieceBandeau?: string;
   /**
+   * Portions d'une pièce du SOCLE à ne pas dessiner, côté par côté.
+   *
+   * Le cache-zip est la sangle sur laquelle la paroi vient se zipper. Bayes la
+   * modélise dans le PLAN de la paroi : côté fermé elle se superpose exactement
+   * à la toile, côté ouvert elle reste tendue en travers de l'ouverture. Dans
+   * les deux cas il n'y a rien à montrer.
+   *
+   * Déclaré par modèle et par côté, jamais en général : c'est une observation
+   * sur un fichier précis, et les autres tentes n'ont pas à en hériter.
+   */
+  socleSansCote?: { piece: string; cotes: readonly string[] };
+  /**
    * Pièces qui ne portent AUCUNE coordonnée d'impression, donc sur lesquelles
    * un visuel ne peut pas se poser.
    *
@@ -154,6 +166,11 @@ export const VUE_3D: Record<string, Vue3D> = {
        Sans ça, le prix et le dessin partaient chacun sur un pignon différent :
        le client voyait le pignon plein et payait le demi-mur, 40 € plus bas. */
     angleCote: { avant: 0, droit: -90, arriere: 180, gauche: 90 },
+    /* La sangle du pignon AVANT seulement — 60 points, de 0 à 1 994 mm, soit
+       le haut du demi-mur. C'est elle qui barrait l'arche quand le côté restait
+       ouvert. Les deux longs côtés gardent la leur : elle court le long des
+       pieds, où elle se lit comme une couture et non comme une toile. */
+    socleSansCote: { piece: "zipper_cover", cotes: ["avant"] },
     angleNatif: {
       a_side_wall: -90, a_door: -90, a_window_wall: -90,
       b_side_wall: 180, b_door: 180, b_window_wall: 180,

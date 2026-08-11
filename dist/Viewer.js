@@ -104,6 +104,55 @@ function marquerVitre(scene) {
  *  transparent, pas de la toile. Un seul test, appelé partout où on peint. */
 const estVitre = (o) => o.userData.vitre === true;
 /**
+ * Retire d'une pièce du socle les triangles posés sur UNE face de la tente.
+ *
+ * Sert au cache-zip de la N, dont la sangle du pignon avant barrait l'arche.
+ * Rien n'est écrit en dur : la direction de la face vient de l'azimut du côté,
+ * et le plan de la face de la boîte de la pièce elle-même. Un triangle n'est
+ * retiré que si ses TROIS points sont dans ce plan à 30 mm près — les sangles
+ * des longs côtés s'approchent à 1 339 mm du pignon sans y toucher, et elles
+ * doivent rester.
+ */
+function retirerFace(scene, azimut) {
+    const dir = new THREE.Vector3(Math.sin(azimut * RAD), Math.cos(azimut * RAD), 0);
+    scene.traverse((o) => {
+        const maille = o;
+        if (!maille.isMesh)
+            return;
+        const geo = maille.geometry;
+        const pos = geo.getAttribute("position");
+        if (!pos)
+            return;
+        const index = geo.getIndex();
+        const nb = index ? index.count : pos.count;
+        const p = new THREE.Vector3();
+        let plan = -Infinity;
+        for (let i = 0; i < pos.count; i++)
+            plan = Math.max(plan, p.fromBufferAttribute(pos, i).dot(dir));
+        const surLaFace = (i) => {
+            const s = index ? index.getX(i) : i;
+            return plan - p.fromBufferAttribute(pos, s).dot(dir) < 30;
+        };
+        const gardes = [];
+        for (let i = 0; i + 2 < nb; i += 3) {
+            if (surLaFace(i) && surLaFace(i + 1) && surLaFace(i + 2))
+                continue;
+            for (const j of [i, i + 1, i + 2])
+                gardes.push(index ? index.getX(j) : j);
+        }
+        if (gardes.length === nb)
+            return; // rien sur cette face : on ne touche à rien
+        /* Bayes découpe sa sangle en un morceau par face — celle du pignon avant en
+           est un à elle seule. On le retire d'un coup plutôt que de lui laisser une
+           géométrie vide, qui partirait quand même au rendu. */
+        if (gardes.length === 0) {
+            maille.visible = false;
+            return;
+        }
+        geo.setIndex(gardes);
+    });
+}
+/**
  * Rapport largeur/hauteur du gabarit d'impression d'une pièce : combien de
  * millimètres de toile vaut un pas de U, rapporté à un pas de V.
  *
@@ -364,6 +413,11 @@ function charger(loader, m, nom) {
             lignes.forEach(([m, l]) => m.add(l));
             if (porteVitre(nom))
                 marquerVitre(g.scene);
+            const sans = vue3d(m).socleSansCote;
+            if (sans?.piece === nom) {
+                for (const cote of sans.cotes)
+                    retirerFace(g.scene, angleCote(m, cote));
+            }
             return g.scene;
         });
         cache.set(url, p);

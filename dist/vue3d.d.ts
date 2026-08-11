@@ -43,6 +43,21 @@ export interface Vue3D {
      *  sans la remplacer. Voir `BandeauModele` dans `composition.ts`. */
     pieceBandeau?: string;
     /**
+     * Portions d'une pièce du SOCLE à ne pas dessiner, côté par côté.
+     *
+     * Le cache-zip est la sangle sur laquelle la paroi vient se zipper. Bayes la
+     * modélise dans le PLAN de la paroi : côté fermé elle se superpose exactement
+     * à la toile, côté ouvert elle reste tendue en travers de l'ouverture. Dans
+     * les deux cas il n'y a rien à montrer.
+     *
+     * Déclaré par modèle et par côté, jamais en général : c'est une observation
+     * sur un fichier précis, et les autres tentes n'ont pas à en hériter.
+     */
+    socleSansCote?: {
+        piece: string;
+        cotes: readonly string[];
+    };
+    /**
      * Pièces qui ne portent AUCUNE coordonnée d'impression, donc sur lesquelles
      * un visuel ne peut pas se poser.
      *
