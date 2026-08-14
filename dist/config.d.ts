@@ -5,7 +5,7 @@ export declare const COTES_TENTE: readonly ["avant", "droit", "arriere", "gauche
 export type CoteTente = (typeof COTES_TENTE)[number];
 /** Ordre figé : la POSITION sert de code (en base 36, un seul caractère même
  *  au-delà de la dixième), ne jamais réordonner ni insérer au milieu. */
-export declare const IMPRESSIONS_TENTE: readonly ["imp_toit", "imp_zip", "imp_structure", "imp_pvc", "imp_paroi", "imp_courbe", "imp_auv_bandeau", "imp_auv_toile", "imp_auv_pied", "imp_auv_pvc", "imp_jonction"];
+export declare const IMPRESSIONS_TENTE: readonly ["imp_toit", "imp_zip", "imp_structure", "imp_pvc", "imp_paroi", "imp_courbe", "imp_auv_bandeau", "imp_auv_toile", "imp_auv_pied", "imp_auv_pvc", "imp_jonction", "imp_paroi_porte"];
 export interface ConfigTente {
     /** Slug du modèle (`x`, `spider`, `n`, `v`). */
     modele: string;

@@ -56,6 +56,9 @@ const DEMI_MUR_LETTRE = Object.fromEntries(Object.entries(LETTRE_DEMI_MUR).map((
 export const IMPRESSIONS_TENTE = [
     "imp_toit", "imp_zip", "imp_structure", "imp_pvc", "imp_paroi", "imp_courbe",
     "imp_auv_bandeau", "imp_auv_toile", "imp_auv_pied", "imp_auv_pvc", "imp_jonction",
+    // Ajoutée le 14/08/2026 — EN BOUT DE LISTE, comme l'exige la règle ci-dessus :
+    // les liens de configuration déjà envoyés codent les positions précédentes.
+    "imp_paroi_porte",
 ];
 /** Initiale ↔ accessoire. Même règle : une initiale attribuée ne change plus. */
 const LETTRE_ACC = {

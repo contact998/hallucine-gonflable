@@ -202,6 +202,7 @@ export declare const IMPRESSIONS: {
     readonly imp_structure: "impression-structure";
     readonly imp_pvc: "impression-pvc-pieds";
     readonly imp_paroi: "impression-paroi";
+    readonly imp_paroi_porte: "impression-paroi-porte";
     readonly imp_courbe: "impression-paroi-courbe";
     readonly imp_auv_bandeau: "impression-auvent-bandeau";
     readonly imp_auv_toile: "impression-auvent-toile";
@@ -216,6 +217,19 @@ export declare const IMP_SOCLE: Impression[];
 export declare const IMP_AUVENT: Impression[];
 /** Proposée seulement si la composition porte une jonction. */
 export declare const IMP_JONCTION: Impression[];
+/**
+ * Les impressions qui peuvent chiffrer un côté, de la PLUS PRÉCISE à la plus
+ * générale — le premier prix trouvé au catalogue gagne.
+ *
+ * Une seule entrée pour presque tout : c'est la paroi à porte qui fait
+ * exception, et seulement chez les tentes dont Bayes sépare les deux tarifs.
+ * Le repli n'est pas une commodité, il est la règle : sans lui, ajouter une clé
+ * plus fine ferait DISPARAÎTRE la ligne d'impression des tentes qui ne l'ont
+ * pas au tarif — une porte imprimée gratuite, ce qui ne se voit pas sur un
+ * devis. C'est ici, dans le module, parce que le site et le CRM doivent tomber
+ * sur le même prix ; deux replis écrits séparément finiraient par diverger.
+ */
+export declare function impressionsCote(type: string): Impression[];
 /** Accessoires. `slug` nul = la clé dépend de la taille (le lest en eau). */
 export declare const ACCESSOIRES: readonly [{
     readonly valeur: "acc_sac";

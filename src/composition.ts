@@ -285,6 +285,11 @@ export const IMPRESSIONS = {
   imp_structure: "impression-structure",
   imp_pvc: "impression-pvc-pieds",
   imp_paroi: "impression-paroi",
+  /* Imprimer une paroi à PORTE coûte plus cher qu'une paroi pleine — Bayes l'a
+     séparé sur la V le 12/08/2026 (51/61/71 $ contre 40/46/52). Voir
+     `impressionsCote` : les tentes dont le tarif ne fait pas la différence
+     n'ont pas cette clé et gardent `imp_paroi`. */
+  imp_paroi_porte: "impression-paroi-porte",
   imp_courbe: "impression-paroi-courbe",
   imp_auv_bandeau: "impression-auvent-bandeau",
   imp_auv_toile: "impression-auvent-toile",
@@ -302,6 +307,26 @@ export const IMP_AUVENT: Impression[] = [
 ];
 /** Proposée seulement si la composition porte une jonction. */
 export const IMP_JONCTION: Impression[] = ["imp_jonction"];
+
+/**
+ * Les impressions qui peuvent chiffrer un côté, de la PLUS PRÉCISE à la plus
+ * générale — le premier prix trouvé au catalogue gagne.
+ *
+ * Une seule entrée pour presque tout : c'est la paroi à porte qui fait
+ * exception, et seulement chez les tentes dont Bayes sépare les deux tarifs.
+ * Le repli n'est pas une commodité, il est la règle : sans lui, ajouter une clé
+ * plus fine ferait DISPARAÎTRE la ligne d'impression des tentes qui ne l'ont
+ * pas au tarif — une porte imprimée gratuite, ce qui ne se voit pas sur un
+ * devis. C'est ici, dans le module, parce que le site et le CRM doivent tomber
+ * sur le même prix ; deux replis écrits séparément finiraient par diverger.
+ */
+export function impressionsCote(type: string): Impression[] {
+  const t = typeCote(type);
+  if (!t.impression) return [];
+  return t.valeur === "porte"
+    ? ["imp_paroi_porte", t.impression as Impression]
+    : [t.impression as Impression];
+}
 
 /** Accessoires. `slug` nul = la clé dépend de la taille (le lest en eau). */
 export const ACCESSOIRES = [

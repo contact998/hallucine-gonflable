@@ -3,7 +3,7 @@ import {
   TYPES_COTE, COTES, TAILLES, auventPossible, typeCote,
   cleTente, cleTypeCote, cleAuvent, cleImpression, cleAccessoire,
   MODELES, modele, typePossible, demiMurPossible, typesDemiMur, cleDemiMur, cleRepliCote,
-  IMPRESSIONS, ACCESSOIRES,
+  IMPRESSIONS, ACCESSOIRES, impressionsCote,
 } from "./composition.js";
 
 const X = modele("x");
@@ -81,6 +81,24 @@ describe("les clés du catalogue — le contrat avec le CRM", () => {
   it("toute impression déclenchée par un type de côté existe dans la table", () => {
     for (const t of TYPES_COTE) {
       if (t.impression) expect(Object.keys(IMPRESSIONS)).toContain(t.impression);
+    }
+  });
+
+  it("imprimer une porte cherche son propre tarif, puis retombe sur la paroi", () => {
+    expect(impressionsCote("porte")).toEqual(["imp_paroi_porte", "imp_paroi"]);
+    /* Le repli est la moitié qui compte : sans lui, une tente dont le tarif ne
+       distingue pas les deux n'aurait plus AUCUN prix pour sa porte imprimée. */
+    expect(impressionsCote("paroi")).toEqual(["imp_paroi"]);
+    expect(impressionsCote("courbe")).toEqual(["imp_courbe"]);
+    expect(impressionsCote("jonction")).toEqual([]);
+    expect(impressionsCote("vide")).toEqual([]);
+  });
+
+  it("toute impression proposée par un côté existe dans la table", () => {
+    for (const t of TYPES_COTE) {
+      for (const i of impressionsCote(t.valeur)) {
+        expect(Object.keys(IMPRESSIONS)).toContain(i);
+      }
     }
   });
 
