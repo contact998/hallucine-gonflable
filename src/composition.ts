@@ -276,6 +276,71 @@ export function auventPossible(type: string): boolean {
   return AUVENT_COMPATIBLE.has(type);
 }
 
+/* ── La rangée de tentes reliées ────────────────────────────────────────────
+ *
+ * N tentes IDENTIQUES accolées le long du côté en jonction, décrites en UNE
+ * composition + un nombre. La dérivation vit ici, et nulle part ailleurs :
+ * le visualiseur en tire ce qu'il dessine, le chiffrage du CRM ce qu'il
+ * facture — deux copies auraient fini par montrer une rangée et en vendre
+ * une autre.
+ *
+ * Le modèle est SYMÉTRIQUE (décision de Daniel, 21/08/2026) : le choix du
+ * côté opposé à la jonction ferme LES DEUX bouts de la rangée, avec ses
+ * annexes (auvent, demi-mur, impression) ; les tentes se traversent — les
+ * faces intermédiaires sont ouvertes sous les gouttières. Une rangée de n
+ * porte donc n − 1 jonctions : celle de la dernière tente cède sa place au
+ * mur du bout.
+ */
+
+/** Ce qu'une tente d'une rangée porte par côté. `impCote` est le drapeau
+ *  d'impression de paroi du CRM — dérivé ici pour que le prix suive le mur. */
+export interface TenteRangee {
+  cotes: Record<string, string>;
+  auvents: Record<string, boolean>;
+  demiMurs?: Record<string, string>;
+  impCote?: Record<string, boolean>;
+}
+
+/**
+ * Les n tentes de la rangée, dérivées du module composé.
+ *
+ * Rend `[module]` tel quel — même référence — quand la rangée n'a pas de
+ * sens : n ≤ 1, aucun côté en jonction, plusieurs (l'axe serait ambigu ; ces
+ * compositions restent le geste manuel d'aujourd'hui), ou un modèle sans
+ * côté opposé (la V et ses trois côtés).
+ */
+export function rangeeTentes(m: Modele, module: TenteRangee, n: number): TenteRangee[] {
+  const cotesModele = m.cotes as readonly string[];
+  const axes = cotesModele.filter((c) => module.cotes[c] === "jonction");
+  if (n <= 1 || axes.length !== 1 || cotesModele.length !== 4) return [module];
+  const axe = axes[0];
+  const oppose = cotesModele[(cotesModele.indexOf(axe) + 2) % 4];
+
+  const tentes: TenteRangee[] = [];
+  for (let i = 0; i < n; i++) {
+    const cotes = { ...module.cotes };
+    const auvents = { ...module.auvents };
+    const demiMurs = { ...(module.demiMurs ?? {}) };
+    const impCote = { ...(module.impCote ?? {}) };
+    if (i > 0) {
+      // Ouverte vers la précédente : le mur du bout n'existe qu'au départ.
+      cotes[oppose] = "vide";
+      auvents[oppose] = false;
+      demiMurs[oppose] = "vide";
+      impCote[oppose] = false;
+    }
+    if (i === n - 1) {
+      // Le bout d'arrivée : le miroir du départ, annexes comprises.
+      cotes[axe] = module.cotes[oppose] ?? "vide";
+      auvents[axe] = module.auvents[oppose] ?? false;
+      demiMurs[axe] = module.demiMurs?.[oppose] ?? "vide";
+      impCote[axe] = module.impCote?.[oppose] ?? false;
+    }
+    tentes.push({ cotes, auvents, demiMurs, impCote });
+  }
+  return tentes;
+}
+
 /* ── Impressions et accessoires ─────────────────────────────────────────── */
 
 /** Option d'impression → suffixe de clé catalogue. */

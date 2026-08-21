@@ -218,6 +218,45 @@ const AUVENT_COMPATIBLE = new Set(["vide", "paroi", "porte", "fenetre"]);
 export function auventPossible(type) {
     return AUVENT_COMPATIBLE.has(type);
 }
+/**
+ * Les n tentes de la rangée, dérivées du module composé.
+ *
+ * Rend `[module]` tel quel — même référence — quand la rangée n'a pas de
+ * sens : n ≤ 1, aucun côté en jonction, plusieurs (l'axe serait ambigu ; ces
+ * compositions restent le geste manuel d'aujourd'hui), ou un modèle sans
+ * côté opposé (la V et ses trois côtés).
+ */
+export function rangeeTentes(m, module, n) {
+    const cotesModele = m.cotes;
+    const axes = cotesModele.filter((c) => module.cotes[c] === "jonction");
+    if (n <= 1 || axes.length !== 1 || cotesModele.length !== 4)
+        return [module];
+    const axe = axes[0];
+    const oppose = cotesModele[(cotesModele.indexOf(axe) + 2) % 4];
+    const tentes = [];
+    for (let i = 0; i < n; i++) {
+        const cotes = { ...module.cotes };
+        const auvents = { ...module.auvents };
+        const demiMurs = { ...(module.demiMurs ?? {}) };
+        const impCote = { ...(module.impCote ?? {}) };
+        if (i > 0) {
+            // Ouverte vers la précédente : le mur du bout n'existe qu'au départ.
+            cotes[oppose] = "vide";
+            auvents[oppose] = false;
+            demiMurs[oppose] = "vide";
+            impCote[oppose] = false;
+        }
+        if (i === n - 1) {
+            // Le bout d'arrivée : le miroir du départ, annexes comprises.
+            cotes[axe] = module.cotes[oppose] ?? "vide";
+            auvents[axe] = module.auvents[oppose] ?? false;
+            demiMurs[axe] = module.demiMurs?.[oppose] ?? "vide";
+            impCote[axe] = module.impCote?.[oppose] ?? false;
+        }
+        tentes.push({ cotes, auvents, demiMurs, impCote });
+    }
+    return tentes;
+}
 /* ── Impressions et accessoires ─────────────────────────────────────────── */
 /** Option d'impression → suffixe de clé catalogue. */
 export const IMPRESSIONS = {

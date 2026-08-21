@@ -16,9 +16,11 @@ import { jsx as _jsx } from "react/jsx-runtime";
  * composition, la cote exacte est écrite à côté. Changer de taille est donc
  * instantané et ne télécharge rien.
  *
- * Un côté en JONCTION fait apparaître la tente voisine : le même socle, toile
- * nue, accolé de l'autre côté de la gouttière. Le client voit l'ensemble — la
- * composition de la voisine reste la sienne, sur sa propre ligne de devis.
+ * Un côté en JONCTION fait apparaître la tente voisine. Deux régimes :
+ * `tentesReliees` ≥ 2 dessine la rangée dérivée par `rangeeTentes` — n tentes
+ * IDENTIQUES, habillées, jonctions intermédiaires, bouts symétriques ; sans ce
+ * nombre, la voisine est un FANTÔME au socle nu — la tente d'à côté qu'on
+ * compose et qu'on vend à part, sur sa propre ligne de devis.
  */
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
@@ -28,7 +30,7 @@ import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 import { ZONES_COULEUR, ZONE_AUVENT, TEINTE_NUE, hexDeTeinte } from "./couleurs.js";
-import { modele as trouverModele } from "./composition.js";
+import { modele as trouverModele, rangeeTentes } from "./composition.js";
 import { vue3d, urlPiece, echelle, angleCote, pieceDeCote, pieceDemiMur, porteLisere, porteVitre, ANGLE_COTE_DEFAUT, decalageVoisin } from "./vue3d.js";
 import { composerPan, chargerImage } from "./visuel.js";
 const RAD = Math.PI / 180;
@@ -421,7 +423,7 @@ function charger(loader, m, nom) {
     }
     return p.then((s) => s.clone(true));
 }
-export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, captureRef }) {
+export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, captureRef, tentesReliees }) {
     const M = trouverModele(modele);
     const VUE = vue3d(M);
     const hote = useRef(null);
@@ -441,8 +443,6 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
        chargée, avant toute échelle : c'est elle qui dit où poser la tente
        voisine d'une jonction. */
     const dimsToit = useRef(null);
-    /* Les tentes voisines à l'écran — une par côté en jonction. */
-    const voisins = useRef(null);
     /* Images décodées, par data-URL : la même image posée sur plusieurs zones ne
        se relit pas, et changer de côté ne repart pas de zéro. */
     const images = useRef(new Map());
@@ -878,7 +878,7 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
         racine.scale.setScalar(MM_EN_M * echelle(M, taille));
         cadrerRef.current();
     }, [taille, pret]);
-    /* ── Les parois suivent les choix ───────────────────────────────────── */
+    /* ── Les parois suivent les choix — et la rangée quand il y en a une ── */
     /* Lue à part : sans ça, changer la couleur du TOIT remonterait toutes les
        parois, alors que seule la teinte d'auvent les concerne ici. */
     const teinteAuvent = couleurs[ZONE_AUVENT.cle] ?? TEINTE_NUE;
@@ -888,11 +888,15 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
             return;
         const loader = new GLTFLoader();
         let vivant = true;
-        const poser = (nom, cote, teinte) => {
+        /* `coteGeo` place la pièce, `cotePeinture` la peint et reçoit son visuel :
+           les deux divergent sur UNE pièce, le mur du bout d'arrivée d'une rangée,
+           posé sur le côté de la jonction mais miroir du côté opposé — teinte et
+           image comprises. */
+        const poser = (dans, nom, coteGeo, cotePeinture, teinte, voisin) => {
             charger(loader, M, nom).then((g) => {
                 if (!vivant)
                     return;
-                g.rotation.z = (VUE.angleNatif[nom] - angleCote(M, cote)) * RAD;
+                g.rotation.z = (VUE.angleNatif[nom] - angleCote(M, coteGeo)) * RAD;
                 if (teinte) {
                     const hex = new THREE.Color(hexDeTeinte(teinte));
                     g.traverse((o) => {
@@ -906,7 +910,7 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
                         maille.material = copie;
                     });
                 }
-                if (cote === actif) {
+                if (!voisin && coteGeo === actif) {
                     g.traverse((o) => {
                         const maille = o;
                         const mat = maille.material;
@@ -918,72 +922,86 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
                         maille.material = clair;
                     });
                 }
-                murs.add(g);
-                piecesAffichees.current.push({ nom, groupe: g, cote });
+                dans.add(g);
+                piecesAffichees.current.push({ nom, groupe: g, cote: cotePeinture, voisin });
                 appliquerVisuels.current();
             });
         };
         murs.clear();
-        piecesAffichees.current = piecesAffichees.current.filter((p) => VUE.socle.includes(p.nom));
-        for (const [cote, choix] of Object.entries(cotes)) {
-            /* La pièce dépend du côté, pas seulement du choix : les deux pignons de
-               la N ne portent pas la même toile. */
-            const nom = pieceDeCote(M, cote, choix);
-            if (nom)
-                poser(nom, cote, couleursCote[cote]);
-            /* Le demi-mur se pose SOUS le choix du côté, sur la même face et avec sa
-               teinte : c'est le bas de la même façade, pas une pièce indépendante. */
-            const basNom = pieceDemiMur(M, demiMurs?.[cote] ?? "vide");
-            if (basNom)
-                poser(basNom, cote, couleursCote[cote]);
-            /* L'auvent porte UNE teinte pour toute la tente, pas une par côté : c'est
-               la même toile imprimée d'un seul tenant, et le prix est unique. */
-            if (auvents[cote] && VUE.pieceAuvent)
-                poser(VUE.pieceAuvent, cote, teinteAuvent);
-        }
-        return () => { vivant = false; };
-    }, [cotes, auvents, demiMurs, couleursCote, teinteAuvent, actif, pret]);
-    /* ── La tente VOISINE d'une jonction ─────────────────────────────────── */
-    /* Un côté en jonction est collé à une autre tente : on la montre. Le même
-       socle, toile nue, posé à une largeur de toit dans la direction du côté —
-       une voisine par côté en jonction. Elle vit dans la racine, donc l'échelle
-       de taille, le cadrage caméra et la capture du devis la comptent d'eux-mêmes ;
-       et elle n'entre ni dans `piecesSocle` ni dans `piecesAffichees`, donc les
-       teintes et visuels du client ne la peignent jamais — sa composition à elle
-       se lit sur sa propre ligne de devis, pas sur ce dessin. */
-    useEffect(() => {
-        const racine = racineRef.current;
-        if (!racine || !pret)
-            return;
-        if (voisins.current) {
-            racine.remove(voisins.current);
-            voisins.current = null;
-            cadrerRef.current();
-        }
-        const cotesJonction = Object.keys(cotes).filter((c) => cotes[c] === "jonction");
+        piecesAffichees.current = piecesAffichees.current.filter((p) => !p.voisin && VUE.socle.includes(p.nom));
+        const n = Math.max(1, Math.floor(tentesReliees ?? 1));
+        const tentes = rangeeTentes(M, { cotes, auvents, demiMurs: demiMurs ?? {} }, n);
+        const cotesModele = M.cotes;
+        const axe = cotesModele.find((c) => cotes[c] === "jonction");
+        const oppose = axe ? cotesModele[(cotesModele.indexOf(axe) + 2) % 4] : undefined;
         const dims = dimsToit.current;
-        if (cotesJonction.length === 0 || !dims)
-            return;
-        const loader = new GLTFLoader();
-        let vivant = true;
-        const groupe = new THREE.Group();
-        voisins.current = groupe;
-        Promise.all(VUE.socle.map((n) => charger(loader, M, n))).then((pieces) => {
-            if (!vivant || voisins.current !== groupe)
-                return;
-            for (const cote of cotesJonction) {
-                const une = new THREE.Group();
-                const d = decalageVoisin(M, cote, dims);
-                une.position.set(d.x, d.y, 0);
-                for (const p of pieces)
-                    une.add(p.clone(true));
-                groupe.add(une);
+        const pas = axe && dims ? decalageVoisin(M, axe, dims) : null;
+        tentes.forEach((t, i) => {
+            const voisin = i > 0;
+            let dans = murs;
+            if (voisin && pas) {
+                dans = new THREE.Group();
+                dans.position.set(pas.x * i, pas.y * i, 0);
+                murs.add(dans);
+                /* Le socle de la voisine : un clone du socle courant, teintes du
+                   moment comprises — l'effet dépend des couleurs, il se refait avec
+                   elles. Enregistré pour que le visuel du toit s'y pose aussi : les
+                   tentes d'une rangée sont IDENTIQUES, c'est tout leur sens. */
+                for (const nomSocle of VUE.socle) {
+                    const s = piecesSocle.current[nomSocle];
+                    if (!s)
+                        continue;
+                    const clone = s.clone(true);
+                    dans.add(clone);
+                    piecesAffichees.current.push({ nom: nomSocle, groupe: clone, voisin: true });
+                }
             }
-            racine.add(groupe);
-            cadrerRef.current();
+            /* Le mur du bout d'arrivée se peint comme celui du départ dont il est le
+               miroir — sur la dernière tente, ce qui est posé sur l'axe se peint
+               « côté opposé ». */
+            const peinture = (cote) => i === tentes.length - 1 && tentes.length > 1 && cote === axe && oppose ? oppose : cote;
+            for (const [cote, choix] of Object.entries(t.cotes)) {
+                /* La pièce dépend du côté, pas seulement du choix : les deux pignons de
+                   la N ne portent pas la même toile. */
+                const nom = pieceDeCote(M, cote, choix);
+                if (nom)
+                    poser(dans, nom, cote, peinture(cote), couleursCote[peinture(cote)], voisin);
+                /* Le demi-mur se pose SOUS le choix du côté, sur la même face et avec sa
+                   teinte : c'est le bas de la même façade, pas une pièce indépendante. */
+                const basNom = pieceDemiMur(M, t.demiMurs?.[cote] ?? "vide");
+                if (basNom)
+                    poser(dans, basNom, cote, peinture(cote), couleursCote[peinture(cote)], voisin);
+                /* L'auvent porte UNE teinte pour toute la tente, pas une par côté : c'est
+                   la même toile imprimée d'un seul tenant, et le prix est unique. */
+                if (t.auvents[cote] && VUE.pieceAuvent)
+                    poser(dans, VUE.pieceAuvent, cote, peinture(cote), teinteAuvent, voisin);
+            }
         });
+        /* Une seule tente et un côté en jonction : la voisine FANTÔME, socle nu,
+           accolée à chaque jonction — celle qu'on compose et qu'on vend À PART.
+           Elle reste blanche et hors de `piecesAffichees` : sa composition à elle
+           se lit sur sa propre ligne de devis, pas sur ce dessin. */
+        if (tentes.length === 1 && dims) {
+            const fantomes = cotesModele.filter((c) => cotes[c] === "jonction");
+            if (fantomes.length > 0) {
+                Promise.all(VUE.socle.map((nm) => charger(loader, M, nm))).then((pieces) => {
+                    if (!vivant)
+                        return;
+                    for (const c of fantomes) {
+                        const d = decalageVoisin(M, c, dims);
+                        const fantome = new THREE.Group();
+                        fantome.position.set(d.x, d.y, 0);
+                        for (const p of pieces)
+                            fantome.add(p.clone(true));
+                        murs.add(fantome);
+                    }
+                    cadrerRef.current();
+                });
+            }
+        }
+        cadrerRef.current();
         return () => { vivant = false; };
-    }, [cotes, pret]);
+    }, [cotes, auvents, demiMurs, couleursCote, teinteAuvent, couleurs, actif, pret, tentesReliees]);
     /* ── La sangle de zip suit le BANDEAU de son côté ────────────────────── */
     /* Dit par Bayes : la bande du pignon avant arrive avec le bandeau courbe,
        c'est elle qui porte le demi-mur. Sans bandeau, il n'y a pas de bande —

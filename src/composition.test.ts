@@ -3,7 +3,7 @@ import {
   TYPES_COTE, COTES, TAILLES, auventPossible, typeCote,
   cleTente, cleTypeCote, cleAuvent, cleImpression, cleAccessoire,
   MODELES, modele, typePossible, demiMurPossible, typesDemiMur, cleDemiMur, cleRepliCote,
-  IMPRESSIONS, ACCESSOIRES, impressionsCote,
+  IMPRESSIONS, ACCESSOIRES, impressionsCote, rangeeTentes,
 } from "./composition.js";
 
 const X = modele("x");
@@ -208,5 +208,76 @@ describe("le dessin fait foi : un choix livré mais pas encore tarifé", () => {
 
   it("un modèle qui vend déjà le choix n'a pas besoin du repli", () => {
     expect(cleTypeCote(X, "4x4", "porte")).toBe("tente-x-4x4-paroi-porte");
+  });
+});
+
+describe("la rangée de tentes reliées", () => {
+  const SPIDER = modele("spider");
+  const module_ = {
+    cotes: { avant: "porte", droit: "jonction", arriere: "fenetre", gauche: "paroi" },
+    auvents: { avant: true, droit: false, arriere: false, gauche: true },
+    demiMurs: { gauche: "fenetre" },
+    impCote: { gauche: true, avant: true },
+  };
+
+  it("une tente seule reste elle-même — rien ne se dérive", () => {
+    expect(rangeeTentes(SPIDER, module_, 1)).toEqual([module_]);
+    expect(rangeeTentes(SPIDER, module_, 0)).toEqual([module_]);
+  });
+
+  it("sans jonction, ou avec deux, pas de rangée : le champ n'a pas de sens", () => {
+    const sans = { ...module_, cotes: { ...module_.cotes, droit: "paroi" } };
+    expect(rangeeTentes(SPIDER, sans, 3)).toEqual([sans]);
+    const deux = { ...module_, cotes: { ...module_.cotes, gauche: "jonction" } };
+    expect(rangeeTentes(SPIDER, deux, 3)).toEqual([deux]);
+  });
+
+  it("trois tentes : deux jonctions, les bouts symétriques, le milieu ouvert", () => {
+    const [t1, t2, t3] = rangeeTentes(SPIDER, module_, 3);
+    // La première est le module tel quel.
+    expect(t1.cotes).toEqual(module_.cotes);
+    // Le milieu : ouvert des deux côtés de l'axe, jonction vers la suivante.
+    expect(t2.cotes).toEqual({ avant: "porte", droit: "jonction", arriere: "fenetre", gauche: "vide" });
+    // La dernière : le bout reprend le choix du côté opposé — mur plein.
+    expect(t3.cotes).toEqual({ avant: "porte", droit: "paroi", arriere: "fenetre", gauche: "vide" });
+  });
+
+  it("les annexes du bout suivent le mur : auvent, demi-mur, impression", () => {
+    const [t1, t2, t3] = rangeeTentes(SPIDER, module_, 3);
+    // Les côtés le long de la rangée valent pour chaque tente.
+    for (const t of [t1, t2, t3]) {
+      expect(t.auvents.avant).toBe(true);
+      expect(t.impCote?.avant).toBe(true);
+    }
+    // Le bout de départ garde ses annexes, le milieu les perd avec son mur.
+    expect(t1.auvents.gauche).toBe(true);
+    expect(t1.demiMurs?.gauche).toBe("fenetre");
+    expect(t2.auvents.gauche).toBe(false);
+    expect(t2.demiMurs?.gauche).toBe("vide");
+    expect(t2.impCote?.gauche).toBe(false);
+    // Le bout d'arrivée les reçoit sur le côté axe, devenu mur.
+    expect(t3.auvents.droit).toBe(true);
+    expect(t3.demiMurs?.droit).toBe("fenetre");
+    expect(t3.impCote?.droit).toBe(true);
+  });
+
+  it("à deux tentes, pas de milieu : le module puis le bout miroir", () => {
+    const [t1, t2] = rangeeTentes(SPIDER, module_, 2);
+    expect(t1.cotes.droit).toBe("jonction");
+    expect(t2.cotes).toEqual({ avant: "porte", droit: "paroi", arriere: "fenetre", gauche: "vide" });
+  });
+
+  it("le compte des jonctions fait n − 1", () => {
+    for (const n of [2, 3, 5]) {
+      const jonctions = rangeeTentes(SPIDER, module_, n)
+        .flatMap((t) => Object.values(t.cotes))
+        .filter((c) => c === "jonction").length;
+      expect(jonctions, `${n} tentes`).toBe(n - 1);
+    }
+  });
+
+  it("la V n'a que trois côtés : pas d'axe opposé, pas de rangée", () => {
+    const v = { cotes: { a: "jonction", b: "paroi", c: "paroi" }, auvents: {}, demiMurs: {}, impCote: {} };
+    expect(rangeeTentes(modele("v"), v, 3)).toEqual([v]);
   });
 });

@@ -195,6 +195,23 @@ export declare const typeCote: (valeur: string) => {
  * il n'y a pas d'air libre au-dessus. Rien d'autre ne l'empêche.
  */
 export declare function auventPossible(type: string): boolean;
+/** Ce qu'une tente d'une rangée porte par côté. `impCote` est le drapeau
+ *  d'impression de paroi du CRM — dérivé ici pour que le prix suive le mur. */
+export interface TenteRangee {
+    cotes: Record<string, string>;
+    auvents: Record<string, boolean>;
+    demiMurs?: Record<string, string>;
+    impCote?: Record<string, boolean>;
+}
+/**
+ * Les n tentes de la rangée, dérivées du module composé.
+ *
+ * Rend `[module]` tel quel — même référence — quand la rangée n'a pas de
+ * sens : n ≤ 1, aucun côté en jonction, plusieurs (l'axe serait ambigu ; ces
+ * compositions restent le geste manuel d'aujourd'hui), ou un modèle sans
+ * côté opposé (la V et ses trois côtés).
+ */
+export declare function rangeeTentes(m: Modele, module: TenteRangee, n: number): TenteRangee[];
 /** Option d'impression → suffixe de clé catalogue. */
 export declare const IMPRESSIONS: {
     readonly imp_toit: "impression-toit";
