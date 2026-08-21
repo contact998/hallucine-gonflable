@@ -16,8 +16,9 @@ import { jsx as _jsx } from "react/jsx-runtime";
  * composition, la cote exacte est écrite à côté. Changer de taille est donc
  * instantané et ne télécharge rien.
  *
- * La jonction entre tentes n'est pas encore dans le fichier fournisseur ; le côté
- * qui la porte reste vide et la page l'annonce plutôt que de montrer autre chose.
+ * Un côté en JONCTION fait apparaître la tente voisine : le même socle, toile
+ * nue, accolé de l'autre côté de la gouttière. Le client voit l'ensemble — la
+ * composition de la voisine reste la sienne, sur sa propre ligne de devis.
  */
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
@@ -28,7 +29,7 @@ import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 import { ZONES_COULEUR, ZONE_AUVENT, TEINTE_NUE, hexDeTeinte } from "./couleurs.js";
 import { modele as trouverModele } from "./composition.js";
-import { vue3d, urlPiece, echelle, angleCote, pieceDeCote, pieceDemiMur, porteLisere, porteVitre, ANGLE_COTE_DEFAUT } from "./vue3d.js";
+import { vue3d, urlPiece, echelle, angleCote, pieceDeCote, pieceDemiMur, porteLisere, porteVitre, ANGLE_COTE_DEFAUT, decalageVoisin } from "./vue3d.js";
 import { composerPan, chargerImage } from "./visuel.js";
 const RAD = Math.PI / 180;
 const MM_EN_M = 0.001;
@@ -436,6 +437,12 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
        portée « tente » s'y rapporte, et elles changent avec la taille choisie. */
     const hauteurTente = useRef(1);
     const diametreTente = useRef(1);
+    /* La largeur du TOIT, en millimètres du modèle de base — mesurée sur la pièce
+       chargée, avant toute échelle : c'est elle qui dit où poser la tente
+       voisine d'une jonction. */
+    const dimsToit = useRef(null);
+    /* Les tentes voisines à l'écran — une par côté en jonction. */
+    const voisins = useRef(null);
     /* Images décodées, par data-URL : la même image posée sur plusieurs zones ne
        se relit pas, et changer de côté ne repart pas de zéro. */
     const images = useRef(new Map());
@@ -527,6 +534,14 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
         Promise.all(VUE.socle.map((n) => charger(loader, M, n))).then((gs) => {
             if (!vivant)
                 return;
+            /* Le toit se mesure AVANT d'être posé dans la racine : sans parent, sa
+               boîte est encore en millimètres du fichier, l'unité du décalage de la
+               tente voisine. */
+            const iToit = VUE.socle.indexOf("roof");
+            if (iToit >= 0) {
+                const t = new THREE.Box3().setFromObject(gs[iToit]).getSize(new THREE.Vector3());
+                dimsToit.current = { x: t.x, y: t.y };
+            }
             gs.forEach((g, i) => {
                 racine.add(g);
                 piecesSocle.current[VUE.socle[i]] = g;
@@ -928,6 +943,47 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
         }
         return () => { vivant = false; };
     }, [cotes, auvents, demiMurs, couleursCote, teinteAuvent, actif, pret]);
+    /* ── La tente VOISINE d'une jonction ─────────────────────────────────── */
+    /* Un côté en jonction est collé à une autre tente : on la montre. Le même
+       socle, toile nue, posé à une largeur de toit dans la direction du côté —
+       une voisine par côté en jonction. Elle vit dans la racine, donc l'échelle
+       de taille, le cadrage caméra et la capture du devis la comptent d'eux-mêmes ;
+       et elle n'entre ni dans `piecesSocle` ni dans `piecesAffichees`, donc les
+       teintes et visuels du client ne la peignent jamais — sa composition à elle
+       se lit sur sa propre ligne de devis, pas sur ce dessin. */
+    useEffect(() => {
+        const racine = racineRef.current;
+        if (!racine || !pret)
+            return;
+        if (voisins.current) {
+            racine.remove(voisins.current);
+            voisins.current = null;
+            cadrerRef.current();
+        }
+        const cotesJonction = Object.keys(cotes).filter((c) => cotes[c] === "jonction");
+        const dims = dimsToit.current;
+        if (cotesJonction.length === 0 || !dims)
+            return;
+        const loader = new GLTFLoader();
+        let vivant = true;
+        const groupe = new THREE.Group();
+        voisins.current = groupe;
+        Promise.all(VUE.socle.map((n) => charger(loader, M, n))).then((pieces) => {
+            if (!vivant || voisins.current !== groupe)
+                return;
+            for (const cote of cotesJonction) {
+                const une = new THREE.Group();
+                const d = decalageVoisin(M, cote, dims);
+                une.position.set(d.x, d.y, 0);
+                for (const p of pieces)
+                    une.add(p.clone(true));
+                groupe.add(une);
+            }
+            racine.add(groupe);
+            cadrerRef.current();
+        });
+        return () => { vivant = false; };
+    }, [cotes, pret]);
     /* ── La sangle de zip suit le BANDEAU de son côté ────────────────────── */
     /* Dit par Bayes : la bande du pignon avant arrive avec le bandeau courbe,
        c'est elle qui porte le demi-mur. Sans bandeau, il n'y a pas de bande —

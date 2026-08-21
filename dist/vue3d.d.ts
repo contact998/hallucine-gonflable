@@ -89,6 +89,25 @@ export declare const ANGLE_COTE_DEFAUT: Record<string, number>;
  *  pour tourner la pièce ET pour tourner la caméra, sinon les deux se
  *  contrediraient au premier modèle qui n'a pas la façade de la X. */
 export declare const angleCote: (m: Modele, cote: string) => number;
+/**
+ * Où poser la tente VOISINE quand ce côté porte une jonction : accolée, de
+ * l'autre côté de la gouttière.
+ *
+ * La direction est l'azimut du côté — la même formule que `marquerFace` du
+ * viewer, (sin az, cos az) vu de dessus. La distance est la largeur du toit
+ * MESURÉE dans cette direction : deux tentes identiques dont les centres sont
+ * séparés d'une largeur se touchent exactement. `dims` vient de la boîte du
+ * toit chargé, en millimètres du modèle de base — le décalage se pose donc
+ * AVANT l'échelle de taille, et les deux tentes restent jointives en 4 × 4
+ * comme en 10 × 10 sans rien recalculer.
+ */
+export declare function decalageVoisin(m: Modele, cote: string, dims: {
+    x: number;
+    y: number;
+}): {
+    x: number;
+    y: number;
+};
 /** Ce choix se dessine-t-il chez ce modèle ? C'est le DESSIN qui décide de ce
  *  qui existe : une pièce que Bayes livre est un produit, même si le tarif n'a
  *  pas encore sa ligne — elle se vend alors au prix provisoire de la paroi

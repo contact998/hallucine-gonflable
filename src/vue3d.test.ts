@@ -3,7 +3,7 @@ import { MODELES, modele } from "./composition.js";
 import {
   VUE_3D, vue3d, urlPiece, echelle, pieceImprimable, MODELES_SANS_VUE,
   angleCote, pieceDeCote, ANGLE_COTE_DEFAUT, estPiece, porteLisere, porteVitre, dessinable,
-  pieceDemiMur as pieceDemiMurDe,
+  pieceDemiMur as pieceDemiMurDe, decalageVoisin,
 } from "./vue3d.js";
 
 describe("la vue 3D de chaque modèle", () => {
@@ -207,6 +207,30 @@ describe("les pièces qui ne peuvent pas recevoir d'image", () => {
 
   it("une pièce non listée est imprimable — on n'interdit que ce qui est mesuré", () => {
     expect(pieceImprimable(modele("x"), "side_wall")).toBe(true);
+  });
+});
+
+describe("la tente voisine d'une jonction", () => {
+  /* Dimensions volontairement inégales : si l'axe se trompait, le décalage
+     prendrait la mauvaise cote et le test le verrait. */
+  const dims = { x: 3000, y: 2900 };
+
+  it("se pose dans la direction du côté, à une largeur de toit du centre", () => {
+    const X = modele("x");
+    expect(decalageVoisin(X, "droit", dims).x).toBeCloseTo(3000, 6);
+    expect(decalageVoisin(X, "droit", dims).y).toBeCloseTo(0, 6);
+    expect(decalageVoisin(X, "gauche", dims).x).toBeCloseTo(-3000, 6);
+    expect(decalageVoisin(X, "arriere", dims).y).toBeCloseTo(2900, 6);
+    expect(decalageVoisin(X, "avant", dims).y).toBeCloseTo(-2900, 6);
+  });
+
+  it("suit la convention du modèle, pas celle de la tente X", () => {
+    // Le Spider partage la table commune : mêmes décalages que la X.
+    const S = modele("spider");
+    expect(decalageVoisin(S, "droit", dims).x).toBeCloseTo(3000, 6);
+    // La N a sa façade retournée d'un demi-tour : « avant » part vers +y.
+    const N = modele("n");
+    expect(decalageVoisin(N, "avant", dims).y).toBeCloseTo(2900, 6);
   });
 });
 
