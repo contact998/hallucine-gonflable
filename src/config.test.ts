@@ -19,9 +19,11 @@ describe("Code de configuration tente — aller-retour", () => {
 
   it("retrouve une composition complète", () => {
     const c: ConfigTente = {
+      modele: "x",
       taille: "8x8",
       cotes: { avant: "porte", droit: "fenetre", arriere: "paroi", gauche: "courbe" },
       auvents: { avant: true, droit: false, arriere: true, gauche: false },
+      demiMurs: {},
       options: ["imp_toit", "imp_structure", "acc_sac", "acc_led"],
     };
     const rendu = decoderConfig(encoderConfig(c))!;
@@ -106,7 +108,7 @@ describe("codes de configuration multi-modèles", () => {
     for (const m of MODELES) {
       for (const taille of m.tailles) {
         const code = encoderConfig({
-          modele: m.slug, taille, cotes: {}, auvents: {}, options: [],
+          modele: m.slug, taille, cotes: {}, auvents: {}, demiMurs: {}, options: [],
         });
         const relu = decoderConfig(code);
         expect(relu, `${m.slug} ${taille}`).not.toBeNull();
