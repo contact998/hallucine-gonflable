@@ -33,5 +33,6 @@ export { HabillageMobilier } from "./HabillageMobilier.js";
    liste pendant que le client voyait son lounge. Même remède que la tente. */
 export * from "./implantationMobilier.js";
 export { default as MobilierViewer, urlMeuble, urlPersonne, FOND_SCENE } from "./MobilierViewer.js";
+export { PlanCotes, planDeVisee } from "./PlanCotes.js";
 export { ListeMobilier } from "./ListeMobilier.js";
 export * from "./visuel.js";
