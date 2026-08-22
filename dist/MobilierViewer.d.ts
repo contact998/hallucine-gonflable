@@ -16,7 +16,9 @@ export declare const urlMeuble: (slug: string) => string;
  *
  * Ce sont des personnages POSÉS, pas animés : ils donnent l'échelle et la vie
  * d'une scène sans coûter une animation. La licence (domaine public) est copiée
- * dans `client/public/models/personnes/LICENCE.txt`.
+ * dans `licences/silhouettes-quaternius.txt`, ici — les modèles sont partagés,
+ * leur licence doit l'être aussi. Crédit demandé par l'auteur :
+ * « Background characters by Quaternius ».
  *
  * Les fichiers sont en Y-vertical, cette scène est en Z-vertical (convention
  * CAO reprise du viewer tente) : on les couche d'un quart de tour, comme les
