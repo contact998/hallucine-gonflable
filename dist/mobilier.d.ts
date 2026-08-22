@@ -22,3 +22,23 @@ export declare const HABILLAGES_MOBILIER: HabillageMobilier[];
  * le panier et le prix ne le sont pas.
  */
 export declare function habillageMobilier(cle: string | undefined | null): HabillageMobilier;
+/**
+ * La FAMILLE d'un meuble — ce sur quoi on s'assoit, ce autour de quoi on se
+ * tient debout, ce derrière quoi on sert.
+ *
+ * Elle vit ici parce que les DEUX applications en ont besoin et pour la même
+ * raison : présenter la liste des meubles en trois groupes repliables plutôt
+ * qu'en quinze lignes à plat. Le site l'utilise en plus pour ranger la scène —
+ * les assises en îlots, les mange-debout en périphérie.
+ *
+ * Déduite du `slugSite`, pas d'une table à tenir à jour : un quinzième meuble
+ * ouvert au CRM tombe dans la bonne famille sans qu'on touche à ce fichier.
+ * C'est la convention de nommage qui porte l'information, et elle est stable —
+ * `bar-cocktail-1`, `table-bistro-longue`, `canape-u`.
+ */
+export declare const FAMILLES_MOBILIER: readonly ["assises", "mangeDebout", "bars"];
+export type FamilleMobilier = (typeof FAMILLES_MOBILIER)[number];
+export declare function familleMobilier(slugSite: string): FamilleMobilier;
+/** Libellé français de la famille — le CRM n'a pas d'i18n ; le site traduit
+ *  par ses propres clés (`piece_groupe_*`). */
+export declare const LIBELLES_FAMILLE_FR: Record<FamilleMobilier, string>;

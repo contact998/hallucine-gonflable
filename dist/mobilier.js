@@ -66,3 +66,32 @@ export function habillageMobilier(cle) {
  * Le mode de pose se partage pareil : `MODES_POSE`, `changerMode`,
  * `composerPan` valent pour toute surface imprimable.
  */
+/**
+ * La FAMILLE d'un meuble — ce sur quoi on s'assoit, ce autour de quoi on se
+ * tient debout, ce derrière quoi on sert.
+ *
+ * Elle vit ici parce que les DEUX applications en ont besoin et pour la même
+ * raison : présenter la liste des meubles en trois groupes repliables plutôt
+ * qu'en quinze lignes à plat. Le site l'utilise en plus pour ranger la scène —
+ * les assises en îlots, les mange-debout en périphérie.
+ *
+ * Déduite du `slugSite`, pas d'une table à tenir à jour : un quinzième meuble
+ * ouvert au CRM tombe dans la bonne famille sans qu'on touche à ce fichier.
+ * C'est la convention de nommage qui porte l'information, et elle est stable —
+ * `bar-cocktail-1`, `table-bistro-longue`, `canape-u`.
+ */
+export const FAMILLES_MOBILIER = ["assises", "mangeDebout", "bars"];
+export function familleMobilier(slugSite) {
+    if (slugSite.startsWith("bar-"))
+        return "bars";
+    if (slugSite.startsWith("table-"))
+        return "mangeDebout";
+    return "assises";
+}
+/** Libellé français de la famille — le CRM n'a pas d'i18n ; le site traduit
+ *  par ses propres clés (`piece_groupe_*`). */
+export const LIBELLES_FAMILLE_FR = {
+    assises: "Canapés, banquettes et assises",
+    mangeDebout: "Tables mange-debout",
+    bars: "Bars",
+};
