@@ -7,7 +7,8 @@
  * que le site vendait.
  *
  * Ce qui est ici : la composition et ses règles, le code de configuration qui
- * voyage dans les devis, les teintes, la façon de poser un visuel.
+ * voyage dans les devis, les teintes, la façon de poser un visuel — et
+ * l'habillage du MOBILIER, qui partage la même palette (voir mobilier.ts).
  * Ce qui n'y est PAS : les prix, les coûts, les marges. Ils appartiennent au
  * catalogue du CRM ; ce module ne sait que fabriquer les clés pour les lire —
  * et n'a donc AUCUN moyen d'exposer un prix d'achat à un client.
@@ -18,6 +19,7 @@
 export * from "./composition.js";
 export * from "./config.js";
 export * from "./couleurs.js";
+export * from "./mobilier.js";
 export * from "./pose.js";
 export * from "./vue3d.js";
 
