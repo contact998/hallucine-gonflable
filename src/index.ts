@@ -27,4 +27,5 @@ export * from "./vue3d.js";
    three.js — déclarés en dépendances de pair : chaque application fournit
    les siens, on n'en embarque pas un deuxième exemplaire. */
 export { default as TenteViewer } from "./Viewer.js";
+export { ReglagesPose, type ClassesPose } from "./ReglagesPose.js";
 export * from "./visuel.js";
