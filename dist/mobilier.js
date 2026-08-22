@@ -51,39 +51,18 @@ const PAR_CLE = new Map(HABILLAGES_MOBILIER.map((h) => [h.cle, h]));
 export function habillageMobilier(cle) {
     return PAR_CLE.get(cle ?? "") ?? PAR_CLE.get(HABILLAGE_MOBILIER_DEFAUT);
 }
-/**
- * Réduit une image déposée par le client à une texture d'APERÇU.
+/*
+ * PAS DE FONCTION D'IMPORT D'IMAGE ICI, et c'est délibéré.
  *
- * Trois raisons de ne pas garder l'originale : une photo de téléphone fait
- * 4000 px et pèse plusieurs mégaoctets sur le GPU pour un meuble de 200 px à
- * l'écran ; l'aperçu voyage avec une demande de devis, où un plafond d'octets
- * l'attend ; et une dimension non puissance de deux gêne le filtrage.
+ * `importerVisuel` de `visuel.ts` fait déjà exactement ce qu'il faut : contrôle
+ * du format et du poids, réduction à 720p, aplatissement sur blanc — parce
+ * qu'un PNG transparent posé sur du noir donnerait une housse noire là où le
+ * client attend de la toile nue —, et des erreurs typées pour que l'appelant
+ * traduise le bon message.
  *
- * ⚠️ APERÇU, jamais fichier d'impression. La maquette imprimable se collecte
- * au gabarit du fabricant — 1024 px ne suffit pas à imprimer une housse.
- *
- * Navigateur uniquement (canvas). Elle vit dans ce paquet parce que le site ET
- * le CRM en ont besoin : le client dépose son visuel sur le configurateur, le
- * commercial le dépose sur le devis, et les deux doivent réduire pareil.
+ * Une housse de meuble et une toile de tente posent le même problème. J'en ai
+ * écrit une deuxième version le 22/08/2026 avant de m'apercevoir que celle-ci
+ * existait : elle a vécu dix minutes, dans la v0.22.0, et n'a jamais servi.
+ * Le mode de pose se partage pareil : `MODES_POSE`, `changerMode`,
+ * `composerPan` valent pour toute surface imprimable.
  */
-export const COTE_APERCU_MOBILIER = 1024;
-export function reduirePourApercu(fichier) {
-    return new Promise((resolve, reject) => {
-        const url = URL.createObjectURL(fichier);
-        const img = new Image();
-        img.onload = () => {
-            URL.revokeObjectURL(url);
-            const k = Math.min(1, COTE_APERCU_MOBILIER / Math.max(img.width, img.height));
-            const c = document.createElement("canvas");
-            c.width = Math.max(1, Math.round(img.width * k));
-            c.height = Math.max(1, Math.round(img.height * k));
-            const ctx = c.getContext("2d");
-            if (!ctx)
-                return reject(new Error("canvas indisponible"));
-            ctx.drawImage(img, 0, 0, c.width, c.height);
-            resolve(c.toDataURL("image/jpeg", 0.82));
-        };
-        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("image illisible")); };
-        img.src = url;
-    });
-}
