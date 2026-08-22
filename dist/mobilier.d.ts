@@ -22,3 +22,20 @@ export declare const HABILLAGES_MOBILIER: HabillageMobilier[];
  * le panier et le prix ne le sont pas.
  */
 export declare function habillageMobilier(cle: string | undefined | null): HabillageMobilier;
+/**
+ * Réduit une image déposée par le client à une texture d'APERÇU.
+ *
+ * Trois raisons de ne pas garder l'originale : une photo de téléphone fait
+ * 4000 px et pèse plusieurs mégaoctets sur le GPU pour un meuble de 200 px à
+ * l'écran ; l'aperçu voyage avec une demande de devis, où un plafond d'octets
+ * l'attend ; et une dimension non puissance de deux gêne le filtrage.
+ *
+ * ⚠️ APERÇU, jamais fichier d'impression. La maquette imprimable se collecte
+ * au gabarit du fabricant — 1024 px ne suffit pas à imprimer une housse.
+ *
+ * Navigateur uniquement (canvas). Elle vit dans ce paquet parce que le site ET
+ * le CRM en ont besoin : le client dépose son visuel sur le configurateur, le
+ * commercial le dépose sur le devis, et les deux doivent réduire pareil.
+ */
+export declare const COTE_APERCU_MOBILIER = 1024;
+export declare function reduirePourApercu(fichier: Blob): Promise<string>;
