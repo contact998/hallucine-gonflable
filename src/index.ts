@@ -28,4 +28,5 @@ export * from "./vue3d.js";
    les siens, on n'en embarque pas un deuxième exemplaire. */
 export { default as TenteViewer } from "./Viewer.js";
 export { ReglagesPose, type ClassesPose } from "./ReglagesPose.js";
+export { HabillageMobilier, type ClassesHabillage } from "./HabillageMobilier.js";
 export * from "./visuel.js";
