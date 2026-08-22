@@ -62,6 +62,11 @@ import { vue3d, urlPiece, echelle, BASE_R2 } from "./vue3d.js";
 import { modele as modeleTente } from "./composition.js";
 import { TEINTE_NUE, hexDeTeinte } from "./couleurs.js";
 
+/** Le gris-bleu du fond de studio. Propriété de la SCÈNE, pas des applications :
+ *  il ne bascule pas en mode sombre — un canapé se regarde sur le même fond des
+ *  deux côtés, sinon les couleurs ne se comparent plus. */
+export const FOND_SCENE = "#eef2f5";
+
 const MM_EN_M = 0.001;
 const RAD = Math.PI / 180;
 
@@ -544,7 +549,12 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
   }, [implantation, abri, habillages, visuels]);
 
   return (
-    <div ref={hote} className="relative w-full h-full">
+    /* Le fond du studio est peint ICI, par la scène. Il était écrit en dur dans
+       chaque page qui la montait — trois fois, dans deux dépôts — et le cliquet
+       hex-inline du CRM le refusait à juste titre. Ce n'est pas une couleur de
+       thème : c'est le gris-bleu du fond de prise de vue, il ne suit ni le mode
+       sombre du site ni celui du CRM. */
+    <div ref={hote} className="relative w-full h-full" style={{ backgroundColor: FOND_SCENE }}>
       {!pret && labelChargement && (
         <span className="absolute inset-0 flex items-center justify-center text-sm text-[#2E4A5E]/70">
           {labelChargement}

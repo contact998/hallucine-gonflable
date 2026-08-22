@@ -6,6 +6,10 @@ export interface Abri {
     taille: string;
 }
 import type { VisuelPose } from "./pose.js";
+/** Le gris-bleu du fond de studio. Propriété de la SCÈNE, pas des applications :
+ *  il ne bascule pas en mode sombre — un canapé se regarde sur le même fond des
+ *  deux côtés, sinon les couleurs ne se comparent plus. */
+export declare const FOND_SCENE = "#eef2f5";
 export declare const urlMeuble: (slug: string) => string;
 /**
  * Une silhouette — un modèle CC0 de Quaternius, chargé et cloné comme un meuble.

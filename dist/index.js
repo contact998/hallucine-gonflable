@@ -32,6 +32,6 @@ export { HabillageMobilier } from "./HabillageMobilier.js";
    site, ce qui privait le CRM de toute vue 3D — le commercial composait une
    liste pendant que le client voyait son lounge. Même remède que la tente. */
 export * from "./implantationMobilier.js";
-export { default as MobilierViewer, urlMeuble, urlPersonne } from "./MobilierViewer.js";
+export { default as MobilierViewer, urlMeuble, urlPersonne, FOND_SCENE } from "./MobilierViewer.js";
 export { ListeMobilier } from "./ListeMobilier.js";
 export * from "./visuel.js";
