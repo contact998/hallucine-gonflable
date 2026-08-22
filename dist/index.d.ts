@@ -7,4 +7,6 @@ export * from "./vue3d.js";
 export { default as TenteViewer } from "./Viewer.js";
 export { ReglagesPose, type ClassesPose } from "./ReglagesPose.js";
 export { HabillageMobilier, type ClassesHabillage } from "./HabillageMobilier.js";
+export * from "./implantationMobilier.js";
+export { default as MobilierViewer } from "./MobilierViewer.js";
 export * from "./visuel.js";

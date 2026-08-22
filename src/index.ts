@@ -29,4 +29,10 @@ export * from "./vue3d.js";
 export { default as TenteViewer } from "./Viewer.js";
 export { ReglagesPose, type ClassesPose } from "./ReglagesPose.js";
 export { HabillageMobilier, type ClassesHabillage } from "./HabillageMobilier.js";
+
+/* Le mobilier : son moteur d'implantation et sa scène 3D. Ils étaient dans le
+   site, ce qui privait le CRM de toute vue 3D — le commercial composait une
+   liste pendant que le client voyait son lounge. Même remède que la tente. */
+export * from "./implantationMobilier.js";
+export { default as MobilierViewer } from "./MobilierViewer.js";
 export * from "./visuel.js";
