@@ -14,6 +14,7 @@
 /** Une ligne de panier : un meuble, une quantité, et son habillage.
  *  Déclarée ici parce que le moteur en a besoin — le compositeur de lounge, qui
  *  la produit, reste côté site : il relève du commerce, pas de la géométrie. */
+import { familleMobilier } from "./mobilier.js";
 export interface LigneLounge {
     slug: string;
     qte: number;
@@ -59,18 +60,7 @@ export interface Implantation {
     /** Exemplaires non posés faute de place — annoncés, jamais tus. */
     nonPoses: number;
 }
-/**
- * Trois zones, du nord au sud : les assises devant l'écran, les mange-debout
- * derrière ; les bars occupent une colonne à part sur le bord est.
- *
- * `MobilierItem` ne porte aucun champ de catégorie — le CRM ne le fournit
- * pas — la classification se fait donc sur le `slugSite`, dont la convention
- * de nommage (déjà celle du moteur `lounge.ts`) sépare sans ambiguïté les
- * trois familles du catalogue actuel : `bar-*`, `table-*`, et tout le reste
- * (canapés, poufs, chaises, tabourets) qui s'assoit face à l'écran.
- */
-type Zone = "assises" | "mangeDebout" | "bars";
-export declare function zoneDe(slug: string): Zone;
+export declare const zoneDe: typeof familleMobilier;
 export declare function implanter(panier: LigneLounge[], catalogue: Record<string, MobilierItem>, surfaceM2?: number, emprise?: {
     largeurM: number;
     profondeurM: number;

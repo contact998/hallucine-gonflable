@@ -140,7 +140,7 @@ function materiauTeinte(gabarit: THREE.Group, cle: string): THREE.MeshStandardMa
 /* Les meubles et les silhouettes vivent sur R2, comme les pièces de tente :
    une adresse, deux lecteurs. Les servir depuis le site obligeait le CRM à s'en
    passer — donc à ne pas avoir de 3D du tout. */
-const urlMeuble = (slug: string) => `${BASE_R2}/mobilier/${slug}.glb`;
+export const urlMeuble = (slug: string) => `${BASE_R2}/mobilier/${slug}.glb`;
 function chargerGLB(loader: GLTFLoader, url: string): Promise<THREE.Group> {
   let p = cacheGLB.get(url);
   if (!p) {
@@ -238,7 +238,7 @@ const MAT_SILHOUETTE = new THREE.MeshStandardMaterial({ color: 0x9fb0bd, roughne
  * capsules de la version précédente. L'échelle et le choix du modèle viennent
  * du module pur, où ils sont testés.
  */
-const urlPersonne = (fichier: string) => `${BASE_R2}/personnes/${fichier}.glb`;
+export const urlPersonne = (fichier: string) => `${BASE_R2}/personnes/${fichier}.glb`;
 
 function poserSilhouette(gabarit: THREE.Group, p: Personne, m: ModeleSilhouette): THREE.Group {
   const g = new THREE.Group();

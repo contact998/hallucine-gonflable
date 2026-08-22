@@ -14,6 +14,7 @@
 /** Une ligne de panier : un meuble, une quantité, et son habillage.
  *  Déclarée ici parce que le moteur en a besoin — le compositeur de lounge, qui
  *  la produit, reste côté site : il relève du commerce, pas de la géométrie. */
+import { familleMobilier, type FamilleMobilier } from "./mobilier.js";
 export interface LigneLounge {
   slug: string;
   qte: number;
@@ -93,13 +94,14 @@ const MARGE_SECURITE_M = 0.01;
  * trois familles du catalogue actuel : `bar-*`, `table-*`, et tout le reste
  * (canapés, poufs, chaises, tabourets) qui s'assoit face à l'écran.
  */
-type Zone = "assises" | "mangeDebout" | "bars";
-
-export function zoneDe(slug: string): Zone {
-  if (slug.startsWith("bar-")) return "bars";
-  if (slug.startsWith("table-")) return "mangeDebout";
-  return "assises";
-}
+/* La famille d'un meuble se décide dans `mobilier.ts`, une seule fois. Elle
+   était écrite ici ET là-bas — deux copies du même `startsWith`, remontées
+   côte à côte dans ce paquet. Ajouter une famille aurait tenu tant qu'on
+   pensait aux deux. `zoneDe` reste comme nom d'appoint : le moteur raisonne en
+   zones du plan, l'interface en familles du catalogue, c'est le même découpage
+   vu de deux métiers. */
+type Zone = FamilleMobilier;
+export const zoneDe = familleMobilier;
 
 interface Unite {
   slug: string;

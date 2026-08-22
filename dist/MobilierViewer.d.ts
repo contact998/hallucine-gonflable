@@ -6,6 +6,20 @@ export interface Abri {
     taille: string;
 }
 import type { VisuelPose } from "./pose.js";
+export declare const urlMeuble: (slug: string) => string;
+/**
+ * Une silhouette — un modèle CC0 de Quaternius, chargé et cloné comme un meuble.
+ *
+ * Ce sont des personnages POSÉS, pas animés : ils donnent l'échelle et la vie
+ * d'une scène sans coûter une animation. La licence (domaine public) est copiée
+ * dans `client/public/models/personnes/LICENCE.txt`.
+ *
+ * Les fichiers sont en Y-vertical, cette scène est en Z-vertical (convention
+ * CAO reprise du viewer tente) : on les couche d'un quart de tour, comme les
+ * capsules de la version précédente. L'échelle et le choix du modèle viennent
+ * du module pur, où ils sont testés.
+ */
+export declare const urlPersonne: (fichier: string) => string;
 type Props = {
     implantation: Implantation;
     labelChargement?: string;

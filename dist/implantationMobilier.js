@@ -1,3 +1,20 @@
+/**
+ * Le moteur d'implantation du mobilier : où chaque meuble se pose, qui s'assoit
+ * dessus, et sur quel sol.
+ *
+ * IL VIT ICI DEPUIS LE 22/08/2026. Il était dans le site, donc la scène 3D du
+ * mobilier aussi, donc le CRM n'en avait aucune : le commercial composait une
+ * liste pendant que le client voyait son lounge. Le même écran des deux côtés
+ * exigeait de remonter le moteur avec la scène — c'est ce que la tente fait
+ * depuis toujours.
+ *
+ * Ce qu'il ne sait pas : les prix. Il ne connaît que des cotes et des places,
+ * lues au catalogue par l'application. Aucun coût ne peut passer par là.
+ */
+/** Une ligne de panier : un meuble, une quantité, et son habillage.
+ *  Déclarée ici parce que le moteur en a besoin — le compositeur de lounge, qui
+ *  la produit, reste côté site : il relève du commerce, pas de la géométrie. */
+import { familleMobilier } from "./mobilier.js";
 /** Le pas entre deux meubles : leur encombrement, plus la circulation. */
 const CIRCULATION_M = 0.6;
 /** Au-delà, `nonPoses` compte le reste — jamais un silence. */
@@ -17,13 +34,7 @@ const PROFONDEUR_ASSIS = 0.65;
 const LISERE_SOL_M = 0.6;
 /** Marge de sécurité anti-frontière flottante entre le calcul du besoin et le placement réel. */
 const MARGE_SECURITE_M = 0.01;
-export function zoneDe(slug) {
-    if (slug.startsWith("bar-"))
-        return "bars";
-    if (slug.startsWith("table-"))
-        return "mangeDebout";
-    return "assises";
-}
+export const zoneDe = familleMobilier;
 /**
  * Aplatit le panier en exemplaires individuels puis les trie par slug, puis
  * par index — jamais par l'ordre d'arrivée des lignes. Un slug absent du
