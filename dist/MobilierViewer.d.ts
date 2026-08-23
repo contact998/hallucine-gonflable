@@ -9,6 +9,10 @@ export interface Abri {
     taille: string;
     config?: CompositionAbri | null;
     nb?: number;
+    /** L'image du client sur TOUTE la tente — enroulée autour de l'ensemble
+     *  (toit, parois, auvents), jamais sur les meubles. Même mécanique que la
+     *  portée « tente » du viewer tente. Absente : la toile sort d'usine. */
+    visuel?: VisuelPose | null;
 }
 import type { VisuelPose } from "./pose.js";
 import { type CompositionAbri } from "./vue3d.js";

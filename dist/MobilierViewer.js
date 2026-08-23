@@ -55,10 +55,11 @@ import { LACET_MEUBLE } from "./implantationMobilier.js";
 import { habillageMobilier as habillage, HABILLAGE_MOBILIER_DEFAUT as HABILLAGE_DEFAUT } from "./mobilier.js";
 import { composerPan } from "./visuel.js";
 import { chargerImage } from "./visuel.js";
-import { urlPiece, echelle, piecesAbri, rangeeAbri, axeRangee, decalageVoisin, porteVitre, BASE_R2 } from "./vue3d.js";
+import { urlPiece, echelle, piecesAbri, rangeeAbri, axeRangee, decalageVoisin, porteVitre, pieceImprimable, BASE_R2 } from "./vue3d.js";
 import { modele as modeleTente } from "./composition.js";
 import { TEINTE_NUE, hexDeTeinte } from "./couleurs.js";
 import { marquerVitre, estVitre } from "./vitre.js";
+import { enroulerAutourDeLaTente } from "./enrouler.js";
 /** Le gris-bleu du fond de studio. Propriété de la SCÈNE, pas des applications :
  *  il ne bascule pas en mode sombre — un canapé se regarde sur le même fond des
  *  deux côtés, sinon les couleurs ne se comparent plus. */
@@ -227,6 +228,12 @@ async function construireAbri(loader, a) {
                     const mat = mail.material;
                     if (!mat)
                         return;
+                    /* Avec un visuel, chaque pièce reçoit SES coordonnées d'enroulement —
+                       or `clone(true)` partage les géométries avec le cache : deux parois
+                       identiques n'en ont qu'une, et la seconde écraserait les UV de la
+                       première. On sépare donc la géométrie, seulement quand il le faut. */
+                    if (a.visuel && mail.isMesh)
+                        mail.geometry = mail.geometry.clone();
                     mail.material = mat.clone();
                     const m2 = mail.material;
                     m2.side = THREE.DoubleSide;
@@ -250,6 +257,9 @@ async function construireAbri(loader, a) {
                 sous.position.set(pas.x * ci, pas.y * ci, 0);
                 sous.userData.azimutAbri = piece.azimut;
                 sous.userData.matsAbri = mats;
+                /* La structure (pieds…) n'a pas de coordonnées d'impression : le visuel
+                   du client ne se pose que sur les pièces que l'atelier sait imprimer. */
+                sous.userData.imprimableAbri = pieceImprimable(m, piece.nom);
                 sous.add(corps);
                 groupe.add(sous);
             }
@@ -257,12 +267,65 @@ async function construireAbri(loader, a) {
         if (!groupe.children.length)
             return null;
         groupe.scale.setScalar(MM_EN_M * echelle(m, a.taille));
+        if (a.visuel)
+            await habillerAbri(groupe, a.visuel);
         return groupe;
     }
     catch {
         /* Modèle ou taille inconnus du module partagé : pas d'abri dessiné, et le
            lounge reste visible. Le devis, lui, ne dépend pas de cette fonction. */
         return null;
+    }
+}
+/**
+ * L'image du client sur TOUTE la tente : l'enroulement du viewer tente
+ * (portée « tente »), appliqué à l'abri du lounge — l'image fait le tour de
+ * l'ensemble (rangée comprise) et chaque pièce n'en montre que sa part, ce qui
+ * raccorde une paroi au toit. Les vitres restent des vitres.
+ *
+ * Le repère est celui du groupe, centré par construction : les UV posés ici
+ * survivent aux déplacements que la scène fera ensuite.
+ */
+async function habillerAbri(groupe, pose) {
+    try {
+        const image = await chargerImage(pose.url);
+        groupe.updateMatrixWorld(true);
+        const boite = new THREE.Box3().setFromObject(groupe);
+        const dim = boite.getSize(new THREE.Vector3());
+        const hauteur = boite.max.z;
+        if (hauteur <= 0)
+            return;
+        enroulerAutourDeLaTente(groupe, hauteur);
+        /* Proportions du développé : le tour sur la hauteur — mesuré, pas deviné. */
+        const ratio = (Math.PI * Math.max(dim.x, dim.y)) / hauteur;
+        const tex = new THREE.CanvasTexture(composerPan(image, pose, ratio, hexDeTeinte(TEINTE_NUE)));
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.flipY = false;
+        tex.channel = 1;
+        tex.needsUpdate = true;
+        for (const sous of groupe.children) {
+            if (!sous.userData.imprimableAbri)
+                continue;
+            sous.traverse((o) => {
+                const maille = o;
+                if (!maille.isMesh || estVitre(maille))
+                    return;
+                if (!maille.geometry.getAttribute("uv1"))
+                    return;
+                const mat = maille.material;
+                if (!mat?.color)
+                    return;
+                mat.map = tex;
+                /* La teinte vit dans le canevas, comme fond — la laisser sur la matière
+                   voilerait l'image de blanc cassé. */
+                mat.color.setRGB(1, 1, 1);
+                mat.needsUpdate = true;
+            });
+        }
+    }
+    catch (err) {
+        /* La tente reste unie plutôt que d'arrêter la scène — mais on le DIT. */
+        console.warn("[lounge] visuel non posé sur la tente", err);
     }
 }
 /**
