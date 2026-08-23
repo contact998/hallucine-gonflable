@@ -133,6 +133,25 @@ function dimsDepuisSurface(surfaceM2: number): { largeurM: number; profondeurM: 
   return { largeurM: RATIO_SOL * profondeurM, profondeurM };
 }
 
+/**
+ * L'ordre des rangs d'un cinéma en plein air : du plus BAS devant l'écran au
+ * plus haut au fond — personne ne regarde à travers un dossier. À hauteur
+ * égale, le moins de places d'abord : le fauteuil une place passe devant le
+ * canapé deux places (décision de Daniel, 23/08/2026 — « d'abord les poufs,
+ * puis les fauteuils une place, puis les deux places »). Les hauteurs viennent
+ * du catalogue, jamais d'une liste écrite ici : un meuble nouveau se range tout
+ * seul à sa hauteur. Le départage final par slug puis index garde le placement
+ * déterministe — un lien de devis rejoué rend la même scène.
+ */
+function ordonnerPourRangs(unites: Unite[]): Unite[] {
+  return [...unites].sort(
+    (a, b) =>
+      a.item.hauteurCm - b.item.hauteurCm ||
+      a.item.placesAssises - b.item.placesAssises ||
+      (a.slug === b.slug ? a.index - b.index : a.slug < b.slug ? -1 : 1),
+  );
+}
+
 interface Rect {
   xMin: number;
   xMax: number;
@@ -295,9 +314,17 @@ interface ResultatPack {
  * petit, garde sa chance dans la même rangée. Un meuble trop large pour la
  * zone entière (même vide) échoue immédiatement, sans quoi le passage à la
  * rangée suivante boucle indéfiniment.
+ *
+ * `quinconce` : un rang sur deux démarre décalé d'une demi-place — comme au
+ * cinéma, chacun voit ENTRE les têtes du rang de devant, pas dedans (décision
+ * de Daniel, 23/08/2026). Le décalage se mesure sur le premier meuble du rang,
+ * et se rogne si la place manque : mieux vaut un rang aligné qu'un meuble
+ * dehors.
  */
-function shelfPack(rect: Rect, blocs: Bloc[], circulation: number): ResultatPack {
+function shelfPack(rect: Rect, blocs: Bloc[], circulation: number, quinconce = false): ResultatPack {
   const largeurZone = rect.xMax - rect.xMin;
+  let rang = 0;
+  let rangVide = true;
   let rowX = rect.xMin;
   let rowZ = rect.zMin;
   let rowMaxDepth = 0;
@@ -313,14 +340,20 @@ function shelfPack(rect: Rect, blocs: Bloc[], circulation: number): ResultatPack
       rowZ += rowMaxDepth + circulation;
       rowX = rect.xMin;
       rowMaxDepth = 0;
+      rang += 1;
+      rangVide = true;
     }
     if (rowZ + b.dM > rect.zMax) {
       echecs.push(...b.unites);
       continue;
     }
+    if (rangVide && quinconce && rang % 2 === 1) {
+      rowX += Math.min((b.wM + circulation) / 2, largeurZone - b.wM);
+    }
     placements.push(...b.deplier(rowX + b.wM / 2, rowZ + b.dM / 2));
     rowX += b.wM + circulation;
     rowMaxDepth = Math.max(rowMaxDepth, b.dM);
+    rangVide = false;
   }
 
   return { placements, echecs, finalRowZ: rowZ, finalRowMaxDepth: rowMaxDepth };
@@ -332,8 +365,16 @@ function shelfPack(rect: Rect, blocs: Bloc[], circulation: number): ResultatPack
  * qui garantit que toute assise reste strictement au nord de tout
  * mange-debout, quel que soit le remplissage de la dernière rangée d'assises.
  */
-function packZonePrincipale(rect: Rect, assises: Bloc[], mangeDebout: Bloc[], circulation: number): ResultatPack {
-  const resAssises = shelfPack(rect, assises, circulation);
+function packZonePrincipale(
+  rect: Rect,
+  assises: Bloc[],
+  mangeDebout: Bloc[],
+  circulation: number,
+  /* Le quinconce ne vaut que pour les assises : des mange-debout décalés ne
+     protègent la vue de personne, on se tient debout autour. */
+  quinconceAssises = false,
+): ResultatPack {
+  const resAssises = shelfPack(rect, assises, circulation, quinconceAssises);
   if (mangeDebout.length === 0) return resAssises;
 
   const zRupture = assises.length === 0 ? rect.zMin : resAssises.finalRowZ + resAssises.finalRowMaxDepth + circulation;
@@ -387,7 +428,12 @@ export function implanter(
   const aPlacer = toutes.slice(0, PLAFOND_EXEMPLAIRES);
   const horsPlafond = toutes.length - aPlacer.length;
 
-  const assises = aPlacer.filter((u) => zoneDe(u.slug) === "assises");
+  /* En rangs, l'ordre alphabétique mettait les canapés deux places au premier
+     rang et les poufs au fond — l'inverse d'une salle : on retrie du plus bas
+     au plus haut, l'écran étant au nord. */
+  const enRangs = disposition === "rangs";
+  const assisesBrutes = aPlacer.filter((u) => zoneDe(u.slug) === "assises");
+  const assises = enRangs ? ordonnerPourRangs(assisesBrutes) : assisesBrutes;
   const mangeDebout = aPlacer.filter((u) => zoneDe(u.slug) === "mangeDebout");
   const bars = aPlacer.filter((u) => zoneDe(u.slug) === "bars");
 
@@ -427,6 +473,7 @@ export function implanter(
       blocsAssises,
       blocsDebout,
       CIRCULATION_M,
+      enRangs,
     );
     const profondeurPrincipale =
       assises.length + mangeDebout.length > 0 ? mesurePrincipale.finalRowZ + mesurePrincipale.finalRowMaxDepth : 0;
@@ -451,7 +498,7 @@ export function implanter(
     zMin: -zHalf,
     zMax: zHalf,
   };
-  const resultatPrincipal = packZonePrincipale(rectPrincipal, blocsAssises, blocsDebout, CIRCULATION_M);
+  const resultatPrincipal = packZonePrincipale(rectPrincipal, blocsAssises, blocsDebout, CIRCULATION_M, enRangs);
 
   let placementsBars: MeublePose[] = [];
   let echecsBars: Unite[] = [];

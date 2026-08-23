@@ -56,6 +56,11 @@ type Props = {
         quitter?: string;
         imprimer?: string;
     };
+    /** Effacer la paroi entre la caméra et les meubles quand on tourne (défaut,
+     *  le comportement historique). `false` : les parois restent pleines quel que
+     *  soit l'angle — demandé par Daniel le 23/08/2026 pour les scènes prêtes du
+     *  site, où la tente doit se montrer telle qu'elle sera construite. */
+    effacerParois?: boolean;
 };
-export default function MobilierViewer({ implantation, labelChargement, labelEchec, captureRef, abri, habillages, visuels, libellesOutils }: Props): import("react").JSX.Element;
+export default function MobilierViewer({ implantation, labelChargement, labelEchec, captureRef, abri, habillages, visuels, libellesOutils, effacerParois }: Props): import("react").JSX.Element;
 export {};

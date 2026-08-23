@@ -259,6 +259,64 @@ describe("implanter", () => {
     expect(res.meubles.every((m) => m.rotation === 0)).toBe(true);
   });
 
+  it("EN RANGS, du plus bas au plus haut : poufs devant l'écran, canapés deux places au fond", () => {
+    /* La salle de cinéma : personne ne regarde à travers un dossier. L'ordre
+       alphabétique posait les canapés doubles au premier rang et les poufs au
+       fond — l'inverse. L'écran est au nord (z NÉGATIF) : « devant » = z plus
+       petit. À hauteur égale (fauteuil et canapé, 85 cm), le une place passe
+       devant le deux places. */
+    const res = implanter(
+      [
+        { slug: "canape-double", qte: 3 },
+        { slug: "pouf", qte: 4 },
+        { slug: "canape-simple", qte: 3 },
+        { slug: "chaise", qte: 3 },
+      ],
+      CAT,
+      undefined,
+      undefined,
+      "rangs",
+    );
+    expect(res.nonPoses).toBe(0);
+    const zDe = (slug: string) => res.meubles.filter((m) => m.slug === slug).map((m) => m.z);
+    /* Deux catégories voisines peuvent partager une rangée (≤), mais jamais
+       s'inverser ; les extrêmes, eux, sont STRICTEMENT séparés. */
+    expect(Math.max(...zDe("pouf"))).toBeLessThanOrEqual(Math.min(...zDe("chaise")));
+    expect(Math.max(...zDe("chaise"))).toBeLessThanOrEqual(Math.min(...zDe("canape-simple")));
+    expect(Math.max(...zDe("canape-simple"))).toBeLessThanOrEqual(Math.min(...zDe("canape-double")));
+    expect(Math.max(...zDe("pouf"))).toBeLessThan(Math.min(...zDe("canape-double")));
+  });
+
+  it("EN RANGS, un rang sur deux est DÉCALÉ d'une demi-place — on voit entre les têtes", () => {
+    /* 8 chaises sous une emprise de 6,2 m de large : 4 au premier rang, puis
+       le rang suivant démarre décalé de (largeur + circulation) / 2 = 0,8 m.
+       Le recentrage translate tout d'un bloc : on compare des ÉCARTS. */
+    const res = implanter(
+      [{ slug: "chaise", qte: 8 }],
+      CAT,
+      undefined,
+      { largeurM: 6.2, profondeurM: 4 },
+      "rangs",
+    );
+    expect(res.nonPoses).toBe(0);
+    const parRang = new Map<string, number[]>();
+    for (const m of res.meubles) {
+      const cle = m.z.toFixed(3);
+      parRang.set(cle, [...(parRang.get(cle) ?? []), m.x]);
+    }
+    const rangs = [...parRang.entries()]
+      .sort(([a], [b]) => Number(a) - Number(b))
+      .map(([, xs]) => xs.sort((a, b) => a - b));
+    expect(rangs.length).toBeGreaterThanOrEqual(2);
+    expect(rangs[1][0] - rangs[0][0]).toBeCloseTo(0.8, 6);
+    /* Et le rang 3, s'il existe, revient à l'aplomb du premier. */
+    if (rangs.length >= 3) expect(rangs[2][0] - rangs[0][0]).toBeCloseTo(0, 6);
+    /* Personne n'est exactement dans l'axe de la tête de devant. */
+    for (const x1 of rangs[0]) for (const x2 of rangs[1]) {
+      expect(Math.abs(x2 - x1)).toBeGreaterThanOrEqual(0.75);
+    }
+  });
+
   it("l'ensemble est CENTRÉ sur son sol, jamais plaqué dans un coin", () => {
     /* Un canapé seul se retrouvait contre l'angle nord-ouest d'un sol trois
        fois trop grand, et le vide à côté ressemblait à une panne. */

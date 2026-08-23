@@ -338,8 +338,12 @@ function construireSol(sol) {
     mesh.position.z = -0.002;
     return mesh;
 }
-export default function MobilierViewer({ implantation, labelChargement, labelEchec, captureRef, abri, habillages, visuels, libellesOutils }) {
+export default function MobilierViewer({ implantation, labelChargement, labelEchec, captureRef, abri, habillages, visuels, libellesOutils, effacerParois }) {
     const hote = useRef(null);
+    /* Lu par la boucle de rendu, montée une seule fois : un ref, pas une
+       dépendance d'effet — changer d'avis ne remonte pas la scène. */
+    const effacerParoisRef = useRef(true);
+    effacerParoisRef.current = effacerParois ?? true;
     /* La capture, gardée par le composant : les outils de vue impriment la
        MÊME image que celle jointe au devis. */
     const captureInterne = useRef(null);
@@ -444,7 +448,10 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
                         continue;
                     const rad = azimut * RAD;
                     const dot = (Math.sin(rad) * versCam.x + Math.cos(rad) * versCam.y) / plat;
-                    const devant = dot > 0.35;
+                    /* Effacement débrayé : aucune paroi n'est « devant », toutes glissent
+                       vers leur opacité propre — la tente reste entière sous tous les
+                       angles. */
+                    const devant = effacerParoisRef.current && dot > 0.35;
                     for (const mt of mats) {
                         const opBase = mt.userData.opBase ?? 1;
                         const cible = devant ? opBase * 0.12 : opBase;

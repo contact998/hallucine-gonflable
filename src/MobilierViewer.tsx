@@ -372,10 +372,19 @@ type Props = {
    *  six langues, le CRM n'en parle qu'une — d'où des mots injectés, pas écrits
    *  ici. Absents : le français par défaut. */
   libellesOutils?: { pleinEcran?: string; quitter?: string; imprimer?: string };
+  /** Effacer la paroi entre la caméra et les meubles quand on tourne (défaut,
+   *  le comportement historique). `false` : les parois restent pleines quel que
+   *  soit l'angle — demandé par Daniel le 23/08/2026 pour les scènes prêtes du
+   *  site, où la tente doit se montrer telle qu'elle sera construite. */
+  effacerParois?: boolean;
 };
 
-export default function MobilierViewer({ implantation, labelChargement, labelEchec, captureRef, abri, habillages, visuels, libellesOutils }: Props) {
+export default function MobilierViewer({ implantation, labelChargement, labelEchec, captureRef, abri, habillages, visuels, libellesOutils, effacerParois }: Props) {
   const hote = useRef<HTMLDivElement>(null);
+  /* Lu par la boucle de rendu, montée une seule fois : un ref, pas une
+     dépendance d'effet — changer d'avis ne remonte pas la scène. */
+  const effacerParoisRef = useRef(true);
+  effacerParoisRef.current = effacerParois ?? true;
   /* La capture, gardée par le composant : les outils de vue impriment la
      MÊME image que celle jointe au devis. */
   const captureInterne = useRef<(() => string | null) | null>(null);
@@ -499,7 +508,10 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
           if (azimut == null || !mats?.length) continue;
           const rad = azimut * RAD;
           const dot = (Math.sin(rad) * versCam.x + Math.cos(rad) * versCam.y) / plat;
-          const devant = dot > 0.35;
+          /* Effacement débrayé : aucune paroi n'est « devant », toutes glissent
+             vers leur opacité propre — la tente reste entière sous tous les
+             angles. */
+          const devant = effacerParoisRef.current && dot > 0.35;
           for (const mt of mats) {
             const opBase = (mt.userData.opBase as number | undefined) ?? 1;
             const cible = devant ? opBase * 0.12 : opBase;
