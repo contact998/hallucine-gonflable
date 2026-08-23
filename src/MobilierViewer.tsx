@@ -481,7 +481,13 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
       orbite.maxPolarAngle = dist > 0
         ? Math.acos(Math.max(-1, Math.min(1, (Z_SOL - orbite.target.z) / dist)))
         : Math.PI / 2;
-      if (performance.now() - derniereAction > REPOS_MS) {
+      /* La vitrine ne tourne QUE si les parois s'effacent : avec des parois
+         opaques (`effacerParois={false}`), la rotation finissait toujours par
+         braquer un mur — le visiteur déposait son image sur les meubles et ne
+         voyait qu'une tente fermée, « rien ne se passe » (vécu par Daniel,
+         24/08/2026). Une scène qui ne se laisse pas traverser du regard reste
+         là où on l'a laissée. */
+      if (effacerParoisRef.current && performance.now() - derniereAction > REPOS_MS) {
         const off = cam.position.clone().sub(orbite.target);
         const az = Math.atan2(off.y, off.x) + 0.0012;
         const rH = Math.hypot(off.x, off.y);
