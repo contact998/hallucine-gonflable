@@ -53,15 +53,17 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { Implantation, MeublePose, Personne, ModeleSilhouette } from "./implantationMobilier.js";
 import { LACET_MEUBLE } from "./implantationMobilier.js";
 /** L'abri au-dessus du lounge, décrit par l'application : le paquet sait le
- *  dessiner, pas le tarifer. */
-export interface Abri { modele: string; taille: string }
+ *  dessiner, pas le tarifer. `config` = la composition reçue du configurateur
+ *  tente — présente, l'abri se dessine construit ; absente, il reste nu. */
+export interface Abri { modele: string; taille: string; config?: CompositionAbri | null }
 import { habillageMobilier as habillage, HABILLAGE_MOBILIER_DEFAUT as HABILLAGE_DEFAUT } from "./mobilier.js";
 import { composerPan } from "./visuel.js";
 import { chargerImage } from "./visuel.js";
 import type { VisuelPose } from "./pose.js";
-import { vue3d, urlPiece, echelle, BASE_R2 } from "./vue3d.js";
+import { urlPiece, echelle, piecesAbri, porteVitre, BASE_R2, type CompositionAbri } from "./vue3d.js";
 import { modele as modeleTente } from "./composition.js";
 import { TEINTE_NUE, hexDeTeinte } from "./couleurs.js";
+import { marquerVitre, estVitre } from "./vitre.js";
 
 /** Le gris-bleu du fond de studio. Propriété de la SCÈNE, pas des applications :
  *  il ne bascule pas en mode sombre — un canapé se regarde sur le même fond des
@@ -163,10 +165,16 @@ function chargerGLB(loader: GLTFLoader, url: string): Promise<THREE.Group> {
 }
 
 /**
- * Les pièces de la tente NUE, telles que le module partagé les décrit — jamais
- * une liste que j'aurais recopiée. `socle` vaut ["roof", "LEG", "zipper_cover"]
- * pour la X : le toit, les pieds, le cache-zip. Les parois sont volontairement
- * absentes ; une tente fermée cacherait le lounge qu'on cherche à montrer.
+ * L'abri, tel que `piecesAbri` le décrit : le socle toujours (toit, pieds,
+ * cache-zip), et — quand la composition voyage avec l'abri — les parois,
+ * demi-murs et auvents que le client a construits, tournés par la MÊME formule
+ * que le viewer tente (décision du 23/08/2026 : le réalisme du lounge, c'est la
+ * fidélité au produit construit, pas un décor).
+ *
+ * Une tente fermée cacherait le lounge : chaque pièce de côté est donc montée
+ * dans son propre sous-groupe, marqué de son azimut (`azimutAbri`) et de ses
+ * matières (`matsAbri`) — la boucle de rendu efface en douceur la paroi qui se
+ * trouve entre la caméra et les meubles, et la repose dès qu'on tourne.
  *
  * Même convention d'unités que le mobilier : les pièces sont en millimètres, et
  * l'échelle vaut 0,001 × `echelle(modèle, taille)` — c'est exactement ce que
@@ -176,44 +184,60 @@ function chargerGLB(loader: GLTFLoader, url: string): Promise<THREE.Group> {
 async function construireAbri(loader: GLTFLoader, a: Abri): Promise<THREE.Group | null> {
   try {
     const m = modeleTente(a.modele);
-    const v = vue3d(m);
-    const groupe = new THREE.Group();
+    const aMonter = piecesAbri(m, a.config);
     const pieces = await Promise.all(
-      (v.socle as string[]).map((nom) =>
-        chargerGLB(loader, urlPiece(m, nom)).then((g) => g.clone(true)).catch(() => null),
+      aMonter.map((piece) =>
+        chargerGLB(loader, urlPiece(m, piece.nom))
+          .then((g) => ({ piece, corps: g.clone(true) }))
+          .catch(() => null),
       ),
     );
-    /* Le traitement que le module partagé applique à CHAQUE pièce, repris ici
-       parce que son chargeur n'est pas exporté. Deux points, chacun documenté
-       dans son en-tête et chacun visible à l'écran si on l'oublie :
-        · `DoubleSide` — « le fichier CAO livre des normales tournées vers
-          l'intérieur sur certaines parois » : sans lui la face extérieure du
-          toit est invisible ou noire, or tout l'intérêt de cette vue est de
-          regarder SOUS l'abri ;
-        · la teinte NUE (blanc) — sans elle la tente rend avec la matière brute
-          du fichier, qui n'est pas ce que le client achète.
-       S'en écarter, c'est dessiner deux tentes différentes pour le même
-       produit : exactement ce que le module partagé existe pour empêcher. */
+    const groupe = new THREE.Group();
+    /* Le traitement que le viewer tente applique à CHAQUE pièce :
+        · `DoubleSide` — le fichier CAO livre des normales tournées vers
+          l'intérieur sur certaines parois, et tout l'intérêt de cette vue est
+          de regarder SOUS l'abri ;
+        · la teinte NUE (blanc) — le code de configuration ne porte pas les
+          couleurs, on dessine donc la toile telle qu'elle sort d'usine ;
+        · les VITRES gardent leur matière : peintes en blanc, une fenêtre
+          devient un mur — `marquerVitre` est la même heuristique que là-bas. */
     const blanc = new THREE.Color(hexDeTeinte(TEINTE_NUE));
-    for (const p of pieces) {
-      if (!p) continue;
-      p.traverse((o) => {
+    for (const charge of pieces) {
+      if (!charge) continue;
+      const { piece, corps } = charge;
+      if (porteVitre(piece.nom)) marquerVitre(corps);
+      const mats: THREE.Material[] = [];
+      corps.traverse((o) => {
         const mail = o as THREE.Mesh;
         const mat = mail.material as THREE.MeshStandardMaterial | undefined;
         if (!mat) return;
         mail.material = mat.clone();
         const m2 = mail.material as THREE.MeshStandardMaterial;
         m2.side = THREE.DoubleSide;
-        m2.color = blanc;
+        if (!estVitre(mail)) m2.color = blanc;
+        if (piece.azimut != null) {
+          /* Prête pour l'effacement : transparente d'office (le basculer en
+             cours de route recompilerait la matière), et son opacité PROPRE
+             mémorisée — une vitre PVC n'est pas opaque au départ, l'effacement
+             doit la moduler, pas l'écraser. */
+          m2.transparent = true;
+          m2.userData.opBase = m2.opacity;
+          mats.push(m2);
+        }
       });
-      groupe.add(p);
+      const sous = new THREE.Group();
+      sous.rotation.z = piece.angle * RAD;
+      sous.userData.azimutAbri = piece.azimut;
+      sous.userData.matsAbri = mats;
+      sous.add(corps);
+      groupe.add(sous);
     }
     if (!groupe.children.length) return null;
     groupe.scale.setScalar(MM_EN_M * echelle(m, a.taille));
     return groupe;
   } catch {
     /* Modèle ou taille inconnus du module partagé : pas d'abri dessiné, et le
-       lounge reste visible. Le prix, lui, ne dépend pas de cette fonction. */
+       lounge reste visible. Le devis, lui, ne dépend pas de cette fonction. */
     return null;
   }
 }
@@ -426,6 +450,33 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
         );
       }
       orbite.update();
+      /* La paroi entre la caméra et le lounge s'efface, les autres restent :
+         on voit SA tente construite ET son mobilier dessous, quel que soit
+         l'angle. Le critère est l'azimut du côté (posé par `construireAbri`)
+         contre celui de la caméra ; le fondu est amorti pour qu'une paroi ne
+         claque pas en tournant. Les vitres modulent leur opacité PROPRE
+         (`opBase`), jamais un 1 fixe — une vitre PVC n'est pas opaque. */
+      const groupeAbri = racine.userData.abri as THREE.Group | null | undefined;
+      if (groupeAbri) {
+        const versCam = cam.position.clone().sub(orbite.target);
+        const plat = Math.hypot(versCam.x, versCam.y) || 1;
+        for (const sous of groupeAbri.children) {
+          const azimut = sous.userData.azimutAbri as number | null | undefined;
+          const mats = sous.userData.matsAbri as THREE.Material[] | undefined;
+          if (azimut == null || !mats?.length) continue;
+          const rad = azimut * RAD;
+          const dot = (Math.sin(rad) * versCam.x + Math.cos(rad) * versCam.y) / plat;
+          const devant = dot > 0.35;
+          for (const mt of mats) {
+            const opBase = (mt.userData.opBase as number | undefined) ?? 1;
+            const cible = devant ? opBase * 0.12 : opBase;
+            mt.opacity += (cible - mt.opacity) * 0.16;
+            /* Une paroi presque pleine réécrit la profondeur (sinon les meubles
+               se voient au travers par tri) ; effacée, elle ne la bloque plus. */
+            mt.depthWrite = mt.opacity > opBase * 0.7 && opBase > 0.9;
+          }
+        }
+      }
       rendu.render(sc, cam);
     };
     boucle();
@@ -552,8 +603,10 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
 
       /* L'abri APRÈS les meubles : il englobe la scène, et le cadrage doit le
          prendre en compte — sinon la caméra serre sur le mobilier et coupe le
-         toit. */
+         toit. Référencé sur la racine : c'est là que la boucle de rendu vient
+         chercher les parois à effacer devant la caméra. */
       if (groupeAbri) encore.racine.add(groupeAbri);
+      encore.racine.userData.abri = groupeAbri ?? null;
 
       encore.cadrer();
       encore.reveiller();

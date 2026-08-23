@@ -3,7 +3,7 @@ import { MODELES, modele } from "./composition.js";
 import {
   VUE_3D, vue3d, urlPiece, echelle, pieceImprimable, MODELES_SANS_VUE,
   angleCote, pieceDeCote, ANGLE_COTE_DEFAUT, estPiece, porteLisere, porteVitre, dessinable,
-  pieceDemiMur as pieceDemiMurDe, decalageVoisin,
+  pieceDemiMur as pieceDemiMurDe, decalageVoisin, piecesAbri,
 } from "./vue3d.js";
 
 describe("la vue 3D de chaque modèle", () => {
@@ -256,5 +256,51 @@ describe("les pièces qui dormaient dans les dossiers", () => {
 
   it("« ouvert » ne se dessine jamais : c'est l'absence de pièce", () => {
     for (const m of MODELES) expect(dessinable(m, m.cotes[0], "vide"), m.slug).toBe(false);
+  });
+});
+
+describe("piecesAbri — la tente COMPOSÉE dans la scène du lounge", () => {
+  it("sans composition : le socle seul, la tente nue d'avant", () => {
+    const p = piecesAbri(modele("x"));
+    expect(p).toEqual([
+      { nom: "roof", angle: 0, azimut: null },
+      { nom: "LEG", angle: 0, azimut: null },
+      { nom: "zipper_cover", angle: 0, azimut: null },
+    ]);
+  });
+
+  it("chaque côté composé monte SA pièce, tournée sur SON azimut", () => {
+    const p = piecesAbri(modele("x"), {
+      cotes: { avant: "paroi", droit: "porte", arriere: "fenetre", gauche: "vide" },
+      auvents: { arriere: true },
+    });
+    expect(p).toContainEqual({ nom: "side_wall", angle: 0, azimut: 180 });
+    expect(p).toContainEqual({ nom: "door", angle: -180, azimut: 90 });
+    expect(p).toContainEqual({ nom: "window_wall", angle: 90, azimut: 0 });
+    // L'auvent au-dessus du côté, même azimut — il s'efface avec sa paroi.
+    expect(p).toContainEqual({ nom: "awning", angle: -90, azimut: 0 });
+    // Le côté ouvert ne monte rien : trois pièces de socle + quatre de côtés.
+    expect(p).toHaveLength(7);
+  });
+
+  it("la N choisit sa toile PAR CÔTÉ, et le demi-mur suit le bandeau", () => {
+    const p = piecesAbri(modele("n"), {
+      cotes: { avant: "courbe", droit: "vide", arriere: "vide", gauche: "paroi" },
+      demiMurs: { avant: "porte" },
+    });
+    expect(p).toContainEqual({ nom: "c_banner", angle: 0, azimut: 0 });
+    expect(p).toContainEqual({ nom: "d_half_door", angle: 0, azimut: 0 });
+    // Long côté = toile A ; pignon composé = toile B, jamais l'inverse.
+    expect(p).toContainEqual({ nom: "a_side_wall", angle: -180, azimut: 90 });
+    const q = piecesAbri(modele("n"), { cotes: { avant: "paroi", droit: "vide", arriere: "vide", gauche: "vide" } });
+    expect(q).toContainEqual({ nom: "b_side_wall", angle: 180, azimut: 0 });
+  });
+
+  it("un demi-mur posé là où il est impossible ne se dessine pas", () => {
+    const p = piecesAbri(modele("n"), {
+      cotes: { avant: "paroi", droit: "vide", arriere: "vide", gauche: "vide" },
+      demiMurs: { avant: "porte" },
+    });
+    expect(p.some((x) => x.nom.startsWith("d_half"))).toBe(false);
   });
 });

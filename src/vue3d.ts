@@ -14,7 +14,7 @@
  * Convention d'azimut, celle du configurateur vu de dessus :
  *   arrière = 0°, droit = +90°, avant = 180°, gauche = −90°.
  */
-import { MODELES, type Modele } from "./composition.js";
+import { MODELES, demiMurPossible, type Modele } from "./composition.js";
 
 /** Un modèle 3D par tente, servi depuis R2 : le site et le CRM lisent la même
  *  adresse, personne ne transporte les fichiers en double. */
@@ -284,6 +284,60 @@ export const pieceDemiMur = (m: Modele, type: string): string | null =>
  *  `piece`, qui vaut pour les modèles dont un côté vaut l'autre. */
 export const pieceDeCote = (m: Modele, cote: string, choix: string): string | null =>
   vue3d(m).pieceParCote?.[cote]?.[choix] ?? vue3d(m).piece[choix] ?? null;
+
+/** Une pièce de l'abri du lounge : quel fichier, tourné comment, sur quel
+ *  azimut. `azimut` sert à l'effacement — la paroi entre la caméra et les
+ *  meubles devient translucide ; `null` = socle, jamais effacé. */
+export interface PieceAbri {
+  nom: string;
+  /** Rotation à appliquer (degrés) : `angleNatif − angleCote`, la formule du
+   *  visualiseur tente — la MÊME, sinon les deux scènes divergent. */
+  angle: number;
+  azimut: number | null;
+}
+
+/** La composition qu'un abri sait dessiner — le sous-ensemble GÉOMÉTRIQUE du
+ *  code de configuration : ni options ni couleurs, le code ne les porte pas. */
+export interface CompositionAbri {
+  cotes?: Record<string, string>;
+  auvents?: Record<string, boolean>;
+  demiMurs?: Record<string, string>;
+}
+
+/**
+ * Les pièces à monter pour l'abri d'un lounge : le socle toujours, et — si une
+ * composition est fournie — les parois, demi-murs et auvents tels que le client
+ * les a construits. Sans composition, la tente reste nue : c'est l'abri choisi
+ * à la main, modèle + taille, comme depuis toujours.
+ *
+ * Pure et testée à part : le montage three.js (`construireAbri`) ne fait que
+ * charger et tourner ce que cette liste décide.
+ */
+export function piecesAbri(m: Modele, c?: CompositionAbri | null): PieceAbri[] {
+  const v = vue3d(m);
+  const out: PieceAbri[] = (v.socle as readonly string[]).map((nom) => ({ nom, angle: 0, azimut: null }));
+  if (!c) return out;
+
+  const poser = (nom: string, cote: string) => {
+    out.push({ nom, angle: (v.angleNatif[nom] ?? 0) - angleCote(m, cote), azimut: angleCote(m, cote) });
+  };
+  for (const cote of m.cotes as readonly string[]) {
+    const type = c.cotes?.[cote] ?? "vide";
+    if (type !== "vide") {
+      const piece = pieceDeCote(m, cote, type);
+      if (piece) poser(piece, cote);
+    }
+    const dm = c.demiMurs?.[cote] ?? "vide";
+    /* Le demi-mur ne vit que sous le bandeau : un code trafiqué ou une version
+       future ne doit pas accrocher une toile dans le vide. */
+    if (dm !== "vide" && demiMurPossible(m, cote, type)) {
+      const piece = pieceDemiMur(m, dm);
+      if (piece) poser(piece, cote);
+    }
+    if (c.auvents?.[cote] && v.pieceAuvent) poser(v.pieceAuvent, cote);
+  }
+  return out;
+}
 
 /** Cette pièce peut-elle recevoir un visuel ? Une case à cocher ou un bouton
  *  qui ne changerait rien au dessin est une promesse que l'image ne tient pas. */

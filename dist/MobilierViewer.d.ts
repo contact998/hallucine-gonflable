@@ -1,11 +1,14 @@
 import type { Implantation } from "./implantationMobilier.js";
 /** L'abri au-dessus du lounge, décrit par l'application : le paquet sait le
- *  dessiner, pas le tarifer. */
+ *  dessiner, pas le tarifer. `config` = la composition reçue du configurateur
+ *  tente — présente, l'abri se dessine construit ; absente, il reste nu. */
 export interface Abri {
     modele: string;
     taille: string;
+    config?: CompositionAbri | null;
 }
 import type { VisuelPose } from "./pose.js";
+import { type CompositionAbri } from "./vue3d.js";
 /** Le gris-bleu du fond de studio. Propriété de la SCÈNE, pas des applications :
  *  il ne bascule pas en mode sombre — un canapé se regarde sur le même fond des
  *  deux côtés, sinon les couleurs ne se comparent plus. */

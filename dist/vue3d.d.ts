@@ -120,6 +120,33 @@ export declare const pieceDemiMur: (m: Modele, type: string) => string | null;
  *  d'abord — les pignons de la N n'ont pas la toile de ses longs côtés — puis
  *  `piece`, qui vaut pour les modèles dont un côté vaut l'autre. */
 export declare const pieceDeCote: (m: Modele, cote: string, choix: string) => string | null;
+/** Une pièce de l'abri du lounge : quel fichier, tourné comment, sur quel
+ *  azimut. `azimut` sert à l'effacement — la paroi entre la caméra et les
+ *  meubles devient translucide ; `null` = socle, jamais effacé. */
+export interface PieceAbri {
+    nom: string;
+    /** Rotation à appliquer (degrés) : `angleNatif − angleCote`, la formule du
+     *  visualiseur tente — la MÊME, sinon les deux scènes divergent. */
+    angle: number;
+    azimut: number | null;
+}
+/** La composition qu'un abri sait dessiner — le sous-ensemble GÉOMÉTRIQUE du
+ *  code de configuration : ni options ni couleurs, le code ne les porte pas. */
+export interface CompositionAbri {
+    cotes?: Record<string, string>;
+    auvents?: Record<string, boolean>;
+    demiMurs?: Record<string, string>;
+}
+/**
+ * Les pièces à monter pour l'abri d'un lounge : le socle toujours, et — si une
+ * composition est fournie — les parois, demi-murs et auvents tels que le client
+ * les a construits. Sans composition, la tente reste nue : c'est l'abri choisi
+ * à la main, modèle + taille, comme depuis toujours.
+ *
+ * Pure et testée à part : le montage three.js (`construireAbri`) ne fait que
+ * charger et tourner ce que cette liste décide.
+ */
+export declare function piecesAbri(m: Modele, c?: CompositionAbri | null): PieceAbri[];
 /** Cette pièce peut-elle recevoir un visuel ? Une case à cocher ou un bouton
  *  qui ne changerait rien au dessin est une promesse que l'image ne tient pas. */
 export declare const pieceImprimable: (m: Modele, piece: string) => boolean;

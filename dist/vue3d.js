@@ -14,7 +14,7 @@
  * Convention d'azimut, celle du configurateur vu de dessus :
  *   arrière = 0°, droit = +90°, avant = 180°, gauche = −90°.
  */
-import { MODELES } from "./composition.js";
+import { MODELES, demiMurPossible } from "./composition.js";
 /** Un modèle 3D par tente, servi depuis R2 : le site et le CRM lisent la même
  *  adresse, personne ne transporte les fichiers en double. */
 export const BASE_R2 = "https://pub-dc19082f8e054e8b8a192d8d29df2aa0.r2.dev/models";
@@ -193,6 +193,43 @@ export const pieceDemiMur = (m, type) => vue3d(m).pieceDemiMur?.[type] ?? null;
  *  d'abord — les pignons de la N n'ont pas la toile de ses longs côtés — puis
  *  `piece`, qui vaut pour les modèles dont un côté vaut l'autre. */
 export const pieceDeCote = (m, cote, choix) => vue3d(m).pieceParCote?.[cote]?.[choix] ?? vue3d(m).piece[choix] ?? null;
+/**
+ * Les pièces à monter pour l'abri d'un lounge : le socle toujours, et — si une
+ * composition est fournie — les parois, demi-murs et auvents tels que le client
+ * les a construits. Sans composition, la tente reste nue : c'est l'abri choisi
+ * à la main, modèle + taille, comme depuis toujours.
+ *
+ * Pure et testée à part : le montage three.js (`construireAbri`) ne fait que
+ * charger et tourner ce que cette liste décide.
+ */
+export function piecesAbri(m, c) {
+    const v = vue3d(m);
+    const out = v.socle.map((nom) => ({ nom, angle: 0, azimut: null }));
+    if (!c)
+        return out;
+    const poser = (nom, cote) => {
+        out.push({ nom, angle: (v.angleNatif[nom] ?? 0) - angleCote(m, cote), azimut: angleCote(m, cote) });
+    };
+    for (const cote of m.cotes) {
+        const type = c.cotes?.[cote] ?? "vide";
+        if (type !== "vide") {
+            const piece = pieceDeCote(m, cote, type);
+            if (piece)
+                poser(piece, cote);
+        }
+        const dm = c.demiMurs?.[cote] ?? "vide";
+        /* Le demi-mur ne vit que sous le bandeau : un code trafiqué ou une version
+           future ne doit pas accrocher une toile dans le vide. */
+        if (dm !== "vide" && demiMurPossible(m, cote, type)) {
+            const piece = pieceDemiMur(m, dm);
+            if (piece)
+                poser(piece, cote);
+        }
+        if (c.auvents?.[cote] && v.pieceAuvent)
+            poser(v.pieceAuvent, cote);
+    }
+    return out;
+}
 /** Cette pièce peut-elle recevoir un visuel ? Une case à cocher ou un bouton
  *  qui ne changerait rien au dessin est une promesse que l'image ne tient pas. */
 export const pieceImprimable = (m, piece) => !vue3d(m).sansImpression.includes(piece);

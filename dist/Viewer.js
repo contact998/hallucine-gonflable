@@ -31,6 +31,7 @@ import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 import { ZONES_COULEUR, ZONE_AUVENT, TEINTE_NUE, hexDeTeinte } from "./couleurs.js";
+import { marquerVitre, estVitre } from "./vitre.js";
 import { modele as trouverModele, rangeeTentes } from "./composition.js";
 import { vue3d, urlPiece, echelle, angleCote, pieceDeCote, pieceDemiMur, porteLisere, porteVitre, ANGLE_COTE_DEFAUT, decalageVoisin } from "./vue3d.js";
 import { composerPan, chargerImage } from "./visuel.js";
@@ -45,68 +46,8 @@ const MM_EN_M = 0.001;
    lire une couture. Largeur en pixels d'écran ; la résolution est renseignée
    par le viewer à chaque redimensionnement. */
 const LISERE_MAT = new LineMaterial({ color: 0x2f353d, linewidth: 2.5, worldUnits: false });
-/** Toile blanche translucide — l'opacité 0,42 est celle que portait la matière
- *  « vitre » du STEP, reprise telle quelle plutôt que redevinée. */
-const VITRE_MAT = new THREE.MeshStandardMaterial({
-    color: 0xdfe7ec,
-    transparent: true,
-    opacity: 0.42,
-    roughness: 0.15,
-    metalness: 0,
-    side: THREE.DoubleSide,
-    depthWrite: false,
-});
-/** Repère la vitre par la géométrie plutôt que par un indice de morceau : Bayes
- *  réordonne ses exports. La vitre est le morceau dont la boîte est la plus
- *  petite ET tient entièrement dans celle du plus grand. Si rien ne correspond
- *  — nouvel export, découpe différente — on ne marque rien : la paroi reste
- *  unie, elle ne casse pas.
- *
- *  On compare des AIRES, pas des volumes. Les panneaux de la N sont des plans
- *  d'épaisseur nulle : leur volume vaut zéro, celui de la toile comme celui de
- *  la vitre, et la comparaison ne départageait rien. L'aire de la plus grande
- *  face vaut pour les deux découpes — 697 000 contre 5 762 000 mm² sur la X,
- *  880 000 contre 4 617 000 sur la N. */
-function marquerVitre(scene) {
-    const mailles = [];
-    scene.traverse((o) => {
-        const m = o;
-        if (m.isMesh)
-            mailles.push(m);
-    });
-    if (mailles.length < 2)
-        return;
-    // Les boîtes se comparent dans le même repère : la scène sort du chargeur
-    // sans que ses matrices aient été calculées une seule fois.
-    scene.updateMatrixWorld(true);
-    const boites = mailles.map((m) => {
-        m.geometry.computeBoundingBox();
-        return m.geometry.boundingBox.clone().applyMatrix4(m.matrixWorld);
-    });
-    const aire = (b) => {
-        const d = b.getSize(new THREE.Vector3());
-        const [a, deux] = [d.x, d.y, d.z].sort((x, y) => y - x);
-        return a * deux;
-    };
-    let iPetit = 0, iGrand = 0;
-    boites.forEach((b, i) => {
-        if (aire(b) < aire(boites[iPetit]))
-            iPetit = i;
-        if (aire(b) > aire(boites[iGrand]))
-            iGrand = i;
-    });
-    if (iPetit === iGrand)
-        return;
-    // Tolérance de 20 mm : la vitre affleure la toile, ses bords coïncident.
-    const grand = boites[iGrand].clone().expandByScalar(20);
-    if (!grand.containsBox(boites[iPetit]))
-        return;
-    mailles[iPetit].userData.vitre = true;
-    mailles[iPetit].material = VITRE_MAT;
-}
-/** La vitre ne se teint pas, ne s'imprime pas, ne s'éclaircit pas : c'est du
- *  transparent, pas de la toile. Un seul test, appelé partout où on peint. */
-const estVitre = (o) => o.userData.vitre === true;
+/* Vitre : détection et matière dans `vitre.ts`, partagées avec l'abri du
+   lounge — une seule heuristique pour les deux scènes. */
 /**
  * Marque, dans une pièce du socle, les morceaux posés sur UNE face de la tente.
  *
