@@ -1,0 +1,202 @@
+import { describe, expect, it } from "vitest";
+import { lignesTarifTente, totalTenteComposee } from "./tarif.js";
+import type { ConfigTente } from "./config.js";
+import {
+  modele, cleTente, cleTypeCote, cleAuvent, cleDemiMur, cleImpression, cleAccessoire,
+} from "./composition.js";
+
+/*
+ * Le calcul vivait dans la page du configurateur du site (70 lignes de useMemo
+ * mêlées aux traductions) : le lounge ne pouvait pas chiffrer une tente
+ * composée. Ces tests décrivent le comportement EXACT de la page — chaque cas
+ * reprend une décision déjà prise là-bas, aucun n'en invente.
+ */
+
+/** Table de prix jouet — les clés sont fabriquées par les MÊMES fonctions que
+ *  la vraie table du CRM, jamais recopiées à la main. */
+const table = (t: Record<string, number>) => (slug: string): number | null => t[slug] ?? null;
+
+const X = modele("x");
+const N = modele("n");
+
+/** Une X 4x4 nue, à compléter par cas. */
+const cfg = (sur: Partial<ConfigTente> = {}): ConfigTente => ({
+  modele: "x",
+  taille: "4x4",
+  cotes: { avant: "vide", droit: "vide", arriere: "vide", gauche: "vide" },
+  auvents: { avant: false, droit: false, arriere: false, gauche: false },
+  demiMurs: { avant: "vide", droit: "vide", arriere: "vide", gauche: "vide" },
+  options: [],
+  ...sur,
+});
+
+describe("la tente nue", () => {
+  it("une seule ligne : le pack de base", () => {
+    const prixDe = table({ [cleTente(X, "4x4")]: 3200 });
+    const lignes = lignesTarifTente(cfg(), prixDe);
+    expect(lignes).toEqual([{ genre: "base", prix: 3200 }]);
+    expect(totalTenteComposee(cfg(), prixDe)).toBe(3200);
+  });
+
+  it("pack absent du tarif : total INCONNU, jamais zéro", () => {
+    const prixDe = table({ [cleTypeCote(X, "4x4", "paroi", "avant")!]: 260 });
+    expect(totalTenteComposee(cfg({ cotes: { avant: "paroi", droit: "vide", arriere: "vide", gauche: "vide" } }), prixDe)).toBeNull();
+  });
+});
+
+describe("les côtés", () => {
+  it("un côté au tarif : sa ligne, non provisoire, avec son libellé", () => {
+    const prixDe = table({
+      [cleTente(X, "4x4")]: 3200,
+      [cleTypeCote(X, "4x4", "paroi", "avant")!]: 260,
+    });
+    const lignes = lignesTarifTente(cfg({ cotes: { avant: "paroi", droit: "vide", arriere: "vide", gauche: "vide" } }), prixDe);
+    expect(lignes).toEqual([
+      { genre: "base", prix: 3200 },
+      { genre: "cote", cote: "avant", cle: "choix_paroi", provisoire: false, prix: 260 },
+    ]);
+  });
+
+  it("un choix dessinable SANS ligne au tarif prend le prix de la paroi pleine, marqué provisoire", () => {
+    const prixDe = table({
+      [cleTente(X, "4x4")]: 3200,
+      [cleTypeCote(X, "4x4", "paroi", "avant")!]: 260,
+      // pas de ligne pour la porte : le dessin fait foi, le repli chiffre
+    });
+    const lignes = lignesTarifTente(cfg({ cotes: { avant: "porte", droit: "vide", arriere: "vide", gauche: "vide" } }), prixDe);
+    expect(lignes).toContainEqual({ genre: "cote", cote: "avant", cle: "choix_porte", provisoire: true, prix: 260 });
+  });
+
+  it("ni ligne directe ni repli : pas de ligne du tout, le prix manquant se voit ailleurs", () => {
+    const prixDe = table({ [cleTente(X, "4x4")]: 3200 });
+    const lignes = lignesTarifTente(cfg({ cotes: { avant: "porte", droit: "vide", arriere: "vide", gauche: "vide" } }), prixDe);
+    expect(lignes).toEqual([{ genre: "base", prix: 3200 }]);
+  });
+
+  it("l'auvent s'ajoute au-dessus du choix du côté", () => {
+    const prixDe = table({
+      [cleTente(X, "4x4")]: 3200,
+      [cleAuvent(X, "4x4")]: 180,
+    });
+    const lignes = lignesTarifTente(cfg({ auvents: { avant: true, droit: false, arriere: false, gauche: false } }), prixDe);
+    expect(lignes).toContainEqual({ genre: "auvent", cote: "avant", prix: 180 });
+  });
+});
+
+describe("le demi-mur de la N", () => {
+  const base = (): ConfigTente => cfg({
+    modele: "n",
+    taille: "3x3",
+    cotes: { avant: "courbe", droit: "vide", arriere: "vide", gauche: "vide" },
+    demiMurs: { avant: "porte", droit: "vide", arriere: "vide", gauche: "vide" },
+  });
+
+  it("le bandeau et son demi-mur font chacun leur ligne", () => {
+    const prixDe = table({
+      [cleTente(N, "3x3")]: 2800,
+      [cleTypeCote(N, "3x3", "courbe", "avant")!]: 300,
+      [cleDemiMur(N, "3x3", "porte")!]: 220,
+    });
+    const lignes = lignesTarifTente(base(), prixDe);
+    expect(lignes).toEqual([
+      { genre: "base", prix: 2800 },
+      { genre: "cote", cote: "avant", cle: "choix_courbe", provisoire: false, prix: 300 },
+      { genre: "demi_mur", cote: "avant", cle: "choix_porte", prix: 220 },
+    ]);
+  });
+
+  it("imprimer ce côté imprime AUSSI le demi-mur — deux lignes d'impression", () => {
+    const prixDe = table({
+      [cleTente(N, "3x3")]: 2800,
+      [cleTypeCote(N, "3x3", "courbe", "avant")!]: 300,
+      [cleDemiMur(N, "3x3", "porte")!]: 220,
+      [cleImpression(N, "3x3", "imp_courbe")]: 90,
+      [cleImpression(N, "3x3", "imp_paroi")]: 80,
+    });
+    const lignes = lignesTarifTente(base(), prixDe, { avant: true });
+    expect(lignes).toContainEqual({ genre: "impression_cote", cote: "avant", prix: 90 });
+    expect(lignes).toContainEqual({ genre: "impression_demi_mur", cote: "avant", prix: 80 });
+  });
+});
+
+describe("l'impression d'un côté ordinaire", () => {
+  it("cochée, elle chiffre avec l'impression la plus précise que le tarif connaisse", () => {
+    const prixDe = table({
+      [cleTente(X, "4x4")]: 3200,
+      [cleTypeCote(X, "4x4", "paroi", "avant")!]: 260,
+      [cleImpression(X, "4x4", "imp_paroi")]: 80,
+    });
+    const lignes = lignesTarifTente(cfg({ cotes: { avant: "paroi", droit: "vide", arriere: "vide", gauche: "vide" } }), prixDe, { avant: true });
+    expect(lignes).toContainEqual({ genre: "impression_cote", cote: "avant", prix: 80 });
+  });
+
+  it("non cochée, rien — l'impression par côté ne voyage pas dans le code", () => {
+    const prixDe = table({
+      [cleTente(X, "4x4")]: 3200,
+      [cleTypeCote(X, "4x4", "paroi", "avant")!]: 260,
+      [cleImpression(X, "4x4", "imp_paroi")]: 80,
+    });
+    const lignes = lignesTarifTente(cfg({ cotes: { avant: "paroi", droit: "vide", arriere: "vide", gauche: "vide" } }), prixDe);
+    expect(lignes.some((l) => l.genre === "impression_cote")).toBe(false);
+  });
+});
+
+describe("les options", () => {
+  it("impression du socle cochée et au tarif : sa ligne", () => {
+    const prixDe = table({
+      [cleTente(X, "4x4")]: 3200,
+      [cleImpression(X, "4x4", "imp_toit")]: 350,
+    });
+    const lignes = lignesTarifTente(cfg({ options: ["imp_toit"] }), prixDe);
+    expect(lignes).toContainEqual({ genre: "impression", cle: "imp_toit", prix: 350 });
+  });
+
+  it("une impression d'auvent SANS auvent posé ne chiffre pas — même restée dans le code", () => {
+    const prixDe = table({
+      [cleTente(X, "4x4")]: 3200,
+      [cleImpression(X, "4x4", "imp_auv_bandeau")]: 120,
+    });
+    const lignes = lignesTarifTente(cfg({ options: ["imp_auv_bandeau"] }), prixDe);
+    expect(lignes.some((l) => l.genre === "impression")).toBe(false);
+  });
+
+  it("la même, avec l'auvent posé : elle chiffre", () => {
+    const prixDe = table({
+      [cleTente(X, "4x4")]: 3200,
+      [cleImpression(X, "4x4", "imp_auv_bandeau")]: 120,
+      [cleAuvent(X, "4x4")]: 180,
+    });
+    const lignes = lignesTarifTente(
+      cfg({ options: ["imp_auv_bandeau"], auvents: { avant: true, droit: false, arriere: false, gauche: false } }),
+      prixDe,
+    );
+    expect(lignes).toContainEqual({ genre: "impression", cle: "imp_auv_bandeau", prix: 120 });
+  });
+
+  it("un accessoire coché et au tarif : sa ligne", () => {
+    const prixDe = table({
+      [cleTente(X, "4x4")]: 3200,
+      [cleAccessoire(X, "4x4", "acc_sac")]: 45,
+    });
+    const lignes = lignesTarifTente(cfg({ options: ["acc_sac"] }), prixDe);
+    expect(lignes).toContainEqual({ genre: "accessoire", cle: "acc_sac", prix: 45 });
+  });
+});
+
+describe("le total d'une tente composée", () => {
+  it("somme des lignes connues — c'est le total que la page du configurateur affiche", () => {
+    const prixDe = table({
+      [cleTente(X, "4x4")]: 3200,
+      [cleTypeCote(X, "4x4", "paroi", "avant")!]: 260,
+      [cleTypeCote(X, "4x4", "paroi", "gauche")!]: 260,
+      [cleAuvent(X, "4x4")]: 180,
+      [cleAccessoire(X, "4x4", "acc_sac")]: 45,
+    });
+    const c = cfg({
+      cotes: { avant: "paroi", droit: "vide", arriere: "vide", gauche: "paroi" },
+      auvents: { avant: false, droit: true, arriere: false, gauche: false },
+      options: ["acc_sac"],
+    });
+    expect(totalTenteComposee(c, prixDe)).toBe(3200 + 260 + 260 + 180 + 45);
+  });
+});

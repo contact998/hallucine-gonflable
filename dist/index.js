@@ -18,6 +18,7 @@
  */
 export * from "./composition.js";
 export * from "./config.js";
+export * from "./tarif.js";
 export * from "./couleurs.js";
 export * from "./mobilier.js";
 export * from "./pose.js";
