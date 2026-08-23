@@ -68,11 +68,15 @@ centre = { x: 0.5, y: 0.5 }) {
     }
     return toile;
 }
-/** Le fichier de départ, avant réduction. Au-delà, le navigateur peine à le
- *  décoder et l'attente devient suspecte pour le visiteur. 4 Mo laisse passer
- *  tout logo raisonnable — et c'est le chiffre déjà écrit dans le message
- *  d'erreur, traduit dans les six langues. */
-export const POIDS_MAX = 4 * 1024 * 1024;
+/** Le fichier de départ, avant réduction. Une photo de téléphone moderne fait
+ *  couramment 5 à 12 Mo : à 4 Mo, « déposer votre image » passait pour un
+ *  bouton muet — la scène ne bougeait pas, seule une petite ligne rouge le
+ *  disait (vécu par Daniel, 23/08/2026). 20 Mo se décode sans attente suspecte
+ *  sur le matériel courant, et l'image est de toute façon RÉDUITE à 1 280 px
+ *  puis ré-encodée en JPEG — le poids d'entrée ne survit jamais.
+ *  ⚠️ Ce chiffre est AUSSI écrit dans le message d'erreur des applications
+ *  (`logo_trop_lourd`, six langues côté site) : les changer ENSEMBLE. */
+export const POIDS_MAX = 20 * 1024 * 1024;
 /** 720p : 1 280 px sur le grand côté, quelle que soit l'orientation. */
 export const COTE_MAX = 1280;
 export const FORMATS = /^image\/(png|jpeg|webp|svg\+xml)$/;
