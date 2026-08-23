@@ -47,6 +47,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { OutilsVue } from "./OutilsVue.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { Implantation, MeublePose, Personne, ModeleSilhouette } from "./implantationMobilier.js";
@@ -310,10 +311,17 @@ type Props = {
   /** Visuel déposé par le client (slug → pose). Posé sur la housse, avec son
       mode — la MÊME mécanique que les toiles de tente. */
   visuels?: Record<string, VisuelPose>;
+  /** Les mots des outils de vue (agrandir, imprimer). Le site les traduit en
+   *  six langues, le CRM n'en parle qu'une — d'où des mots injectés, pas écrits
+   *  ici. Absents : le français par défaut. */
+  libellesOutils?: { pleinEcran?: string; quitter?: string; imprimer?: string };
 };
 
-export default function MobilierViewer({ implantation, labelChargement, labelEchec, captureRef, abri, habillages, visuels }: Props) {
+export default function MobilierViewer({ implantation, labelChargement, labelEchec, captureRef, abri, habillages, visuels, libellesOutils }: Props) {
   const hote = useRef<HTMLDivElement>(null);
+  /* La capture, gardée par le composant : les outils de vue impriment la
+     MÊME image que celle jointe au devis. */
+  const captureInterne = useRef<(() => string | null) | null>(null);
   const [pret, setPret] = useState(false);
   /* Modèles qui n'ont pas pu être chargés — annoncés, jamais tus. */
   const [echecs, setEchecs] = useState(0);
@@ -425,8 +433,8 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
     /* Capture pour la demande de devis : on redessine puis on recopie sur fond
        clair — le tampon WebGL n'est pas conservé entre deux images, et le JPEG
        ne connaît pas la transparence. Même recette que le viewer tente. */
-    if (captureRef) {
-      captureRef.current = () => {
+    {
+      const prendre = () => {
         rendu.render(sc, cam);
         const c = document.createElement("canvas");
         c.width = rendu.domElement.width;
@@ -438,6 +446,9 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
         ctx.drawImage(rendu.domElement, 0, 0);
         return c.toDataURL("image/jpeg", 0.72);
       };
+      /* La MÊME capture sert au devis et à l'impression. */
+      captureInterne.current = prendre;
+      if (captureRef) captureRef.current = prendre;
     }
 
     outils.current = { loader: new GLTFLoader(), racine, cadrer, reveiller };
@@ -557,6 +568,9 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
        thème : c'est le gris-bleu du fond de prise de vue, il ne suit ni le mode
        sombre du site ni celui du CRM. */
     <div ref={hote} className="relative w-full h-full" style={{ backgroundColor: FOND_SCENE }}>
+      {/* Agrandir et imprimer : le lounge se montre au client et se glisse dans
+          un dossier, exactement comme la tente. */}
+      <OutilsVue hote={hote} capture={() => captureInterne.current?.() ?? null} libelles={libellesOutils} />
       {!pret && labelChargement && (
         <span className="absolute inset-0 flex items-center justify-center text-sm text-[#2E4A5E]/70">
           {labelChargement}

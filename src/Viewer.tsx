@@ -23,6 +23,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { OutilsVue } from "./OutilsVue.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
@@ -449,17 +450,25 @@ export interface TenteViewerProps {
    *  rangée dérivée par `rangeeTentes`. Absent ou 1 = la tente seule, avec la
    *  voisine fantôme (socle nu) si un côté est en jonction. */
   tentesReliees?: number;
+  /** Les mots des outils de vue (agrandir, imprimer). Le site les traduit en
+   *  six langues, le CRM n'en parle qu'une — d'où des mots injectés, pas écrits
+   *  ici. Absents : le français par défaut. */
+  libellesOutils?: { pleinEcran?: string; quitter?: string; imprimer?: string };
+
   /** Texte de remplacement pendant le chargement. */
   labelChargement: string;
   /** Reçoit la fonction de capture (JPEG data-URL) — jointe à la demande de devis. */
   captureRef?: React.MutableRefObject<(() => string | null) | null>;
 }
 
-export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, captureRef, tentesReliees }: TenteViewerProps) {
+export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, captureRef, tentesReliees, libellesOutils }: TenteViewerProps) {
   const M = trouverModele(modele);
   const VUE = vue3d(M);
 
   const hote = useRef<HTMLDivElement>(null);
+  /* La capture, gardée par le composant : les outils de vue impriment la
+     MÊME image que celle jointe au devis. */
+  const captureInterne = useRef<(() => string | null) | null>(null);
   const racineRef = useRef<THREE.Group | null>(null);
   const parois = useRef<THREE.Group | null>(null);
   const cadrerRef = useRef<() => void>(() => {});
@@ -640,8 +649,8 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
     /* Capture pour la demande de devis : on redessine puis on recopie sur fond
        clair (le tampon WebGL n'est pas conservé entre deux images, et le JPEG
        ne connaît pas la transparence). */
-    if (captureRef) {
-      captureRef.current = () => {
+    {
+      const prendre = () => {
         rendu.render(sc, cam);
         const c = document.createElement("canvas");
         c.width = rendu.domElement.width;
@@ -653,6 +662,10 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
         ctx.drawImage(rendu.domElement, 0, 0);
         return c.toDataURL("image/jpeg", 0.72);
       };
+      /* La MÊME capture sert au devis et à l'impression : deux fonctions de
+         rendu auraient fini par diverger sur le fond ou la qualité. */
+      captureInterne.current = prendre;
+      if (captureRef) captureRef.current = prendre;
     }
 
     orbite.addEventListener("start", () => {
@@ -1068,6 +1081,9 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
 
   return (
     <div ref={hote} className="relative w-full h-full min-h-[300px]">
+      {/* Agrandir et imprimer : dans le visualiseur, donc partout où une tente
+          s'affiche — le site comme le CRM. */}
+      <OutilsVue hote={hote} capture={() => captureInterne.current?.() ?? null} libelles={libellesOutils} />
       {!pret && (
         <div className="absolute inset-0 grid place-items-center pointer-events-none">
           <p className="text-[#2E4A5E]/60 text-sm">{labelChargement}</p>

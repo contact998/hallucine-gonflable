@@ -1,4 +1,4 @@
-import { jsx as _jsx } from "react/jsx-runtime";
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 /*
  * Visualiseur 3D de la tente X — montre la composition réelle des 4 côtés.
  *
@@ -24,6 +24,7 @@ import { jsx as _jsx } from "react/jsx-runtime";
  */
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { OutilsVue } from "./OutilsVue.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
@@ -423,10 +424,13 @@ function charger(loader, m, nom) {
     }
     return p.then((s) => s.clone(true));
 }
-export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, captureRef, tentesReliees }) {
+export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, captureRef, tentesReliees, libellesOutils }) {
     const M = trouverModele(modele);
     const VUE = vue3d(M);
     const hote = useRef(null);
+    /* La capture, gardée par le composant : les outils de vue impriment la
+       MÊME image que celle jointe au devis. */
+    const captureInterne = useRef(null);
     const racineRef = useRef(null);
     const parois = useRef(null);
     const cadrerRef = useRef(() => { });
@@ -597,8 +601,8 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
         /* Capture pour la demande de devis : on redessine puis on recopie sur fond
            clair (le tampon WebGL n'est pas conservé entre deux images, et le JPEG
            ne connaît pas la transparence). */
-        if (captureRef) {
-            captureRef.current = () => {
+        {
+            const prendre = () => {
                 rendu.render(sc, cam);
                 const c = document.createElement("canvas");
                 c.width = rendu.domElement.width;
@@ -611,6 +615,11 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
                 ctx.drawImage(rendu.domElement, 0, 0);
                 return c.toDataURL("image/jpeg", 0.72);
             };
+            /* La MÊME capture sert au devis et à l'impression : deux fonctions de
+               rendu auraient fini par diverger sur le fond ou la qualité. */
+            captureInterne.current = prendre;
+            if (captureRef)
+                captureRef.current = prendre;
         }
         orbite.addEventListener("start", () => {
             azimut.current.anime = false;
@@ -1021,5 +1030,5 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
                 o.visible = cotes[cote] === parCote.avecChoix;
         });
     }, [cotes, pret]);
-    return (_jsx("div", { ref: hote, className: "relative w-full h-full min-h-[300px]", children: !pret && (_jsx("div", { className: "absolute inset-0 grid place-items-center pointer-events-none", children: _jsx("p", { className: "text-[#2E4A5E]/60 text-sm", children: labelChargement }) })) }));
+    return (_jsxs("div", { ref: hote, className: "relative w-full h-full min-h-[300px]", children: [_jsx(OutilsVue, { hote: hote, capture: () => captureInterne.current?.() ?? null, libelles: libellesOutils }), !pret && (_jsx("div", { className: "absolute inset-0 grid place-items-center pointer-events-none", children: _jsx("p", { className: "text-[#2E4A5E]/60 text-sm", children: labelChargement }) }))] }));
 }

@@ -48,6 +48,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
  */
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { OutilsVue } from "./OutilsVue.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { LACET_MEUBLE } from "./implantationMobilier.js";
@@ -285,8 +286,11 @@ function construireSol(sol) {
     mesh.position.z = -0.002;
     return mesh;
 }
-export default function MobilierViewer({ implantation, labelChargement, labelEchec, captureRef, abri, habillages, visuels }) {
+export default function MobilierViewer({ implantation, labelChargement, labelEchec, captureRef, abri, habillages, visuels, libellesOutils }) {
     const hote = useRef(null);
+    /* La capture, gardée par le composant : les outils de vue impriment la
+       MÊME image que celle jointe au devis. */
+    const captureInterne = useRef(null);
     const [pret, setPret] = useState(false);
     /* Modèles qui n'ont pas pu être chargés — annoncés, jamais tus. */
     const [echecs, setEchecs] = useState(0);
@@ -377,8 +381,8 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
         /* Capture pour la demande de devis : on redessine puis on recopie sur fond
            clair — le tampon WebGL n'est pas conservé entre deux images, et le JPEG
            ne connaît pas la transparence. Même recette que le viewer tente. */
-        if (captureRef) {
-            captureRef.current = () => {
+        {
+            const prendre = () => {
                 rendu.render(sc, cam);
                 const c = document.createElement("canvas");
                 c.width = rendu.domElement.width;
@@ -391,6 +395,10 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
                 ctx.drawImage(rendu.domElement, 0, 0);
                 return c.toDataURL("image/jpeg", 0.72);
             };
+            /* La MÊME capture sert au devis et à l'impression. */
+            captureInterne.current = prendre;
+            if (captureRef)
+                captureRef.current = prendre;
         }
         outils.current = { loader: new GLTFLoader(), racine, cadrer, reveiller };
         return () => {
@@ -497,5 +505,5 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
        hex-inline du CRM le refusait à juste titre. Ce n'est pas une couleur de
        thème : c'est le gris-bleu du fond de prise de vue, il ne suit ni le mode
        sombre du site ni celui du CRM. */
-    _jsxs("div", { ref: hote, className: "relative w-full h-full", style: { backgroundColor: FOND_SCENE }, children: [!pret && labelChargement && (_jsx("span", { className: "absolute inset-0 flex items-center justify-center text-sm text-[#2E4A5E]/70", children: labelChargement })), pret && echecs > 0 && labelEchec && (_jsx("span", { className: "absolute bottom-2 left-2 right-2 rounded bg-[#2E4A5E]/85 px-3 py-1.5 text-center text-xs text-white", children: labelEchec(echecs) }))] }));
+    _jsxs("div", { ref: hote, className: "relative w-full h-full", style: { backgroundColor: FOND_SCENE }, children: [_jsx(OutilsVue, { hote: hote, capture: () => captureInterne.current?.() ?? null, libelles: libellesOutils }), !pret && labelChargement && (_jsx("span", { className: "absolute inset-0 flex items-center justify-center text-sm text-[#2E4A5E]/70", children: labelChargement })), pret && echecs > 0 && labelEchec && (_jsx("span", { className: "absolute bottom-2 left-2 right-2 rounded bg-[#2E4A5E]/85 px-3 py-1.5 text-center text-xs text-white", children: labelEchec(echecs) }))] }));
 }

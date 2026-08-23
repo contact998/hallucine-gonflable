@@ -42,6 +42,14 @@ type Props = {
     /** Visuel déposé par le client (slug → pose). Posé sur la housse, avec son
         mode — la MÊME mécanique que les toiles de tente. */
     visuels?: Record<string, VisuelPose>;
+    /** Les mots des outils de vue (agrandir, imprimer). Le site les traduit en
+     *  six langues, le CRM n'en parle qu'une — d'où des mots injectés, pas écrits
+     *  ici. Absents : le français par défaut. */
+    libellesOutils?: {
+        pleinEcran?: string;
+        quitter?: string;
+        imprimer?: string;
+    };
 };
-export default function MobilierViewer({ implantation, labelChargement, labelEchec, captureRef, abri, habillages, visuels }: Props): import("react").JSX.Element;
+export default function MobilierViewer({ implantation, labelChargement, labelEchec, captureRef, abri, habillages, visuels, libellesOutils }: Props): import("react").JSX.Element;
 export {};

@@ -35,6 +35,7 @@ export { HabillageMobilier, type ClassesHabillage } from "./HabillageMobilier.js
    liste pendant que le client voyait son lounge. Même remède que la tente. */
 export * from "./implantationMobilier.js";
 export { default as MobilierViewer, urlMeuble, urlPersonne, FOND_SCENE } from "./MobilierViewer.js";
+export { OutilsVue, imprimerImage } from "./OutilsVue.js";
 export { PlanCotes, planDeVisee, type ClassesPlanCotes } from "./PlanCotes.js";
 export { ListeMobilier, type MeubleListe, type ClassesListe, type ListeMobilierProps } from "./ListeMobilier.js";
 export * from "./visuel.js";
