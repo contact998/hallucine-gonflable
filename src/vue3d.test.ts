@@ -3,7 +3,7 @@ import { MODELES, modele } from "./composition.js";
 import {
   VUE_3D, vue3d, urlPiece, echelle, pieceImprimable, MODELES_SANS_VUE,
   angleCote, pieceDeCote, ANGLE_COTE_DEFAUT, estPiece, porteLisere, porteVitre, dessinable,
-  pieceDemiMur as pieceDemiMurDe, decalageVoisin, piecesAbri,
+  pieceDemiMur as pieceDemiMurDe, decalageVoisin, piecesAbri, axeRangee, rangeeAbri,
 } from "./vue3d.js";
 
 describe("la vue 3D de chaque modèle", () => {
@@ -302,5 +302,57 @@ describe("piecesAbri — la tente COMPOSÉE dans la scène du lounge", () => {
       demiMurs: { avant: "porte" },
     });
     expect(p.some((x) => x.nom.startsWith("d_half"))).toBe(false);
+  });
+});
+
+describe("rangeeAbri — n tentes reliées dans la scène du lounge", () => {
+  const X = modele("x");
+
+  it("l'axe est le côté en jonction quand il est unique, « droit » sinon chez les quatre-côtés", () => {
+    expect(axeRangee(X, { cotes: { avant: "jonction" } })).toBe("avant");
+    expect(axeRangee(X, { cotes: { avant: "paroi" } })).toBe("droit");
+    expect(axeRangee(X, null)).toBe("droit");
+    // Deux jonctions : l'axe serait ambigu — ces compositions restent le geste
+    // manuel d'aujourd'hui, comme chez rangeeTentes.
+    expect(axeRangee(X, { cotes: { avant: "jonction", arriere: "jonction" } })).toBe("droit");
+  });
+
+  it("la V n'a pas de rangée : trois côtés, pas d'axe", () => {
+    expect(axeRangee(modele("v"), null)).toBeNull();
+    expect(rangeeAbri(modele("v"), { cotes: { a: "paroi" } }, 3)).toEqual([{ cotes: { a: "paroi" } }]);
+  });
+
+  it("n ≤ 1 rend la composition telle quelle — même une nue", () => {
+    const c = { cotes: { avant: "paroi" } };
+    expect(rangeeAbri(X, c, 1)).toEqual([c]);
+    expect(rangeeAbri(X, null, 1)).toEqual([null]);
+    expect(rangeeAbri(X, null, 0)).toEqual([null]);
+  });
+
+  it("une tente NUE en rangée : n socles, rien d'autre", () => {
+    expect(rangeeAbri(X, null, 3)).toEqual([null, null, null]);
+  });
+
+  it("une composition à UNE jonction suit rangeeTentes : bouts symétriques, faces intermédiaires ouvertes", () => {
+    const module_ = {
+      cotes: { avant: "paroi", droit: "jonction", arriere: "porte", gauche: "fenetre" },
+      auvents: { gauche: true },
+    };
+    const [t1, t2, t3] = rangeeAbri(X, module_, 3) as NonNullable<ReturnType<typeof rangeeAbri>[number]>[];
+    // Départ : le module tel quel.
+    expect(t1.cotes).toMatchObject({ avant: "paroi", droit: "jonction", gauche: "fenetre" });
+    // Milieu : ouvert vers la précédente, jonction vers la suivante.
+    expect(t2.cotes?.gauche).toBe("vide");
+    expect(t2.cotes?.droit).toBe("jonction");
+    // Bout d'arrivée : le miroir du départ — le mur du bout remplace la jonction,
+    // annexes comprises.
+    expect(t3.cotes?.droit).toBe("fenetre");
+    expect(t3.auvents?.droit).toBe(true);
+    expect(t3.cotes?.gauche).toBe("vide");
+  });
+
+  it("une composition SANS jonction se répète telle quelle : n tentes identiques accolées", () => {
+    const c = { cotes: { avant: "paroi" } };
+    expect(rangeeAbri(X, c, 2)).toEqual([c, c]);
   });
 });

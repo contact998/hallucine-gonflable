@@ -147,6 +147,24 @@ export interface CompositionAbri {
  * charger et tourner ce que cette liste décide.
  */
 export declare function piecesAbri(m: Modele, c?: CompositionAbri | null): PieceAbri[];
+/**
+ * Le côté le long duquel une RANGÉE d'abris s'étend.
+ *
+ * Le côté en jonction quand il est unique — c'est lui que `rangeeTentes` suit.
+ * Sinon « droit » chez les modèles à quatre côtés : son azimut vaut ±90°, la
+ * rangée suit donc la LARGEUR du sol du lounge (n·L × P), jamais sa profondeur.
+ * `null` chez les autres (la V et ses trois côtés) : pas de rangée.
+ */
+export declare function axeRangee(m: Modele, c?: CompositionAbri | null): string | null;
+/**
+ * Les n abris d'une rangée de lounge, chacun prêt pour `piecesAbri`.
+ *
+ * Une composition à UNE jonction suit `rangeeTentes` — la MÊME dérivation que
+ * le viewer tente et le chiffrage du CRM, sinon la scène du lounge montrerait
+ * une autre rangée que celle qu'on vend. Une tente nue (ou sans jonction) se
+ * répète telle quelle : n socles accolés, c'est déjà la rangée.
+ */
+export declare function rangeeAbri(m: Modele, c: CompositionAbri | null | undefined, n: number): (CompositionAbri | null)[];
 /** Cette pièce peut-elle recevoir un visuel ? Une case à cocher ou un bouton
  *  qui ne changerait rien au dessin est une promesse que l'image ne tient pas. */
 export declare const pieceImprimable: (m: Modele, piece: string) => boolean;

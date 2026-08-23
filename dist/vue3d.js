@@ -14,7 +14,7 @@
  * Convention d'azimut, celle du configurateur vu de dessus :
  *   arrière = 0°, droit = +90°, avant = 180°, gauche = −90°.
  */
-import { MODELES, demiMurPossible } from "./composition.js";
+import { MODELES, demiMurPossible, rangeeTentes } from "./composition.js";
 /** Un modèle 3D par tente, servi depuis R2 : le site et le CRM lisent la même
  *  adresse, personne ne transporte les fichiers en double. */
 export const BASE_R2 = "https://pub-dc19082f8e054e8b8a192d8d29df2aa0.r2.dev/models";
@@ -229,6 +229,39 @@ export function piecesAbri(m, c) {
             poser(v.pieceAuvent, cote);
     }
     return out;
+}
+/**
+ * Le côté le long duquel une RANGÉE d'abris s'étend.
+ *
+ * Le côté en jonction quand il est unique — c'est lui que `rangeeTentes` suit.
+ * Sinon « droit » chez les modèles à quatre côtés : son azimut vaut ±90°, la
+ * rangée suit donc la LARGEUR du sol du lounge (n·L × P), jamais sa profondeur.
+ * `null` chez les autres (la V et ses trois côtés) : pas de rangée.
+ */
+export function axeRangee(m, c) {
+    const cotes = m.cotes;
+    if (cotes.length !== 4)
+        return null;
+    const jonctions = cotes.filter((x) => c?.cotes?.[x] === "jonction");
+    return jonctions.length === 1 ? jonctions[0] : "droit";
+}
+/**
+ * Les n abris d'une rangée de lounge, chacun prêt pour `piecesAbri`.
+ *
+ * Une composition à UNE jonction suit `rangeeTentes` — la MÊME dérivation que
+ * le viewer tente et le chiffrage du CRM, sinon la scène du lounge montrerait
+ * une autre rangée que celle qu'on vend. Une tente nue (ou sans jonction) se
+ * répète telle quelle : n socles accolés, c'est déjà la rangée.
+ */
+export function rangeeAbri(m, c, n) {
+    const seule = [c ?? null];
+    if (n <= 1 || m.cotes.length !== 4)
+        return seule;
+    const jonctions = m.cotes.filter((x) => c?.cotes?.[x] === "jonction");
+    if (c && jonctions.length === 1) {
+        return rangeeTentes(m, { cotes: c.cotes ?? {}, auvents: c.auvents ?? {}, demiMurs: c.demiMurs ?? {} }, n);
+    }
+    return Array.from({ length: n }, () => c ?? null);
 }
 /** Cette pièce peut-elle recevoir un visuel ? Une case à cocher ou un bouton
  *  qui ne changerait rien au dessin est une promesse que l'image ne tient pas. */

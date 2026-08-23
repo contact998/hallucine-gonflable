@@ -1,11 +1,14 @@
 import type { Implantation } from "./implantationMobilier.js";
 /** L'abri au-dessus du lounge, décrit par l'application : le paquet sait le
  *  dessiner, pas le tarifer. `config` = la composition reçue du configurateur
- *  tente — présente, l'abri se dessine construit ; absente, il reste nu. */
+ *  tente — présente, l'abri se dessine construit ; absente, il reste nu.
+ *  `nb` = tentes IDENTIQUES reliées en rangée (dérivée par `rangeeAbri`, la
+ *  même que le viewer tente) ; absent ou 1 = la tente seule. */
 export interface Abri {
     modele: string;
     taille: string;
     config?: CompositionAbri | null;
+    nb?: number;
 }
 import type { VisuelPose } from "./pose.js";
 import { type CompositionAbri } from "./vue3d.js";
@@ -36,9 +39,9 @@ type Props = {
     labelEchec?: (n: number) => string;
     /** Reçoit la fonction de capture (JPEG data-URL) — jointe à la demande de devis. */
     captureRef?: React.MutableRefObject<(() => string | null) | null>;
-    /** L'abri au-dessus du lounge. La tente NUE — toit, pieds, cache-zip —, jamais
-        ses parois : on montre un abri, pas une tente fermée dans laquelle le
-        mobilier serait invisible. */
+    /** L'abri au-dessus du lounge — construit si `config` voyage avec lui, nu
+        sinon, en rangée de `nb` tentes reliées. La paroi entre la caméra et les
+        meubles s'efface en douceur : on voit la tente construite ET le lounge. */
     abri?: Abri | null;
     /** Teinte choisie par meuble (slug → clé d'habillage). Absent = teinte nue. */
     habillages?: Record<string, string>;

@@ -55,7 +55,7 @@ import { LACET_MEUBLE } from "./implantationMobilier.js";
 import { habillageMobilier as habillage, HABILLAGE_MOBILIER_DEFAUT as HABILLAGE_DEFAUT } from "./mobilier.js";
 import { composerPan } from "./visuel.js";
 import { chargerImage } from "./visuel.js";
-import { urlPiece, echelle, piecesAbri, porteVitre, BASE_R2 } from "./vue3d.js";
+import { urlPiece, echelle, piecesAbri, rangeeAbri, axeRangee, decalageVoisin, porteVitre, BASE_R2 } from "./vue3d.js";
 import { modele as modeleTente } from "./composition.js";
 import { TEINTE_NUE, hexDeTeinte } from "./couleurs.js";
 import { marquerVitre, estVitre } from "./vitre.js";
@@ -179,10 +179,28 @@ function chargerGLB(loader, url) {
 async function construireAbri(loader, a) {
     try {
         const m = modeleTente(a.modele);
-        const aMonter = piecesAbri(m, a.config);
-        const pieces = await Promise.all(aMonter.map((piece) => chargerGLB(loader, urlPiece(m, piece.nom))
+        /* La RANGÉE : n tentes identiques, dérivées par `rangeeAbri` — la même
+           dérivation que le viewer tente et le chiffrage du CRM. Une seule tente
+           passe par le même chemin, avec une liste d'un élément. */
+        const n = Math.max(1, Math.floor(a.nb ?? 1));
+        const tentes = rangeeAbri(m, a.config, n);
+        const charges = await Promise.all(tentes.map((t) => Promise.all(piecesAbri(m, t).map((piece) => chargerGLB(loader, urlPiece(m, piece.nom))
             .then((g) => ({ piece, corps: g.clone(true) }))
-            .catch(() => null)));
+            .catch(() => null)))));
+        /* Le pas entre deux tentes : la largeur du toit dans la direction de
+           l'axe, mesurée sur la pièce chargée AVANT toute échelle — millimètres du
+           modèle de base, l'unité de `decalageVoisin`, exactement la recette du
+           viewer tente. Sans toit chargé, pas de décalage : les socles se
+           superposent, mais la scène reste debout. */
+        let pas = { x: 0, y: 0 };
+        if (tentes.length > 1) {
+            const toit = charges.flat().find((c) => c?.piece.nom === "roof");
+            const axe = axeRangee(m, a.config);
+            if (toit && axe) {
+                const t = new THREE.Box3().setFromObject(toit.corps).getSize(new THREE.Vector3());
+                pas = decalageVoisin(m, axe, { x: t.x, y: t.y });
+            }
+        }
         const groupe = new THREE.Group();
         /* Le traitement que le viewer tente applique à CHAQUE pièce :
             · `DoubleSide` — le fichier CAO livre des normales tournées vers
@@ -193,40 +211,49 @@ async function construireAbri(loader, a) {
             · les VITRES gardent leur matière : peintes en blanc, une fenêtre
               devient un mur — `marquerVitre` est la même heuristique que là-bas. */
         const blanc = new THREE.Color(hexDeTeinte(TEINTE_NUE));
-        for (const charge of pieces) {
-            if (!charge)
-                continue;
-            const { piece, corps } = charge;
-            if (porteVitre(piece.nom))
-                marquerVitre(corps);
-            const mats = [];
-            corps.traverse((o) => {
-                const mail = o;
-                const mat = mail.material;
-                if (!mat)
-                    return;
-                mail.material = mat.clone();
-                const m2 = mail.material;
-                m2.side = THREE.DoubleSide;
-                if (!estVitre(mail))
-                    m2.color = blanc;
-                if (piece.azimut != null) {
-                    /* Prête pour l'effacement : transparente d'office (le basculer en
-                       cours de route recompilerait la matière), et son opacité PROPRE
-                       mémorisée — une vitre PVC n'est pas opaque au départ, l'effacement
-                       doit la moduler, pas l'écraser. */
-                    m2.transparent = true;
-                    m2.userData.opBase = m2.opacity;
-                    mats.push(m2);
-                }
-            });
-            const sous = new THREE.Group();
-            sous.rotation.z = piece.angle * RAD;
-            sous.userData.azimutAbri = piece.azimut;
-            sous.userData.matsAbri = mats;
-            sous.add(corps);
-            groupe.add(sous);
-        }
+        charges.forEach((pieces, i) => {
+            /* La rangée reste CENTRÉE sur le sol du lounge, comme la tente seule :
+               le sol fait n·L × P, la tente i se pose à (i − (n−1)/2) pas du centre. */
+            const ci = i - (charges.length - 1) / 2;
+            for (const charge of pieces) {
+                if (!charge)
+                    continue;
+                const { piece, corps } = charge;
+                if (porteVitre(piece.nom))
+                    marquerVitre(corps);
+                const mats = [];
+                corps.traverse((o) => {
+                    const mail = o;
+                    const mat = mail.material;
+                    if (!mat)
+                        return;
+                    mail.material = mat.clone();
+                    const m2 = mail.material;
+                    m2.side = THREE.DoubleSide;
+                    if (!estVitre(mail))
+                        m2.color = blanc;
+                    if (piece.azimut != null) {
+                        /* Prête pour l'effacement : transparente d'office (le basculer en
+                           cours de route recompilerait la matière), et son opacité PROPRE
+                           mémorisée — une vitre PVC n'est pas opaque au départ, l'effacement
+                           doit la moduler, pas l'écraser. */
+                        m2.transparent = true;
+                        m2.userData.opBase = m2.opacity;
+                        mats.push(m2);
+                    }
+                });
+                const sous = new THREE.Group();
+                sous.rotation.z = piece.angle * RAD;
+                /* L'offset vit sur le SOUS-GROUPE, un par pièce : la structure reste
+                   PLATE, et la boucle de rendu qui efface la paroi devant la caméra
+                   continue de lire `groupe.children` sans rien savoir de la rangée. */
+                sous.position.set(pas.x * ci, pas.y * ci, 0);
+                sous.userData.azimutAbri = piece.azimut;
+                sous.userData.matsAbri = mats;
+                sous.add(corps);
+                groupe.add(sous);
+            }
+        });
         if (!groupe.children.length)
             return null;
         groupe.scale.setScalar(MM_EN_M * echelle(m, a.taille));
