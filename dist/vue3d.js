@@ -18,6 +18,21 @@ import { MODELES, demiMurPossible, rangeeTentes } from "./composition.js";
 /** Un modèle 3D par tente, servi depuis R2 : le site et le CRM lisent la même
  *  adresse, personne ne transporte les fichiers en double. */
 export const BASE_R2 = "https://pub-dc19082f8e054e8b8a192d8d29df2aa0.r2.dev/models";
+/** Le gris-bleu du fond de studio. Propriété de la SCÈNE, pas des applications :
+ *  il ne bascule pas en mode sombre — un canapé se regarde sur le même fond des
+ *  deux côtés, sinon les couleurs ne se comparent plus. */
+export const FOND_SCENE = "#eef2f5";
+/* Les meubles et les silhouettes vivent sur R2, comme les pièces de tente :
+   une adresse, deux lecteurs. Les servir depuis le site obligeait le CRM à s'en
+   passer — donc à ne pas avoir de 3D du tout.
+
+   Ces trois adresses se construisent ICI, dans le module pur, et non dans le
+   visualiseur du mobilier où elles ont commencé : la scène de l'écran a besoin
+   des silhouettes sans avoir rien à faire des canapés, et une page qui montre
+   un écran n'a pas à embarquer le lounge pour connaître une URL. */
+export const urlMeuble = (slug) => `${BASE_R2}/mobilier/${slug}.glb`;
+export const urlPersonne = (fichier) => `${BASE_R2}/personnes/${fichier}.glb`;
+export const urlEcran = () => `${BASE_R2}/ecran/ecran.glb`;
 const SOCLE_COMMUN = ["roof", "LEG", "zipper_cover"];
 export const VUE_3D = {
     x: {

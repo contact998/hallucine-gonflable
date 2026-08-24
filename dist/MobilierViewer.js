@@ -55,15 +55,11 @@ import { LACET_MEUBLE } from "./implantationMobilier.js";
 import { habillageMobilier as habillage, HABILLAGE_MOBILIER_DEFAUT as HABILLAGE_DEFAUT } from "./mobilier.js";
 import { composerPan } from "./visuel.js";
 import { chargerImage } from "./visuel.js";
-import { urlPiece, echelle, piecesAbri, rangeeAbri, axeRangee, decalageVoisin, porteVitre, pieceImprimable, BASE_R2 } from "./vue3d.js";
+import { urlPiece, echelle, piecesAbri, rangeeAbri, axeRangee, decalageVoisin, porteVitre, pieceImprimable, urlMeuble, urlPersonne, FOND_SCENE } from "./vue3d.js";
 import { modele as modeleTente } from "./composition.js";
 import { TEINTE_NUE, hexDeTeinte } from "./couleurs.js";
 import { marquerVitre, estVitre } from "./vitre.js";
 import { enroulerAutourDeLaTente } from "./enrouler.js";
-/** Le gris-bleu du fond de studio. Propriété de la SCÈNE, pas des applications :
- *  il ne bascule pas en mode sombre — un canapé se regarde sur le même fond des
- *  deux côtés, sinon les couleurs ne se comparent plus. */
-export const FOND_SCENE = "#eef2f5";
 const MM_EN_M = 0.001;
 const RAD = Math.PI / 180;
 /* Cache module : survit aux montages/démontages du composant. La clé est
@@ -142,10 +138,6 @@ function materiauTeinte(gabarit, cle) {
     cacheMateriau.set(h.cle, m);
     return m;
 }
-/* Les meubles et les silhouettes vivent sur R2, comme les pièces de tente :
-   une adresse, deux lecteurs. Les servir depuis le site obligeait le CRM à s'en
-   passer — donc à ne pas avoir de 3D du tout. */
-export const urlMeuble = (slug) => `${BASE_R2}/mobilier/${slug}.glb`;
 function chargerGLB(loader, url) {
     let p = cacheGLB.get(url);
     if (!p) {
@@ -355,7 +347,6 @@ const MAT_SILHOUETTE = new THREE.MeshStandardMaterial({ color: 0x9fb0bd, roughne
  * capsules de la version précédente. L'échelle et le choix du modèle viennent
  * du module pur, où ils sont testés.
  */
-export const urlPersonne = (fichier) => `${BASE_R2}/personnes/${fichier}.glb`;
 function poserSilhouette(gabarit, p, m) {
     const g = new THREE.Group();
     const corps = gabarit.clone(true);

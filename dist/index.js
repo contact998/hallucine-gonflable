@@ -27,6 +27,7 @@ export * from "./couleurs.js";
 export * from "./mobilier.js";
 export * from "./pose.js";
 export * from "./vue3d.js";
+export * from "./ecran.js";
 /* Le visualiseur 3D et la composition des pans. Ils demandent React et
    three.js — déclarés en dépendances de pair : chaque application fournit
    les siens, on n'en embarque pas un deuxième exemplaire. */
@@ -37,7 +38,10 @@ export { HabillageMobilier } from "./HabillageMobilier.js";
    site, ce qui privait le CRM de toute vue 3D — le commercial composait une
    liste pendant que le client voyait son lounge. Même remède que la tente. */
 export * from "./implantationMobilier.js";
-export { default as MobilierViewer, urlMeuble, urlPersonne, FOND_SCENE } from "./MobilierViewer.js";
+export { default as MobilierViewer } from "./MobilierViewer.js";
+/* L'écran étanche : sa scène, et la règle qui le met à n'importe quelle taille
+   depuis l'unique modèle du fournisseur (voir ecran.ts). */
+export { default as EcranViewer } from "./EcranViewer.js";
 export { OutilsVue, imprimerImage } from "./OutilsVue.js";
 export { PlanCotes, planDeVisee } from "./PlanCotes.js";
 export { ListeMobilier } from "./ListeMobilier.js";
