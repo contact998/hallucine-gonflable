@@ -1,4 +1,4 @@
-# @hallucine/tente
+# @hallucine/gonflable
 
 Le module de la **tente gonflable X**, en un seul exemplaire, installé par le site public *et* par le CRM.
 
@@ -24,7 +24,7 @@ Avant lui, les deux outils avaient divergé en silence : le calculateur du CRM i
 Pas de registre npm : le paquet s'installe **depuis GitHub, à une version marquée**.
 
 ```
-"@hallucine/tente": "github:contact998/hallucine-tente#v0.18.0"
+"@hallucine/gonflable": "github:contact998/hallucine-gonflable#v0.37.0"
 ```
 
 `react` et `three` sont des dépendances de **pair**, et optionnelles : chaque application fournit les siennes, on n'embarque pas un second exemplaire de three.js.

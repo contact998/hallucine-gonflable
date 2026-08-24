@@ -1,7 +1,7 @@
 {
-  "name": "@hallucine/tente",
-  "version": "0.36.3",
-  "description": "Le vocabulaire partagé de la gamme gonflable : composition et règles de la tente, code de configuration, teintes, habillage du mobilier, pose des visuels et visualiseur 3D. Installé par le site public et par le CRM.",
+  "name": "@hallucine/gonflable",
+  "version": "0.37.0",
+  "description": "Le vocabulaire partagé de la gamme gonflable : tente, mobilier de lounge et écran étanche — composition et règles, code de configuration, teintes, habillage, pose des visuels et visualiseurs 3D. Installé par le site public et par le CRM.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
