@@ -51,6 +51,12 @@ export default function EcranViewer({ toileLargeurM, baseImageM = null, silhouet
         sc.add(soleil, appoint);
         const rendu = new THREE.WebGLRenderer({ antialias: true });
         rendu.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        /* Le canevas prend sa taille du CSS, pas de ses pixels : `setSize` plus bas
+           ne touche QUE la résolution (`updateStyle` à false). Sans ces deux lignes,
+           chaque redimensionnement agrandit la mise en page, qui redimensionne, qui
+           agrandit — le canevas part à dix mille pixels de haut. `touch-action` en
+           plus : sinon le doigt fait défiler la page au lieu de tourner la scène. */
+        rendu.domElement.style.cssText = "width:100%;height:100%;display:block;touch-action:none";
         el.appendChild(rendu.domElement);
         const cam = new THREE.PerspectiveCamera(34, 1, 0.05, 400);
         /* Z vertical AVANT les contrôles : posé après, l'orbite reste sur Y et la
