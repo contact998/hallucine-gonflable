@@ -60,6 +60,7 @@ import { modele as modeleTente } from "./composition.js";
 import { TEINTE_NUE, hexDeTeinte } from "./couleurs.js";
 import { marquerVitre, estVitre } from "./vitre.js";
 import { enroulerAutourDeLaTente } from "./enrouler.js";
+import { ratioGabarit, centreDuTissu, QUART_DE_TOUR, orienter } from "./gabarit.js";
 const MM_EN_M = 0.001;
 const RAD = Math.PI / 180;
 /* Cache module : survit aux montages/démontages du composant. La clé est
@@ -250,8 +251,11 @@ async function construireAbri(loader, a) {
                 sous.userData.azimutAbri = piece.azimut;
                 sous.userData.matsAbri = mats;
                 /* La structure (pieds…) n'a pas de coordonnées d'impression : le visuel
-                   du client ne se pose que sur les pièces que l'atelier sait imprimer. */
+                   du client ne se pose que sur les pièces que l'atelier sait imprimer.
+                   Le NOM de la pièce voyage avec : la pose par gabarit en a besoin — un
+                   quart de toit ne se déplie pas comme une paroi. */
                 sous.userData.imprimableAbri = pieceImprimable(m, piece.nom);
+                sous.userData.nomPieceAbri = piece.nom;
                 sous.add(corps);
                 groupe.add(sous);
             }
@@ -281,43 +285,92 @@ async function construireAbri(loader, a) {
 async function habillerAbri(groupe, pose) {
     try {
         const image = await chargerImage(pose.url);
-        groupe.updateMatrixWorld(true);
-        const boite = new THREE.Box3().setFromObject(groupe);
-        const dim = boite.getSize(new THREE.Vector3());
-        const hauteur = boite.max.z;
-        if (hauteur <= 0)
+        const blanc = hexDeTeinte(TEINTE_NUE);
+        /* La PORTÉE commande, comme sur le configurateur tente — c'est la barre de
+           réglage qui la choisit, plus une règle cachée ici :
+            · « tente » : une seule image ENROULÉE autour de l'ensemble. Elle
+              raccorde parois et toit, au prix d'un sommet étiré (le pôle sur un
+              planisphère) — un petit motif y devient illisible.
+            · « pan » (le défaut) : chaque pièce reçoit son dessin sur SON gabarit
+              d'impression, celui que l'atelier déplie. Rien n'est étiré, le motif
+              reste net aussi petit qu'on le demande. */
+        if (pose.portee === "tente") {
+            groupe.updateMatrixWorld(true);
+            const boite = new THREE.Box3().setFromObject(groupe);
+            const dim = boite.getSize(new THREE.Vector3());
+            const hauteur = boite.max.z;
+            if (hauteur <= 0)
+                return;
+            enroulerAutourDeLaTente(groupe, hauteur);
+            /* Proportions du développé : le tour sur la hauteur — mesuré, pas deviné. */
+            const ratio = (Math.PI * Math.max(dim.x, dim.y)) / hauteur;
+            const tex = new THREE.CanvasTexture(composerPan(image, pose, ratio, blanc));
+            tex.colorSpace = THREE.SRGBColorSpace;
+            tex.flipY = false;
+            tex.channel = 1;
+            tex.needsUpdate = true;
+            poserSurAbri(groupe, () => tex, "uv1");
             return;
-        enroulerAutourDeLaTente(groupe, hauteur);
-        /* Proportions du développé : le tour sur la hauteur — mesuré, pas deviné. */
-        const ratio = (Math.PI * Math.max(dim.x, dim.y)) / hauteur;
-        const tex = new THREE.CanvasTexture(composerPan(image, pose, ratio, hexDeTeinte(TEINTE_NUE)));
-        tex.colorSpace = THREE.SRGBColorSpace;
-        tex.flipY = false;
-        tex.channel = 1;
-        tex.needsUpdate = true;
-        for (const sous of groupe.children) {
-            if (!sous.userData.imprimableAbri)
-                continue;
-            sous.traverse((o) => {
-                const maille = o;
-                if (!maille.isMesh || estVitre(maille))
-                    return;
-                if (!maille.geometry.getAttribute("uv1"))
-                    return;
-                const mat = maille.material;
-                if (!mat?.color)
-                    return;
-                mat.map = tex;
-                /* La teinte vit dans le canevas, comme fond — la laisser sur la matière
-                   voilerait l'image de blanc cassé. */
-                mat.color.setRGB(1, 1, 1);
-                mat.needsUpdate = true;
-            });
         }
+        /* Par gabarit : un canevas par PIÈCE, aux proportions de son dépliage et
+           centré sur son tissu — le même calcul que le viewer tente, partagé dans
+           `gabarit.ts`. Mis en cache par (pièce · réglage) : une rangée de dix
+           tentes ne compose pas dix fois le même toit. */
+        const parPiece = new Map();
+        poserSurAbri(groupe, (maille, nom) => {
+            const geo = maille.geometry;
+            const donnees = geo.userData;
+            donnees.ratioGabarit ??= ratioGabarit(geo);
+            donnees.centreTissu ??= centreDuTissu(geo);
+            const quarts = QUART_DE_TOUR[nom] ?? 0;
+            /* Le visuel se pose au barycentre du tissu — mais le canevas est lu à
+               travers le miroir (et le demi-tour du toit). On vise donc le point qui,
+               une fois retourné, tombe là où il faut. */
+            const cible = quarts % 4 === 2
+                ? { x: donnees.centreTissu.x, y: 1 - donnees.centreTissu.y }
+                : { x: 1 - donnees.centreTissu.x, y: donnees.centreTissu.y };
+            const cle = `${nom}|${pose.mode}|${pose.taille}|${donnees.ratioGabarit.toFixed(3)}`;
+            let tex = parPiece.get(cle);
+            if (!tex) {
+                tex = new THREE.CanvasTexture(composerPan(image, pose, donnees.ratioGabarit, blanc, cible));
+                tex.colorSpace = THREE.SRGBColorSpace;
+                tex.flipY = false; // glTF : origine UV en haut à gauche
+                orienter(tex, quarts);
+                parPiece.set(cle, tex);
+            }
+            return tex;
+        }, "uv");
     }
     catch (err) {
         /* La tente reste unie plutôt que d'arrêter la scène — mais on le DIT. */
         console.warn("[lounge] visuel non posé sur la tente", err);
+    }
+}
+/** Applique une texture à chaque toile imprimable de l'abri — les vitres et la
+ *  quincaillerie sans coordonnées restent ce qu'elles sont. `canal` dit quelle
+ *  grille lire : les gabarits du fournisseur (`uv`) ou celle qu'on a posée
+ *  nous-mêmes en enroulant (`uv1`). */
+function poserSurAbri(groupe, texturePour, canal) {
+    for (const sous of groupe.children) {
+        if (!sous.userData.imprimableAbri)
+            continue;
+        const nom = sous.userData.nomPieceAbri ?? "";
+        sous.traverse((o) => {
+            const maille = o;
+            if (!maille.isMesh || estVitre(maille))
+                return;
+            if (!maille.geometry.getAttribute(canal))
+                return;
+            const mat = maille.material;
+            if (!mat?.color)
+                return;
+            mat.map = texturePour(maille, nom);
+            mat.map.channel = canal === "uv1" ? 1 : 0;
+            /* La teinte vit dans le canevas, comme fond — la laisser sur la matière
+               voilerait l'image de blanc cassé. */
+            mat.color.setRGB(1, 1, 1);
+            mat.needsUpdate = true;
+        });
     }
 }
 /**
