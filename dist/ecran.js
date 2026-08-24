@@ -24,6 +24,17 @@
  */
 /** Dossier du modèle sur R2, à côté de `tente-x` et `mobilier`. */
 export const DOSSIER_ECRAN = "ecran";
+/**
+ * Quels écrans du catalogue ce modèle représente : la gamme ÉTANCHE, et elle
+ * seule.
+ *
+ * La gamme SOUFFLERIE n'est pas le même produit — manchon de gonflage, autres
+ * proportions, autre structure — et lui plaquer ce modèle montrerait au client
+ * un écran qu'il ne recevra pas. La gamme KEMI (l'économique), elle, n'a même
+ * pas de cotes au catalogue. Dans les deux cas : pas de 3D, comme la jonction
+ * de tente tant que Bayes ne l'a pas livrée. Mieux vaut rien qu'un à-peu-près.
+ */
+export const ecranModelise = (slugSite) => slugSite.startsWith("ecran-etanche-");
 /** Une jupe ne se replie pas sur elle-même : on lui en garde toujours un
  *  cinquième. Sans cette butée, une cote aberrante retournerait la géométrie. */
 const PART_MINIMALE_JUPE = 0.2;

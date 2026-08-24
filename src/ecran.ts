@@ -27,6 +27,18 @@
 export const DOSSIER_ECRAN = "ecran";
 
 /**
+ * Quels écrans du catalogue ce modèle représente : la gamme ÉTANCHE, et elle
+ * seule.
+ *
+ * La gamme SOUFFLERIE n'est pas le même produit — manchon de gonflage, autres
+ * proportions, autre structure — et lui plaquer ce modèle montrerait au client
+ * un écran qu'il ne recevra pas. La gamme KEMI (l'économique), elle, n'a même
+ * pas de cotes au catalogue. Dans les deux cas : pas de 3D, comme la jonction
+ * de tente tant que Bayes ne l'a pas livrée. Mieux vaut rien qu'un à-peu-près.
+ */
+export const ecranModelise = (slugSite: string) => slugSite.startsWith("ecran-etanche-");
+
+/**
  * Ce qu'on mesure sur le GLB au chargement, en millimètres du modèle.
  * Mesuré plutôt qu'écrit : une nouvelle livraison Bayes ne doit pas obliger à
  * retoucher des nombres à la main — c'est ce qui avait fait dériver la tente N.

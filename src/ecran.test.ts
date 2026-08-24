@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calerEcran, type MesuresEcran } from "./ecran.js";
+import { calerEcran, ecranModelise, type MesuresEcran } from "./ecran.js";
 
 /* Les mesures RÉELLES du GLB livré par Bayes le 21/08/2026 (étanche 3 m).
    Si une nouvelle livraison les change, ce fichier n'a pas à bouger : ces
@@ -78,5 +78,13 @@ describe("calerEcran", () => {
     expect(() => calerEcran({ ...BAYES, largeurToileMM: 0 }, 6, 1.5)).toThrow();
     expect(() => calerEcran(BAYES, 0, 1.5)).toThrow();
     expect(() => calerEcran({ ...BAYES, zToileMM: 340 }, 6, 1.5)).toThrow();
+  });
+
+  it("ne prête le modèle étanche à aucune autre gamme", () => {
+    for (const s of ["ecran-etanche-2m", "ecran-etanche-6m", "ecran-etanche-10m"])
+      expect(ecranModelise(s), s).toBe(true);
+    /* La soufflerie est un autre produit, le kemi n'a même pas de cotes. */
+    for (const s of ["ecran-soufflerie-9m", "ecran-soufflerie-9m-drivein", "ecran-kemi-6m", ""])
+      expect(ecranModelise(s), s).toBe(false);
   });
 });
