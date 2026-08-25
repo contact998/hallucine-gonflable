@@ -523,6 +523,9 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
      dépendance d'effet — changer d'avis ne remonte pas la scène. */
   const effacerParoisRef = useRef(true);
   effacerParoisRef.current = effacerParois ?? true;
+  /* Même mécanique : lue par le cadrage, montée une seule fois. */
+  const elevationRef = useRef(0.4);
+  elevationRef.current = ecran ? 0.78 : 0.4;
   /* La capture, gardée par le composant : les outils de vue impriment la
      MÊME image que celle jointe au devis. */
   const captureInterne = useRef<(() => string | null) | null>(null);
@@ -578,6 +581,11 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
        de sa boîte englobante, pour que tout tienne dans les deux axes de vue.
        Algorithme identique à `MobilierViewer3D.tsx`, appliqué ici à une boîte
        qui contient plusieurs objets plutôt qu'un seul. */
+    /* La hauteur de la caméra, en part du recul. 0,4 est l'angle historique du
+       lounge — l'œil d'un visiteur debout. Avec un écran, il faut passer
+       PAR-DESSUS les toits de tente, sinon la rangée le masque entièrement :
+       c'est ce qu'on a vu en prod le 25/08/2026, l'écran réduit à un timbre
+       entre deux tentes. */
     const cadrer = () => {
       const boite = new THREE.Box3().setFromObject(racine);
       if (boite.isEmpty()) return;
@@ -591,7 +599,7 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
       const az = off.x || off.y ? Math.atan2(off.y, off.x) : -0.9;
       orbite.target.copy(centre);
       cam.position.copy(centre).add(
-        new THREE.Vector3(Math.cos(az) * 0.92, Math.sin(az) * 0.92, 0.4).multiplyScalar(recul),
+        new THREE.Vector3(Math.cos(az) * 0.92, Math.sin(az) * 0.92, elevationRef.current).multiplyScalar(recul),
       );
       orbite.minDistance = recul * 0.5;
       orbite.maxDistance = recul * 2.4;
@@ -703,7 +711,7 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
     const regarderDepuisLesAssises = () => {
       const d = cam.position.clone().sub(orbite.target);
       const rayon = Math.hypot(d.x, d.y) || 1;
-      const az = Math.PI * 0.35;
+      const az = Math.PI * 0.42;
       cam.position.set(
         orbite.target.x + Math.cos(az) * rayon,
         orbite.target.y + Math.sin(az) * rayon,
@@ -843,7 +851,18 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
 
       /* L'écran DANS la racine : le cadrage l'embrasse comme le reste, sinon la
          caméra serre sur les meubles et le coupe. */
-      if (ecranCharge) encore.racine.add(ecranCharge.groupe);
+      if (ecranCharge) {
+        encore.racine.add(ecranCharge.groupe);
+        /* Un appoint DE FACE, comme dans `EcranViewer` et pour la même raison :
+           le ciel du lounge éclaire par le haut, ce qui convient à des meubles
+           arrondis. Un écran est un plan vertical entier — il n'en reçoit que
+           la moitié, et la toile blanche sort GRISE. Vérifié en prod le
+           25/08/2026 avant de poser cette lampe. Elle vit dans la racine, donc
+           elle disparaît avec la recomposition, comme l'écran lui-même. */
+        const appoint = new THREE.DirectionalLight(0xffffff, 0.85);
+        appoint.position.set(0, 12, 6);
+        encore.racine.add(appoint, appoint.target);
+      }
 
       if (ecranCharge && !ecranOriente.current) {
         ecranOriente.current = true;
