@@ -213,7 +213,23 @@ export function lignesTarifRangee(
     }
   });
 
-  return ordre;
+  /* L'ordre d'affichage se refait à la fin. Sans lui, le mur qui ferme le bout
+     de la DERNIÈRE tente arrivait après les accessoires — le client lisait
+     « sac de transport, éclairage LED, paroi à fenêtre ». Le tri est stable :
+     à l'intérieur d'un côté, la jonction reste avant le mur du bout, et les
+     options gardent l'ordre où le client les a cochées. */
+  const cotesModele = m.cotes as readonly string[];
+  const phase = (l: LigneTarifTente): number =>
+    l.genre === "base" ? 0
+      : l.genre === "impression" ? 2
+      : l.genre === "accessoire" ? 3
+      : 1;
+  return ordre.sort((a, b) => {
+    const d = phase(a) - phase(b);
+    if (d !== 0) return d;
+    if (phase(a) !== 1) return 0;
+    return cotesModele.indexOf(a.cote ?? "") - cotesModele.indexOf(b.cote ?? "");
+  });
 }
 
 /**

@@ -271,3 +271,29 @@ describe("la rangée de tentes", () => {
     expect(totalTenteComposee(rangee(999), prixDe)).toBe(totalTenteComposee(rangee(10), prixDe));
   });
 });
+
+describe("l'ordre du détail d'une rangée", () => {
+  it("le mur qui ferme le bout reste avec les CÔTÉS, jamais derrière les accessoires", () => {
+    const prixDe = table({
+      [cleTente(X, "4x4")]: 3200,
+      [cleTypeCote(X, "4x4", "jonction", "gauche")!]: 190,
+      [cleTypeCote(X, "4x4", "paroi", "droit")!]: 260,
+      [cleTypeCote(X, "4x4", "paroi", "gauche")!]: 260,
+      [cleAccessoire(X, "4x4", "acc_sac")]: 45,
+    });
+    const lignes = lignesTarifTente(
+      cfg({
+        cotes: { avant: "vide", droit: "paroi", arriere: "vide", gauche: "jonction" },
+        options: ["acc_sac"],
+        nb: 3,
+      }),
+      prixDe,
+    );
+    const genres = lignes.map((l) => l.genre);
+    expect(genres[0]).toBe("base");
+    expect(genres[genres.length - 1]).toBe("accessoire");
+    // Les deux bouts se suivent sur leur côté : jonction d'abord, mur ensuite.
+    expect(lignes.filter((l) => l.cote === "gauche").map((l) => l.cle))
+      .toEqual(["choix_jonction", "choix_paroi"]);
+  });
+});
