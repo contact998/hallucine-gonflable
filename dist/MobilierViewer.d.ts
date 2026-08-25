@@ -16,6 +16,17 @@ export interface Abri {
 }
 import type { VisuelPose } from "./pose.js";
 import { type CompositionAbri } from "./vue3d.js";
+/** L'écran du cinéma, décrit par l'application : le paquet sait le dessiner et
+ *  le dimensionner, pas le tarifer. Les deux cotes sortent du catalogue CRM
+ *  (`CatalogueSpecs`), jamais d'un nombre écrit dans une page. Gamme ÉTANCHE
+ *  seulement — c'est la seule que Bayes a modélisée. */
+export interface EcranLounge {
+    /** Largeur de la toile de projection, en mètres — le « 6 m » du catalogue. */
+    toileLargeurM: number;
+    /** Hauteur de la base de l'image. Absente : la géométrie du fournisseur est
+     *  laissée telle quelle, sans jupe retouchée. */
+    baseImageM?: number | null;
+}
 type Props = {
     implantation: Implantation;
     labelChargement?: string;
@@ -40,11 +51,15 @@ type Props = {
         quitter?: string;
         imprimer?: string;
     };
+    /** L'écran de projection devant les assises, ou rien. Une taille qui sort de
+     *  ce que la géométrie sait rendre laisse la scène SANS écran plutôt qu'avec
+     *  un dessin faux — le lounge ne s'en trouve pas amputé. */
+    ecran?: EcranLounge | null;
     /** Effacer la paroi entre la caméra et les meubles quand on tourne (défaut,
      *  le comportement historique). `false` : les parois restent pleines quel que
      *  soit l'angle — demandé par Daniel le 23/08/2026 pour les scènes prêtes du
      *  site, où la tente doit se montrer telle qu'elle sera construite. */
     effacerParois?: boolean;
 };
-export default function MobilierViewer({ implantation, labelChargement, labelEchec, captureRef, abri, habillages, visuels, libellesOutils, effacerParois }: Props): import("react").JSX.Element;
+export default function MobilierViewer({ implantation, labelChargement, labelEchec, captureRef, abri, ecran, habillages, visuels, libellesOutils, effacerParois }: Props): import("react").JSX.Element;
 export {};

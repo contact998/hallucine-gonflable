@@ -55,6 +55,7 @@ import { LACET_MEUBLE } from "./implantationMobilier.js";
 import { habillageMobilier as habillage, HABILLAGE_MOBILIER_DEFAUT as HABILLAGE_DEFAUT } from "./mobilier.js";
 import { composerPan } from "./visuel.js";
 import { chargerImage } from "./visuel.js";
+import { chargerEcranGlb, poserTaille } from "./ecranGlb.js";
 import { urlPiece, echelle, piecesAbri, rangeeAbri, axeRangee, decalageVoisin, porteVitre, pieceImprimable, urlMeuble, urlPersonne, FOND_SCENE } from "./vue3d.js";
 import { modele as modeleTente } from "./composition.js";
 import { TEINTE_NUE, hexDeTeinte } from "./couleurs.js";
@@ -445,7 +446,13 @@ function construireSol(sol) {
     mesh.position.z = -0.002;
     return mesh;
 }
-export default function MobilierViewer({ implantation, labelChargement, labelEchec, captureRef, abri, habillages, visuels, libellesOutils, effacerParois }) {
+/* L'écran se pose AU NORD du sol (y négatif), face aux assises : c'est le
+   repère du moteur d'implantation, où `rotation: 0` veut dire « face à
+   l'écran ». Il se tient EN DEHORS du rectangle de sol — un écran n'est pas un
+   meuble, il ne mange pas la place des canapés — avec un recul de dégagement
+   qui grandit un peu avec lui. */
+const RECUL_ECRAN_M = 1.6;
+export default function MobilierViewer({ implantation, labelChargement, labelEchec, captureRef, abri, ecran, habillages, visuels, libellesOutils, effacerParois }) {
     const hote = useRef(null);
     /* Lu par la boucle de rendu, montée une seule fois : un ref, pas une
        dépendance d'effet — changer d'avis ne remonte pas la scène. */
@@ -458,6 +465,9 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
     /* Modèles qui n'ont pas pu être chargés — annoncés, jamais tus. */
     const [echecs, setEchecs] = useState(0);
     /* Posés par l'effet de mise en place, consommés par l'effet de composition. */
+    /* L'écran n'oriente la caméra qu'à son ARRIVÉE : changer sa taille ensuite
+       ne doit pas ramener de force le visiteur à l'angle par défaut. */
+    const ecranOriente = useRef(false);
     const outils = useRef(null);
     const generation = useRef(0);
     /* ── Mise en place : une seule fois ─────────────────────────────────── */
@@ -600,7 +610,19 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
             if (captureRef)
                 captureRef.current = prendre;
         }
-        outils.current = { loader: new GLTFLoader(), racine, cadrer, reveiller };
+        /* Avec un écran, la vue naturelle est celle du spectateur : on se place
+           DERRIÈRE les assises, l'écran au fond. L'angle historique regardait les
+           canapés de face — donc, un écran posé, on n'en aurait vu que le dos.
+           Posée une seule fois, à l'apparition de l'écran : ensuite l'angle
+           appartient à celui qui tourne la scène. */
+        const regarderDepuisLesAssises = () => {
+            const d = cam.position.clone().sub(orbite.target);
+            const rayon = Math.hypot(d.x, d.y) || 1;
+            const az = Math.PI * 0.35;
+            cam.position.set(orbite.target.x + Math.cos(az) * rayon, orbite.target.y + Math.sin(az) * rayon, cam.position.z);
+            orbite.update();
+        };
+        outils.current = { loader: new GLTFLoader(), racine, cadrer, reveiller, regarderDepuisLesAssises };
         return () => {
             cancelAnimationFrame(raf);
             ro.disconnect();
@@ -630,6 +652,27 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
            pas comme un meuble manquant : une tente qui ne se dessine pas n'enlève
            rien au lounge, et son prix est au panier de toute façon. */
         const abriPromis = abri ? construireAbri(o.loader, abri) : Promise.resolve(null);
+        /* L'écran se charge avec le reste, et son échec ne compte pas comme un
+           meuble manquant : un lounge sans son écran reste un lounge. Une taille
+           que la géométrie ne sait pas rendre le laisse absent, jamais faux. */
+        const ecranPromis = ecran
+            ? chargerEcranGlb(o.loader)
+                .then((e) => {
+                const t = poserTaille(e, ecran.toileLargeurM, ecran.baseImageM ?? null);
+                /* AU NORD du sol (y négatif), face aux assises : c'est le repère du
+                   moteur d'implantation, où `rotation: 0` veut dire « face à
+                   l'écran ». La face de projection du modèle regarde le nord, d'où
+                   le demi-tour. Hors du rectangle de sol — un écran n'est pas un
+                   meuble, il ne prend pas la place d'un canapé — et d'autant plus
+                   reculé qu'il est grand : un 10 m à un mètre du premier rang se
+                   regarde le nez en l'air. */
+                e.groupe.rotation.z = Math.PI;
+                const recul = Math.max(RECUL_ECRAN_M, t.largeurM * 0.4);
+                e.groupe.position.set(0, -(implantation.sol.profondeurM / 2 + recul), 0);
+                return e;
+            })
+                .catch(() => null)
+            : Promise.resolve(null);
         /* Les gens : un chargement par FICHIER, pas par personne — deux hommes
            assis partagent le même gabarit, comme deux canapés identiques. */
         const gens = implantation.personnes ?? [];
@@ -643,7 +686,8 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
             Promise.allSettled(meubles.map((pose) => chargerGLB(o.loader, urlMeuble(pose.slug)).then((gabarit) => ({ pose, gabarit })))),
             abriPromis,
             silhouettesPromises,
-        ]).then(([resultats, groupeAbri, silhouettes]) => {
+            ecranPromis,
+        ]).then(([resultats, groupeAbri, silhouettes, ecranCharge]) => {
             const encore = outils.current;
             /* Une réponse en retard (implantation changée entre-temps) ne doit pas
                écraser la dernière composition demandée. */
@@ -696,11 +740,21 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
             if (groupeAbri)
                 encore.racine.add(groupeAbri);
             encore.racine.userData.abri = groupeAbri ?? null;
+            /* L'écran DANS la racine : le cadrage l'embrasse comme le reste, sinon la
+               caméra serre sur les meubles et le coupe. */
+            if (ecranCharge)
+                encore.racine.add(ecranCharge.groupe);
+            if (ecranCharge && !ecranOriente.current) {
+                ecranOriente.current = true;
+                encore.regarderDepuisLesAssises();
+            }
+            if (!ecran)
+                ecranOriente.current = false;
             encore.cadrer();
             encore.reveiller();
             setPret(true);
         });
-    }, [implantation, abri, habillages, visuels]);
+    }, [implantation, abri, ecran, habillages, visuels]);
     return (
     /* Le fond du studio est peint ICI, par la scène. Il était écrit en dur dans
        chaque page qui la montait — trois fois, dans deux dépôts — et le cliquet

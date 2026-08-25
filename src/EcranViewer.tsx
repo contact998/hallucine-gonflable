@@ -20,25 +20,11 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { FOND_SCENE, urlEcran, urlPersonne } from "./vue3d.js";
-import { calerEcran, type MesuresEcran } from "./ecran.js";
+import { FOND_SCENE, urlPersonne } from "./vue3d.js";
+import { chargerEcranGlb, poserTaille, type EcranCharge } from "./ecranGlb.js";
 import { OutilsVue } from "./OutilsVue.js";
 
-const MM_EN_M = 0.001;
 const TAILLE_HOMME_M = 1.75;
-/** Matières nommées par le convertisseur — le seul contrat avec le GLB. */
-const TOILE = "toile";
-const RENFORT = "renfort";
-const QUINCAILLERIE = "quincaillerie";
-
-type Corps = {
-  objet: THREE.Mesh;
-  origine: Float32Array;
-  /** La quincaillerie se DÉPLACE, elle ne s'étire pas : une valve allongée de
-   *  huit centimètres se voit, une valve remontée d'autant, non. */
-  rigide: boolean;
-  centreZ: number;
-};
 
 type Props = {
   /** Largeur de la toile de projection, en mètres — la cote que le catalogue
@@ -68,10 +54,8 @@ export default function EcranViewer({
   const [echec, setEchec] = useState(false);
 
   const outils = useRef<{
-    ecran: THREE.Group;
+    ecran: EcranCharge;
     homme: THREE.Group;
-    corps: Corps[];
-    mesures: MesuresEcran;
     cadrer: (hauteurM: number, largeurM: number) => void;
   } | null>(null);
 
@@ -112,9 +96,8 @@ export default function EcranViewer({
     sol.position.z = -0.002;
     sc.add(sol);
 
-    const ecran = new THREE.Group();
     const homme = new THREE.Group();
-    sc.add(ecran, homme);
+    sc.add(homme);
 
     const orbite = new OrbitControls(cam, rendu.domElement);
     orbite.enableDamping = true;
@@ -182,45 +165,9 @@ export default function EcranViewer({
     let vivant = true;
     const loader = new GLTFLoader();
 
-    const chargerEcran = loader.loadAsync(urlEcran()).then((gltf) => {
-      const corps: Corps[] = [];
-      const toiles: THREE.Mesh[] = [];
-      const renforts: THREE.Mesh[] = [];
-      gltf.scene.traverse((o) => {
-        const maille = o as THREE.Mesh;
-        if (!maille.isMesh) return;
-        const mat = maille.material as THREE.MeshStandardMaterial;
-        /* De la toile, pas des volumes : le client regarde aussi l'arrière, et
-           la CAO tourne certaines normales vers l'intérieur — sans les deux
-           faces, des pans entiers disparaissent ou virent au noir. */
-        mat.side = THREE.DoubleSide;
-        maille.geometry.computeBoundingBox();
-        const b = maille.geometry.boundingBox!;
-        corps.push({
-          objet: maille,
-          origine: Float32Array.from(maille.geometry.attributes.position.array),
-          rigide: mat.name === QUINCAILLERIE,
-          centreZ: (b.min.z + b.max.z) / 2,
-        });
-        if (mat.name === TOILE) toiles.push(maille);
-        if (mat.name === RENFORT) renforts.push(maille);
-      });
-      if (!toiles.length || !renforts.length) throw new Error("modèle d'écran sans toile ni renfort");
-
-      const boiteDes = (l: THREE.Mesh[]) => {
-        const b = new THREE.Box3();
-        for (const o of l) b.union(new THREE.Box3().setFromObject(o));
-        return b;
-      };
-      const bt = boiteDes(toiles);
-      const mesures: MesuresEcran = {
-        largeurToileMM: bt.max.x - bt.min.x,
-        zSocleMM: boiteDes(renforts).max.z,
-        zToileMM: bt.min.z,
-        hauteurBruteMM: new THREE.Box3().setFromObject(gltf.scene).max.z,
-      };
-      ecran.add(gltf.scene);
-      return { corps, mesures };
+    const chargerEcran = chargerEcranGlb(loader).then((e) => {
+      sc.add(e.groupe);
+      return e;
     });
 
     const chargerHomme = loader.loadAsync(urlPersonne("homme-debout")).then((gltf) => {
@@ -245,7 +192,7 @@ export default function EcranViewer({
     void Promise.all([chargerEcran, chargerHomme.catch(() => null)])
       .then(([e]) => {
         if (!vivant) return;
-        outils.current = { ecran, homme, corps: e.corps, mesures: e.mesures, cadrer };
+        outils.current = { ecran: e, homme, cadrer };
         setPret(true);
       })
       .catch(() => { if (vivant) setEchec(true); });
@@ -270,42 +217,18 @@ export default function EcranViewer({
     const o = outils.current;
     if (!pret || !o) return;
 
-    let calage;
+    let taille;
     try {
-      calage = calerEcran(o.mesures, toileLargeurM, baseImageM);
+      taille = poserTaille(o.ecran, toileLargeurM, baseImageM);
     } catch {
       setEchec(true);
       return;
     }
 
-    for (const c of o.corps) {
-      const attr = c.objet.geometry.attributes.position as THREE.BufferAttribute;
-      const dest = attr.array as Float32Array;
-      const src = c.origine;
-      if (c.rigide) {
-        const decalage = calage.etirer(c.centreZ) - c.centreZ;
-        for (let i = 0; i < src.length; i += 3) {
-          dest[i] = src[i];
-          dest[i + 1] = src[i + 1];
-          dest[i + 2] = src[i + 2] + decalage;
-        }
-      } else {
-        for (let i = 0; i < src.length; i += 3) {
-          dest[i] = src[i];
-          dest[i + 1] = src[i + 1];
-          dest[i + 2] = calage.etirer(src[i + 2]);
-        }
-      }
-      attr.needsUpdate = true;
-      c.objet.geometry.computeBoundingSphere();
-    }
-
-    o.ecran.scale.setScalar(MM_EN_M * calage.facteur);
-    const largeurM = new THREE.Box3().setFromObject(o.ecran).max.x * 2;
     o.homme.visible = silhouette;
     // Un pas de côté, et un pas en avant : de face, il masquerait la toile.
-    o.homme.position.set(largeurM / 2 + 0.9, -0.4, 0);
-    o.cadrer(calage.hauteurM, largeurM);
+    o.homme.position.set(taille.largeurM / 2 + 0.9, -0.4, 0);
+    o.cadrer(taille.hauteurM, taille.largeurM);
   }, [pret, toileLargeurM, baseImageM, silhouette]);
 
   return (

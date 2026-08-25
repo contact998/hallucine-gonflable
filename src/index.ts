@@ -40,7 +40,7 @@ export { HabillageMobilier, type ClassesHabillage } from "./HabillageMobilier.js
    site, ce qui privait le CRM de toute vue 3D — le commercial composait une
    liste pendant que le client voyait son lounge. Même remède que la tente. */
 export * from "./implantationMobilier.js";
-export { default as MobilierViewer } from "./MobilierViewer.js";
+export { default as MobilierViewer, type EcranLounge } from "./MobilierViewer.js";
 
 /* L'écran étanche : sa scène, et la règle qui le met à n'importe quelle taille
    depuis l'unique modèle du fournisseur (voir ecran.ts). */
