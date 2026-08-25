@@ -203,6 +203,21 @@ export interface TenteRangee {
     demiMurs?: Record<string, string>;
     impCote?: Record<string, boolean>;
 }
+/** Le plafond du compteur, partout : le site, le CRM et le code d'URL comptent
+ *  jusqu'ici et pas plus loin. Au-delà, ce n'est plus une rangée qu'on livre en
+ *  une fois, c'est un chantier qui se discute. */
+export declare const NB_TENTES_MAX = 10;
+/** Le nombre de tentes reliées, assaini : entier, borné à [1, `NB_TENTES_MAX`].
+ *  Un nombre absent, illisible ou trafiqué vaut « une seule tente ». */
+export declare function nbTentesRangee(n: unknown): number;
+/**
+ * La rangée a-t-elle un sens sur cette composition ?
+ *
+ * Il faut EXACTEMENT un côté en jonction — c'est lui qui donne l'axe — et un
+ * modèle à quatre côtés, pour que le côté opposé existe. Ailleurs, le compteur
+ * ne doit ni s'afficher, ni voyager dans le code, ni chiffrer quoi que ce soit.
+ */
+export declare function rangeePossible(m: Modele, cotes: Record<string, string>): boolean;
 /**
  * Les n tentes de la rangée, dérivées du module composé.
  *

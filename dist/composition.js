@@ -218,6 +218,29 @@ const AUVENT_COMPATIBLE = new Set(["vide", "paroi", "porte", "fenetre"]);
 export function auventPossible(type) {
     return AUVENT_COMPATIBLE.has(type);
 }
+/** Le plafond du compteur, partout : le site, le CRM et le code d'URL comptent
+ *  jusqu'ici et pas plus loin. Au-delà, ce n'est plus une rangée qu'on livre en
+ *  une fois, c'est un chantier qui se discute. */
+export const NB_TENTES_MAX = 10;
+/** Le nombre de tentes reliées, assaini : entier, borné à [1, `NB_TENTES_MAX`].
+ *  Un nombre absent, illisible ou trafiqué vaut « une seule tente ». */
+export function nbTentesRangee(n) {
+    const v = Math.floor(Number(n));
+    if (!Number.isFinite(v))
+        return 1;
+    return Math.min(NB_TENTES_MAX, Math.max(1, v));
+}
+/**
+ * La rangée a-t-elle un sens sur cette composition ?
+ *
+ * Il faut EXACTEMENT un côté en jonction — c'est lui qui donne l'axe — et un
+ * modèle à quatre côtés, pour que le côté opposé existe. Ailleurs, le compteur
+ * ne doit ni s'afficher, ni voyager dans le code, ni chiffrer quoi que ce soit.
+ */
+export function rangeePossible(m, cotes) {
+    const cotesModele = m.cotes;
+    return cotesModele.length === 4 && cotesModele.filter((c) => cotes[c] === "jonction").length === 1;
+}
 /**
  * Les n tentes de la rangée, dérivées du module composé.
  *
@@ -229,7 +252,7 @@ export function auventPossible(type) {
 export function rangeeTentes(m, module, n) {
     const cotesModele = m.cotes;
     const axes = cotesModele.filter((c) => module.cotes[c] === "jonction");
-    if (n <= 1 || axes.length !== 1 || cotesModele.length !== 4)
+    if (n <= 1 || !rangeePossible(m, module.cotes))
         return [module];
     const axe = axes[0];
     const oppose = cotesModele[(cotesModele.indexOf(axe) + 2) % 4];

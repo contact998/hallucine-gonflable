@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lignesTarifTente, totalTenteComposee } from "./tarif.js";
+import { lignesTarifTente, totalTenteComposee, totalLignesTarif } from "./tarif.js";
 import type { ConfigTente } from "./config.js";
 import {
   modele, cleTente, cleTypeCote, cleAuvent, cleDemiMur, cleImpression, cleAccessoire,
@@ -198,5 +198,76 @@ describe("le total d'une tente composée", () => {
       options: ["acc_sac"],
     });
     expect(totalTenteComposee(c, prixDe)).toBe(3200 + 260 + 260 + 180 + 45);
+  });
+});
+
+/*
+ * La RANGÉE. Le site montrait une jonction, dessinait la voisine en fantôme, et
+ * chiffrait UNE tente : le client repartait avec le prix de la moitié de ce
+ * qu'il regardait. Le CRM, lui, comptait juste depuis le premier jour — ces
+ * tests décrivent les mêmes règles, ici, pour que les deux comptent pareil.
+ */
+describe("la rangée de tentes", () => {
+  /** Une X 4x4 dont le côté GAUCHE est en jonction — l'axe de la rangée. */
+  const rangee = (nb: number, sur: Partial<ConfigTente> = {}) =>
+    cfg({
+      cotes: { avant: "vide", droit: "paroi", arriere: "vide", gauche: "jonction" },
+      nb,
+      ...sur,
+    });
+
+  const prixDe = table({
+    [cleTente(X, "4x4")]: 3200,
+    [cleTypeCote(X, "4x4", "jonction", "gauche")!]: 190,
+    [cleTypeCote(X, "4x4", "paroi", "droit")!]: 260,
+    [cleTypeCote(X, "4x4", "paroi", "gauche")!]: 260,
+    [cleAccessoire(X, "4x4", "acc_sac")]: 45,
+    [cleImpression(X, "4x4", "imp_jonction")]: 50,
+  });
+
+  it("nb absent ou 1 : le détail d'UNE tente, mot pour mot", () => {
+    const seule = lignesTarifTente(rangee(1), prixDe);
+    expect(lignesTarifTente(rangee(1, { nb: undefined }), prixDe)).toEqual(seule);
+    expect(seule.every((l) => l.quantite === undefined)).toBe(true);
+  });
+
+  it("trois tentes : le pack se compte trois fois, la jonction DEUX", () => {
+    const lignes = lignesTarifTente(rangee(3), prixDe);
+    expect(lignes).toContainEqual({ genre: "base", prix: 3200, quantite: 3 });
+    expect(lignes).toContainEqual(
+      { genre: "cote", cote: "gauche", cle: "choix_jonction", provisoire: false, prix: 190, quantite: 2 },
+    );
+  });
+
+  it("le côté opposé ferme les DEUX bouts — sa paroi se compte deux fois, jamais trois", () => {
+    const lignes = lignesTarifTente(rangee(3), prixDe);
+    const bouts = lignes.filter((l) => l.genre === "cote" && l.cle === "choix_paroi");
+    expect(bouts.reduce((s, l) => s + (l.quantite ?? 1), 0)).toBe(2);
+  });
+
+  it("les accessoires ne se comptent qu'une fois : ils sont réglés pour l'ensemble", () => {
+    const lignes = lignesTarifTente(rangee(4, { options: ["acc_sac"] }), prixDe);
+    expect(lignes).toContainEqual({ genre: "accessoire", cle: "acc_sac", prix: 45 });
+  });
+
+  it("l'impression de jonction suit les jonctions, pas les tentes", () => {
+    const lignes = lignesTarifTente(rangee(3, { options: ["imp_jonction"] }), prixDe);
+    expect(lignes).toContainEqual({ genre: "impression", cle: "imp_jonction", prix: 50, quantite: 2 });
+  });
+
+  it("le total compte les quantités — et vaut n fois le pack, plus les bouts", () => {
+    expect(totalTenteComposee(rangee(3), prixDe)).toBe(3 * 3200 + 2 * 190 + 2 * 260);
+    expect(totalLignesTarif(lignesTarifTente(rangee(3), prixDe)))
+      .toBe(totalTenteComposee(rangee(3), prixDe));
+  });
+
+  it("sans jonction, le nombre ne chiffre rien : une tente reste une tente", () => {
+    const sansJonction = cfg({ cotes: { avant: "vide", droit: "paroi", arriere: "vide", gauche: "paroi" }, nb: 5 });
+    expect(totalTenteComposee(sansJonction, prixDe)).toBe(3200 + 260 + 260);
+  });
+
+  it("un nombre trafiqué est borné : jamais zéro tente, jamais mille", () => {
+    expect(totalTenteComposee(rangee(0), prixDe)).toBe(totalTenteComposee(rangee(1), prixDe));
+    expect(totalTenteComposee(rangee(999), prixDe)).toBe(totalTenteComposee(rangee(10), prixDe));
   });
 });

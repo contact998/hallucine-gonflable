@@ -1,6 +1,6 @@
 {
   "name": "@hallucine/gonflable",
-  "version": "0.39.0",
+  "version": "0.40.0",
   "description": "Le vocabulaire partagé de la gamme gonflable : tente, mobilier de lounge et écran étanche — composition et règles, code de configuration, teintes, habillage, pose des visuels et visualiseurs 3D. Installé par le site public et par le CRM.",
   "type": "module",
   "main": "./dist/index.js",

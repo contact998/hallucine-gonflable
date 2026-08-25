@@ -24,6 +24,7 @@ import {
   modele as trouverModele, typeCote, demiMurPossible,
   cleTente, cleTypeCote, cleRepliCote, cleAuvent, cleDemiMur, cleImpression, cleAccessoire,
   IMPRESSIONS, IMP_SOCLE, IMP_AUVENT, IMP_JONCTION, impressionsCote,
+  rangeeTentes, nbTentesRangee,
   type Impression, type Accessoire,
 } from "./composition.js";
 import { dessinable } from "./vue3d.js";
@@ -45,8 +46,16 @@ export interface LigneTarifTente {
   cle?: string;
   /** Prix de repli (paroi pleine) faute de ligne au tarif : à dire en rouge. */
   provisoire?: boolean;
+  /** Combien de fois cette ligne se répète dans une RANGÉE — absent = une fois.
+   *  `prix` reste le prix UNITAIRE : le total d'une ligne vaut prix × quantité,
+   *  et `totalLignesTarif` est là pour qu'on ne l'oublie pas. */
+  quantite?: number;
   prix: number;
 }
+
+/** Le total de lignes chiffrées, quantités comprises. */
+export const totalLignesTarif = (lignes: readonly LigneTarifTente[]): number =>
+  lignes.reduce((s, l) => s + l.prix * (l.quantite ?? 1), 0);
 
 /** Prix par slug — `null` = prix INCONNU, jamais zéro. */
 export type PrixDe = (slug: string) => number | null;
@@ -55,8 +64,20 @@ export type PrixDe = (slug: string) => number | null;
  * Les lignes chiffrées d'une tente composée, dans l'ordre d'affichage de la
  * page : le pack, puis chaque côté (choix, impression, demi-mur, auvent), puis
  * les options. Seules les lignes dont le tarif connaît le prix apparaissent.
+ *
+ * `c.nb` au-delà de 1 chiffre la RANGÉE entière — voir `lignesTarifRangee`.
  */
 export function lignesTarifTente(
+  c: ConfigTente,
+  prixDe: PrixDe,
+  impCotes?: Record<string, boolean>,
+): LigneTarifTente[] {
+  const n = nbTentesRangee(c.nb);
+  return n > 1 ? lignesTarifRangee(c, prixDe, n, impCotes) : lignesUneTente(c, prixDe, impCotes);
+}
+
+/** Le détail d'UNE tente — l'arithmétique historique, inchangée. */
+function lignesUneTente(
   c: ConfigTente,
   prixDe: PrixDe,
   impCotes?: Record<string, boolean>,
@@ -133,6 +154,69 @@ export function lignesTarifTente(
 }
 
 /**
+ * Les lignes chiffrées d'une RANGÉE de n tentes identiques reliées.
+ *
+ * La dérivation des tentes vient de `rangeeTentes` — jamais recalculée ici :
+ * c'est elle qui décide que la dernière tente ferme le bout au lieu de porter
+ * une jonction, donc qu'une rangée de n porte n − 1 jonctions. Deux copies
+ * auraient fini par dessiner une rangée et en facturer une autre.
+ *
+ * Deux écarts volontaires entre les tentes, les MÊMES que le chiffrage du CRM :
+ *   · les ACCESSOIRES ne se comptent qu'une fois — le sac, la pompe, les lests
+ *     se règlent pour l'ensemble, pas par tente ;
+ *   · l'impression de jonction ne suit que les tentes qui en portent une — la
+ *     dernière n'a rien à imprimer de ce côté-là (`lignesUneTente` le sait
+ *     déjà : une option sans support ne se chiffre pas).
+ *
+ * Les lignes identiques fusionnent et portent leur `quantite` : trois fois le
+ * même pack s'écrit « × 3 », pas trois lignes à la file.
+ */
+export function lignesTarifRangee(
+  c: ConfigTente,
+  prixDe: PrixDe,
+  n: number,
+  impCotes?: Record<string, boolean>,
+): LigneTarifTente[] {
+  const m = trouverModele(c.modele);
+  const tentes = rangeeTentes(
+    m,
+    { cotes: c.cotes, auvents: c.auvents, demiMurs: c.demiMurs ?? {}, impCote: impCotes ?? {} },
+    nbTentesRangee(n),
+  );
+  if (tentes.length === 1) return lignesUneTente(c, prixDe, impCotes);
+
+  const estImpression = (k: string) => !!(IMPRESSIONS as Record<string, string>)[k];
+  const fusion = new Map<string, LigneTarifTente>();
+  const ordre: LigneTarifTente[] = [];
+
+  tentes.forEach((t, i) => {
+    const lignes = lignesUneTente(
+      {
+        ...c,
+        cotes: t.cotes,
+        auvents: t.auvents,
+        demiMurs: t.demiMurs ?? {},
+        options: i === 0 ? c.options : c.options.filter(estImpression),
+      },
+      prixDe,
+      t.impCote,
+    );
+    for (const l of lignes) {
+      const cle = [l.genre, l.cote ?? "", l.cle ?? "", l.provisoire ? 1 : 0, l.prix].join("|");
+      const deja = fusion.get(cle);
+      if (deja) {
+        deja.quantite = (deja.quantite ?? 1) + 1;
+      } else {
+        fusion.set(cle, l);
+        ordre.push(l);
+      }
+    }
+  });
+
+  return ordre;
+}
+
+/**
  * Le total d'une tente composée — celui que la page du configurateur affiche.
  * `null` si le pack de base n'a pas de prix : sans lui le total serait un
  * morceau de tente, et un abri sous-facturé en silence est pire qu'un « prix à
@@ -141,5 +225,5 @@ export function lignesTarifTente(
 export function totalTenteComposee(c: ConfigTente, prixDe: PrixDe): number | null {
   const m = trouverModele(c.modele);
   if (prixDe(cleTente(m, c.taille)) == null) return null;
-  return lignesTarifTente(c, prixDe).reduce((s, l) => s + l.prix, 0);
+  return totalLignesTarif(lignesTarifTente(c, prixDe));
 }

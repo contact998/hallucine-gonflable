@@ -16,6 +16,10 @@ export interface ConfigTente {
      *  — « vide » ou absent = pas de demi-mur. Voir `DemiMurModele`. */
     demiMurs: Record<string, string>;
     options: string[];
+    /** Tentes IDENTIQUES reliées le long du côté en jonction — absent ou 1 = la
+     *  tente seule. N'a de sens que sur une composition où `rangeePossible` :
+     *  ailleurs il ne s'écrit pas et ne se relit pas. */
+    nb?: number;
 }
 /** Composition → code d'URL. */
 export declare function encoderConfig(c: ConfigTente): string;

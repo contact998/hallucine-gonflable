@@ -171,3 +171,49 @@ describe("codes de configuration multi-modèles", () => {
     expect(Object.keys(c.cotes)).toEqual(["a", "b", "c"]);
   });
 });
+
+/*
+ * Le NOMBRE DE TENTES (25/08/2026). Une jonction dans le code, et rien pour
+ * dire combien de tentes : le devis parlait d'une rangée, le lien rouvrait une
+ * tente seule. Le segment s'ajoute en QUEUE, comme toujours, et ne s'écrit que
+ * quand il change quelque chose.
+ */
+describe("Le nombre de tentes reliées", () => {
+  const avecJonction = (nb?: number): ConfigTente => ({
+    ...vide(),
+    cotes: { avant: "paroi", droit: "vide", arriere: "vide", gauche: "jonction" },
+    ...(nb === undefined ? {} : { nb }),
+  });
+
+  it("voyage dans le code, et se relit", () => {
+    const code = encoderConfig(avecJonction(3));
+    expect(code.endsWith(".3")).toBe(true);
+    expect(decoderConfig(code)!.nb).toBe(3);
+  });
+
+  it("une seule tente ne s'écrit PAS : le code reste celui d'avant, au caractère près", () => {
+    expect(encoderConfig(avecJonction(1))).toBe(encoderConfig(avecJonction()));
+    expect(encoderConfig(avecJonction(1))).toBe("4x4.p--j");
+    expect(decoderConfig("4x4.p--j")!.nb).toBeUndefined();
+  });
+
+  it("un ancien code s'ouvre sur une tente, sans rien inventer", () => {
+    expect(decoderConfig("4x4.pFA-.02.sl")!.nb).toBeUndefined();
+  });
+
+  it("sans jonction, le nombre ne s'écrit pas et ne se relit pas", () => {
+    expect(encoderConfig({ ...vide(), cotes: { ...vide().cotes, avant: "paroi" }, nb: 4 })).toBe("4x4.p---");
+    expect(decoderConfig("4x4.p---...4")!.nb).toBeUndefined();
+  });
+
+  it("un nombre trafiqué est borné, jamais refusé — le reste du code vaut mieux que rien", () => {
+    expect(decoderConfig("4x4.p--j...999")!.nb).toBe(10);
+    expect(decoderConfig("4x4.p--j...0")!.nb).toBeUndefined();
+    expect(decoderConfig("4x4.p--j...trois")!.nb).toBeUndefined();
+  });
+
+  it("aller-retour complet : le nombre survit aux accessoires et aux impressions", () => {
+    const c = { ...avecJonction(6), options: ["imp_toit", "imp_jonction", "acc_sac"] };
+    expect(decoderConfig(encoderConfig(c))).toEqual(c);
+  });
+});

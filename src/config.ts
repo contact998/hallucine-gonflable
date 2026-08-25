@@ -9,6 +9,9 @@
  *                       arrière · gauche ; MAJUSCULE = un auvent en plus
  *   3. impressions      les indices cochés, collés
  *   4. accessoires      les initiales cochées, collées
+ *   5. tentes reliées   le nombre, écrit SEULEMENT au-delà d'une tente
+ *                       (ajouté le 25/08/2026 : sans lui, un devis de rangée
+ *                       rouvrait le prix d'UNE tente)
  *
  * Volontairement court et stable plutôt qu'un JSON encodé : ça tient dans un
  * SMS, ça survit aux retours à la ligne des logiciels de messagerie, et ça se
@@ -22,7 +25,7 @@
 
 import {
   MODELES, MODELE_DEFAUT, modele as trouverModele, TAILLES, COTES,
-  typePossible, demiMurPossible, typesDemiMur,
+  typePossible, demiMurPossible, typesDemiMur, rangeePossible, nbTentesRangee,
 } from "./composition.js";
 
 /** Dérivées de la table des modèles — une seule source pour la gamme. */
@@ -98,6 +101,10 @@ export interface ConfigTente {
    *  — « vide » ou absent = pas de demi-mur. Voir `DemiMurModele`. */
   demiMurs: Record<string, string>;
   options: string[];
+  /** Tentes IDENTIQUES reliées le long du côté en jonction — absent ou 1 = la
+   *  tente seule. N'a de sens que sur une composition où `rangeePossible` :
+   *  ailleurs il ne s'écrit pas et ne se relit pas. */
+  nb?: number;
 }
 
 /*
@@ -139,8 +146,14 @@ export function encoderConfig(c: ConfigTente): string {
     .map(([, l]) => l)
     .join("");
 
+  /* Le nombre ne s'écrit qu'au-delà d'une tente, et seulement là où la rangée
+     a un sens : sans rangée, le code reste IDENTIQUE au caractère près à celui
+     d'avant cette version — c'est ce qui garde les devis déjà partis valides. */
+  const n = rangeePossible(m, c.cotes) ? nbTentesRangee(c.nb) : 1;
+  const nb = n > 1 ? String(n) : "";
+
   const tete = m.slug === MODELE_DEFAUT ? [] : [m.slug];
-  return [...tete, c.taille, cotes, imps, accs].join(".").replace(/\.+$/, "");
+  return [...tete, c.taille, cotes, imps, accs, nb].join(".").replace(/\.+$/, "");
 }
 
 /** Code d'URL → composition. Rend `null` si le code est inexploitable :
@@ -154,7 +167,7 @@ export function decoderConfig(code: string | null | undefined): ConfigTente | nu
   const enTete = MODELES.some((m) => m.slug === segments[0]) ? segments.shift()! : MODELE_DEFAUT;
   const m = trouverModele(enTete);
 
-  const [taille, cotesStr = "", imps = "", accs = ""] = segments;
+  const [taille, cotesStr = "", imps = "", accs = "", nbStr = ""] = segments;
   if (!(m.tailles as readonly string[]).includes(taille)) return null;
 
   const cotes: Record<string, string> = {};
@@ -200,5 +213,10 @@ export function decoderConfig(code: string | null | undefined): ConfigTente | nu
     if (k) options.push(k);
   }
 
-  return { modele: m.slug, taille, cotes, auvents, demiMurs, options };
+  /* Un nombre trafiqué, illisible, ou posé sur une composition sans jonction
+     retombe à une tente : mieux vaut chiffrer la tente qu'on voit que facturer
+     une rangée que personne n'a composée. */
+  const n = rangeePossible(m, cotes) ? nbTentesRangee(nbStr) : 1;
+
+  return { modele: m.slug, taille, cotes, auvents, demiMurs, options, ...(n > 1 ? { nb: n } : {}) };
 }
