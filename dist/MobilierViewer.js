@@ -449,9 +449,14 @@ function construireSol(sol) {
 /* L'écran se pose AU NORD du sol (y négatif), face aux assises : c'est le
    repère du moteur d'implantation, où `rotation: 0` veut dire « face à
    l'écran ». Il se tient EN DEHORS du rectangle de sol — un écran n'est pas un
-   meuble, il ne mange pas la place des canapés — avec un recul de dégagement
-   qui grandit un peu avec lui. */
-const RECUL_ECRAN_M = 1.6;
+   meuble, il ne mange pas la place des canapés.
+
+   LE RECUL VAUT UNE LARGEUR DE TOILE, au minimum trois mètres. C'était 0,4
+   largeur : un 10 m tombait à quatre mètres du premier rang, où personne ne
+   peut regarder un film — il faut lever la tête et on ne voit pas les bords.
+   La règle de projection dit la première rangée à une largeur d'écran au
+   moins ; c'est celle-ci, et elle se voit dans la scène. */
+const RECUL_ECRAN_M = 3;
 export default function MobilierViewer({ implantation, labelChargement, labelEchec, captureRef, abri, ecran, habillages, visuels, libellesOutils, effacerParois }) {
     const hote = useRef(null);
     /* Lu par la boucle de rendu, montée une seule fois : un ref, pas une
@@ -675,7 +680,7 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
                    reculé qu'il est grand : un 10 m à un mètre du premier rang se
                    regarde le nez en l'air. */
                 e.groupe.rotation.z = Math.PI;
-                const recul = Math.max(RECUL_ECRAN_M, t.largeurM * 0.4);
+                const recul = Math.max(RECUL_ECRAN_M, t.largeurM);
                 e.groupe.position.set(0, -(implantation.sol.profondeurM / 2 + recul), 0);
                 return e;
             })
