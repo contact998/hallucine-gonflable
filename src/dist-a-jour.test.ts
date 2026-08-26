@@ -26,8 +26,12 @@ describe("dist/ versionné", () => {
         { cwd: RACINE, stdio: "pipe" },
       );
 
-      const attendus = readdirSync(temoin).sort();
-      const publies = readdirSync(join(RACINE, "dist")).sort();
+      /* Les fichiers cachés ne sont pas des sorties de compilation : macOS pose
+         un `.metadata_never_index` dans les dossiers exclus de Spotlight, et il
+         faisait tomber ce test sans que src/ ni dist/ aient bougé. */
+      const compiles = (d: string) => readdirSync(d).filter((f) => !f.startsWith(".")).sort();
+      const attendus = compiles(temoin);
+      const publies = compiles(join(RACINE, "dist"));
       expect(publies).toEqual(attendus);
 
       for (const fichier of attendus) {

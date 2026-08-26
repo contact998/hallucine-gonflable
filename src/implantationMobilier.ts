@@ -40,8 +40,25 @@ type MobilierItem = MeubleCote;
  *  · « rangs » — toutes face à l'écran. C'est un cinéma en plein air : personne
  *    ne s'assoit dos à la toile.
  *  · « ilots » — appariées face à face. C'est un lounge : on se regarde.
+ *  · « tablees » — autour d'une table. C'est un repas ; il faut alors dire
+ *    LAQUELLE des pièces est la table, par `groupement`.
  */
-export type Disposition = "rangs" | "ilots";
+export type Disposition = "rangs" | "ilots" | "tablees";
+
+/**
+ * Une tablée : une pièce centrale, et ce qui s'assoit autour.
+ *
+ * Le moteur ne connaît ni banquet ni traiteur — il connaît un centre et des
+ * satellites. C'est l'application qui dit « la table de huit, huit chaises » ;
+ * le jour où l'on sert un buffet autour d'un îlot, la même mécanique servira
+ * sans un mot de plus ici.
+ */
+export interface Groupement {
+  /** Le slug de la pièce centrale. */
+  centre: string;
+  /** Combien de satellites l'entourent, au plus. */
+  autour: number;
+}
 
 export interface MeublePose {
   slug: string;
@@ -284,8 +301,91 @@ function blocFaceAFace(a: Unite, b: Unite, passage: number, quartDeTour: boolean
  * puis par index, et on les prend dans cet ordre. Deux compositions identiques
  * donnent les mêmes îlots, des mois plus tard, depuis un lien de devis.
  */
-function enBlocs(unites: Unite[], disposition: Disposition, passage: number): Bloc[] {
+/**
+ * Une tablée : la table au centre, les chaises tout autour, le tout posé comme
+ * UN bloc. C'est ce qui distingue un repas d'une salle d'examen — le rangeur
+ * ne voit qu'un rectangle, et les chaises ne peuvent plus s'égailler ailleurs.
+ *
+ * Les chaises se répartissent d'abord sur les deux LONGS côtés — c'est ainsi
+ * qu'on dresse une table —, le reste aux deux bouts. Chacune regarde la table.
+ *
+ * Déterministe : aucun tirage, la répartition ne dépend que du nombre.
+ */
+function blocTablee(table: Unite, chaises: Unite[], passage: number): Bloc {
+  const wT = table.item.largeurCm / 100, dT = table.item.profondeurCm / 100;
+  /* Une chaise glissée sous la table n'occupe que sa profondeur au-delà du
+     plateau ; c'est cette profondeur-là qui fait grandir la tablée. */
+  const dC = chaises.length > 0 ? Math.max(...chaises.map((u) => u.item.profondeurCm / 100)) : 0;
+  const wC = chaises.length > 0 ? Math.max(...chaises.map((u) => u.item.largeurCm / 100)) : 0;
+
+  /* Combien tiennent le long d'un grand côté, sans se chevaucher. */
+  const parLong = Math.max(1, Math.floor(wT / Math.max(wC, 0.01)));
+  const auxLongs = Math.min(chaises.length, parLong * 2);
+  const auxBouts = chaises.length - auxLongs;
+
+  const wM = wT + (auxBouts > 0 ? 2 * (dC + passage) : 0);
+  const dM = dT + (auxLongs > 0 ? 2 * (dC + passage) : 0);
+
+  return {
+    wM,
+    dM,
+    unites: [table, ...chaises],
+    deplier: (x, z) => {
+      const poses: MeublePose[] = [{ slug: table.slug, x, z, rotation: 0 }];
+      const ecart = (d: number) => d / 2 + passage + dC / 2;
+      chaises.forEach((c, i) => {
+        if (i < auxLongs) {
+          /* Les grands côtés : au nord et au sud, alternés, étalés en largeur. */
+          const sud = i % 2 === 1;
+          const rang = Math.floor(i / 2);
+          const pas = wT / parLong;
+          const dx = -wT / 2 + pas / 2 + rang * pas;
+          poses.push({
+            slug: c.slug,
+            x: x + dx,
+            z: z + (sud ? ecart(dT) : -ecart(dT)),
+            /* Face à la table : celle du nord regarde vers le sud. */
+            rotation: sud ? Math.PI : 0,
+          });
+        } else {
+          /* Les bouts : est et ouest, alternés. */
+          const est = (i - auxLongs) % 2 === 1;
+          poses.push({
+            slug: c.slug,
+            x: x + (est ? ecart(wT) : -ecart(wT)),
+            z,
+            rotation: est ? -Math.PI / 2 : Math.PI / 2,
+          });
+        }
+      });
+      return poses;
+    },
+  };
+}
+
+function enBlocs(
+  unites: Unite[],
+  disposition: Disposition,
+  passage: number,
+  groupement?: Groupement,
+): Bloc[] {
   if (disposition === "rangs") return unites.map(blocSimple);
+  if (disposition === "tablees" && groupement) {
+    const tables = unites.filter((u) => u.slug === groupement.centre);
+    const chaises = unites.filter((u) => u.slug !== groupement.centre);
+    const blocs: Bloc[] = [];
+    let pris = 0;
+    for (const table of tables) {
+      const part = chaises.slice(pris, pris + groupement.autour);
+      pris += part.length;
+      blocs.push(blocTablee(table, part, passage));
+    }
+    /* Les chaises en trop — plus d'invités que de couverts dressés — ne
+       disparaissent pas : elles se posent seules, et se voient. Les faire
+       taire donnerait une capacité fausse. */
+    for (const restante of chaises.slice(pris)) blocs.push(blocSimple(restante));
+    return blocs;
+  }
   const blocs: Bloc[] = [];
   for (let i = 0; i < unites.length; i += 2) {
     const a = unites[i], b = unites[i + 1];
@@ -423,6 +523,8 @@ export function implanter(
   disposition: Disposition = "ilots",
   /** Voir `personnes()` : absent = une silhouette par place. */
   invites?: number,
+  /** Qui est la table, et combien s'assoient autour — pour « tablees ». */
+  groupement?: Groupement,
 ): Implantation {
   const toutes = unitesTriees(panier, catalogue);
   const aPlacer = toutes.slice(0, PLAFOND_EXEMPLAIRES);
@@ -432,15 +534,21 @@ export function implanter(
      rang et les poufs au fond — l'inverse d'une salle : on retrie du plus bas
      au plus haut, l'écran étant au nord. */
   const enRangs = disposition === "rangs";
-  const assisesBrutes = aPlacer.filter((u) => zoneDe(u.slug) === "assises");
+  /* Le centre d'une tablée rejoint les assises quelle que soit sa famille : une
+     table de repas se range avec ses chaises, pas avec les mange-debout. Sans
+     cette ligne, le classement se ferait sur le PRÉFIXE du slug — « table-… »
+     partirait au comptoir et laisserait les chaises s'éparpiller. Ce n'est pas
+     au nom d'un fichier de décider où l'on dîne. */
+  const estCentre = (u: Unite) => groupement !== undefined && u.slug === groupement.centre;
+  const assisesBrutes = aPlacer.filter((u) => zoneDe(u.slug) === "assises" || estCentre(u));
   const assises = enRangs ? ordonnerPourRangs(assisesBrutes) : assisesBrutes;
-  const mangeDebout = aPlacer.filter((u) => zoneDe(u.slug) === "mangeDebout");
+  const mangeDebout = aPlacer.filter((u) => zoneDe(u.slug) === "mangeDebout" && !estCentre(u));
   const bars = aPlacer.filter((u) => zoneDe(u.slug) === "bars");
 
   const largeurBarMax = bars.length > 0 ? Math.max(...bars.map((u) => u.item.largeurCm / 100)) : 0;
   /* Les assises deviennent des îlots ; les mange-debout et les bars restent
      seuls — on ne met pas deux mange-debout face à face, ils n'ont pas de face. */
-  const blocsAssises = enBlocs(assises, disposition, PASSAGE_ILOT_M);
+  const blocsAssises = enBlocs(assises, disposition, PASSAGE_ILOT_M, groupement);
   const blocsDebout = mangeDebout.map(blocSimple);
   const blocsBars = bars.map(blocSimple);
 

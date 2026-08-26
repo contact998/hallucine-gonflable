@@ -576,3 +576,84 @@ describe("implanter", () => {
     }
   });
 });
+
+
+/* ── La tablée ─────────────────────────────────────────────────────────────
+ *
+ * Un repas n'est pas une salle d'examen : les chaises entourent une table, et
+ * l'ensemble se pose d'un bloc. Sans ça, le rangeur les éparpillait — le
+ * banquet du lounge rendait des rangs de chaises et des tables à côté.
+ */
+describe("tablées — les chaises tiennent autour de leur table", () => {
+  const TABLE = "table-repas";
+  const CHAISE = "chaise-repas";
+  const CAT: Record<string, MeubleCote> = {
+    [TABLE]: {
+      slugSite: TABLE, designation: "Table de repas",
+      largeurCm: 226, profondeurCm: 139, hauteurCm: 87,
+      placesAssises: 0, hauteurAssiseCm: null,
+    },
+    [CHAISE]: {
+      slugSite: CHAISE, designation: "Chaise",
+      largeurCm: 43, profondeurCm: 58, hauteurCm: 97,
+      placesAssises: 1, hauteurAssiseCm: 45,
+    },
+  };
+  const GROUPEMENT = { centre: TABLE, autour: 8 };
+  const panier: LigneLounge[] = [{ slug: TABLE, qte: 2 }, { slug: CHAISE, qte: 16 }];
+
+  const poser = () =>
+    implanter(panier, CAT, undefined, { largeurM: 24, profondeurM: 16 }, "tablees", undefined, GROUPEMENT);
+
+  it("pose chaque chaise à portée de SA table, jamais à l'autre bout du sol", () => {
+    const { meubles } = poser();
+    const tables = meubles.filter((m) => m.slug === TABLE);
+    const chaises = meubles.filter((m) => m.slug === CHAISE);
+    expect(tables).toHaveLength(2);
+    expect(chaises).toHaveLength(16);
+
+    /* Une chaise appartient à sa table si elle est plus près d'elle que la
+       demi-diagonale d'une tablée — au-delà, elle mange ailleurs. */
+    const PORTEE = 2.6;
+    for (const c of chaises) {
+      const d = Math.min(...tables.map((t) => Math.hypot(t.x - c.x, t.z - c.z)));
+      expect(d, `chaise à ${d.toFixed(2)} m de toute table`).toBeLessThan(PORTEE);
+    }
+  });
+
+  it("répartit huit chaises par table, pas seize autour d'une seule", () => {
+    const { meubles } = poser();
+    const tables = meubles.filter((m) => m.slug === TABLE);
+    const parTable = tables.map((t) =>
+      meubles.filter((m) => m.slug === CHAISE && Math.hypot(t.x - m.x, t.z - m.z) < 2.6).length,
+    );
+    expect(parTable).toEqual([8, 8]);
+  });
+
+  it("tourne chaque chaise VERS sa table — personne ne dîne de dos", () => {
+    const { meubles } = poser();
+    const tables = meubles.filter((m) => m.slug === TABLE);
+    for (const c of meubles.filter((m) => m.slug === CHAISE)) {
+      const t = tables.reduce((a, b) =>
+        Math.hypot(a.x - c.x, a.z - c.z) <= Math.hypot(b.x - c.x, b.z - c.z) ? a : b);
+      /* Convention des MEUBLES : à rotation nulle, la face regarde vers +Z —
+         c'est elle qui fait qu'un îlot face à face se regarde vraiment. (Les
+         silhouettes de `personnes()`, elles, comptent 0 vers l'écran : deux
+         conventions voisines, à ne pas confondre.) */
+      const regard = { x: Math.sin(c.rotation), z: Math.cos(c.rotation) };
+      const vers = { x: t.x - c.x, z: t.z - c.z };
+      const norme = Math.hypot(vers.x, vers.z) || 1;
+      const produit = (regard.x * vers.x + regard.z * vers.z) / norme;
+      expect(produit, `chaise tournée à ${c.rotation.toFixed(2)} rad`).toBeGreaterThan(0.5);
+    }
+  });
+
+  it("ne fait jamais disparaître une chaise en trop — une capacité fausse est pire qu'un surplus", () => {
+    const { meubles, nonPoses } = implanter(
+      [{ slug: TABLE, qte: 1 }, { slug: CHAISE, qte: 11 }],
+      CAT, undefined, { largeurM: 24, profondeurM: 16 }, "tablees", undefined, GROUPEMENT,
+    );
+    expect(nonPoses).toBe(0);
+    expect(meubles.filter((m) => m.slug === CHAISE)).toHaveLength(11);
+  });
+});

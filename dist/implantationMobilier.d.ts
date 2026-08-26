@@ -39,8 +39,24 @@ type MobilierItem = MeubleCote;
  *  · « rangs » — toutes face à l'écran. C'est un cinéma en plein air : personne
  *    ne s'assoit dos à la toile.
  *  · « ilots » — appariées face à face. C'est un lounge : on se regarde.
+ *  · « tablees » — autour d'une table. C'est un repas ; il faut alors dire
+ *    LAQUELLE des pièces est la table, par `groupement`.
  */
-export type Disposition = "rangs" | "ilots";
+export type Disposition = "rangs" | "ilots" | "tablees";
+/**
+ * Une tablée : une pièce centrale, et ce qui s'assoit autour.
+ *
+ * Le moteur ne connaît ni banquet ni traiteur — il connaît un centre et des
+ * satellites. C'est l'application qui dit « la table de huit, huit chaises » ;
+ * le jour où l'on sert un buffet autour d'un îlot, la même mécanique servira
+ * sans un mot de plus ici.
+ */
+export interface Groupement {
+    /** Le slug de la pièce centrale. */
+    centre: string;
+    /** Combien de satellites l'entourent, au plus. */
+    autour: number;
+}
 export interface MeublePose {
     slug: string;
     /** Mètres, repère au sol, origine au centre. L'écran est au NORD (z négatif). */
@@ -66,7 +82,9 @@ export declare function implanter(panier: LigneLounge[], catalogue: Record<strin
     profondeurM: number;
 }, disposition?: Disposition, 
 /** Voir `personnes()` : absent = une silhouette par place. */
-invites?: number): Implantation;
+invites?: number, 
+/** Qui est la table, et combien s'assoient autour — pour « tablees ». */
+groupement?: Groupement): Implantation;
 /**
  * Un exemplaire de PLUS de ce meuble tiendrait-il encore ? C'est le VRAI
  * moteur qui répond — jamais une règle de surface : un canapé de 2 m peut
