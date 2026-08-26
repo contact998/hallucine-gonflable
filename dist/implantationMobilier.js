@@ -17,8 +17,15 @@
 import { familleMobilier } from "./mobilier.js";
 /** Le pas entre deux meubles : leur encombrement, plus la circulation. */
 const CIRCULATION_M = 0.6;
-/** Au-delà, `nonPoses` compte le reste — jamais un silence. */
-const PLAFOND_EXEMPLAIRES = 60;
+/**
+ * Le plafond d'exemplaires posés. 60 à l'origine — dimensionné pour un lounge
+ * de canapés, et crevé PAR CONSTRUCTION par un banquet : 60 couverts font
+ * 68 pièces (les chaises plus leurs tables), et les huit manquantes laissaient
+ * huit convives debout en file devant des tables nues. 120 couvre un banquet
+ * de 100 couverts (113 pièces) ; les GLB clonés partagent leur géométrie, le
+ * rendu ne s'alourdit pas d'autant.
+ */
+const PLAFOND_EXEMPLAIRES = 120;
 /** Le sol demandé se rend en 4:3, largeur sur profondeur. */
 const RATIO_SOL = 4 / 3;
 /* Le passage entre deux assises qui se regardent : de quoi poser les pieds et

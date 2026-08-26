@@ -159,11 +159,11 @@ describe("implanter", () => {
   });
 
   it("respecte le plafond de 60 exemplaires posés et compte le reste dans nonPoses", () => {
-    const panier: LigneLounge[] = [{ slug: "pouf", qte: 75 }];
+    const panier: LigneLounge[] = [{ slug: "pouf", qte: 150 }];
     const res = implanter(panier, CAT);
-    expect(res.meubles.length).toBe(60);
-    expect(res.nonPoses).toBe(15);
-    // et les 60 posés restent disjoints malgré la densité
+    expect(res.meubles.length).toBe(120);
+    expect(res.nonPoses).toBe(30);
+    // et les 120 posés restent disjoints malgré la densité
     const rects = res.meubles.map((m) => rectDe(m, CAT));
     for (let i = 0; i < rects.length; i++) {
       for (let j = i + 1; j < rects.length; j++) {
