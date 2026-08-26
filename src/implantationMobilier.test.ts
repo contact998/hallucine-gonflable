@@ -363,10 +363,10 @@ describe("implanter", () => {
     const apres = implanter(panier, CAT, 40);
     expect(apres).toEqual(avant);
   });
-  it("plafonne la foule — au-delà, la scène devient illisible", async () => {
+  it("plafonne la foule — au-delà, le rendu s'alourdit pour rien", async () => {
     const { personnes } = await import("./implantationMobilier.js");
     const res = implanter([{ slug: "canape-u", qte: 20 }], CAT, 400);
-    expect(personnes(res.meubles, CAT).length).toBeLessThanOrEqual(28);
+    expect(personnes(res.meubles, CAT).length).toBeLessThanOrEqual(100);
   });
   it("un assis a les talons au bord AVANT et le dos qui ne sort pas du dossier", async () => {
     /* Vu à l'écran deux fois, dans les deux sens : d'abord des cuisses à
@@ -636,11 +636,12 @@ describe("tablées — les chaises tiennent autour de leur table", () => {
     for (const c of meubles.filter((m) => m.slug === CHAISE)) {
       const t = tables.reduce((a, b) =>
         Math.hypot(a.x - c.x, a.z - c.z) <= Math.hypot(b.x - c.x, b.z - c.z) ? a : b);
-      /* Convention des MEUBLES : à rotation nulle, la face regarde vers +Z —
-         c'est elle qui fait qu'un îlot face à face se regarde vraiment. (Les
-         silhouettes de `personnes()`, elles, comptent 0 vers l'écran : deux
-         conventions voisines, à ne pas confondre.) */
-      const regard = { x: Math.sin(c.rotation), z: Math.cos(c.rotation) };
+      /* La convention MESURÉE sur `personnes()` : le convive est posé à
+         `avance` de l'origine du meuble vers −Z au repère nul — l'AVANT d'une
+         assise est donc −Z, et le canapé posé en z −0,85 assoit en z −1,41.
+         Mon premier essai (+Z) était faux, et le second aussi : c'est le
+         moteur qui fait foi, pas l'intuition. */
+      const regard = { x: -Math.sin(c.rotation), z: -Math.cos(c.rotation) };
       const vers = { x: t.x - c.x, z: t.z - c.z };
       const norme = Math.hypot(vers.x, vers.z) || 1;
       const produit = (regard.x * vers.x + regard.z * vers.z) / norme;

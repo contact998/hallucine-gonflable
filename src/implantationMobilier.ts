@@ -351,8 +351,12 @@ function blocTablee(table: Unite, chaises: Unite[], passage: number): Bloc {
             slug: c.slug,
             x: x + dx,
             z: z + (sud ? ecart(dT) : -ecart(dT)),
-            /* Face à la table : celle du nord regarde vers le sud. */
-            rotation: sud ? Math.PI : 0,
+            /* Une assise a son AVANT vers −z au repère nul : c'est là que
+               `personnes()` pose le convive, à `avance` du meuble. La chaise du
+               NORD doit donc tourner d'un demi-tour pour que son occupant se
+               retrouve entre elle et la table — sans quoi il s'assied derrière
+               le dossier, ce que la scène montrait. */
+            rotation: sud ? 0 : Math.PI,
           });
         } else {
           /* Les bouts : est et ouest, alternés. */
@@ -361,7 +365,7 @@ function blocTablee(table: Unite, chaises: Unite[], passage: number): Bloc {
             slug: c.slug,
             x: x + (est ? ecart(wT) : -ecart(wT)),
             z,
-            rotation: est ? -Math.PI / 2 : Math.PI / 2,
+            rotation: est ? Math.PI / 2 : -Math.PI / 2,
           });
         }
       });
@@ -533,7 +537,16 @@ export function implanter(
   /** Qui est la table, et combien s'assoient autour — pour « tablees ». */
   groupement?: Groupement,
 ): Implantation {
-  const toutes = unitesTriees(panier, catalogue);
+  let toutes = unitesTriees(panier, catalogue);
+  /* Le plafond tranche dans l'ordre des slugs — et « chaise » passe avant
+     « table ». À 60 invités, les 60 chaises remplissaient le quota et les huit
+     tables TOMBAIENT du plafond : un banquet sans tables, chaises en rangs.
+     Les centres des tablées passent donc devant : mieux vaut perdre huit
+     chaises que les huit tables qui font le repas. */
+  if (disposition === "tablees" && groupement) {
+    const centres = toutes.filter((u) => u.slug === groupement.centre);
+    toutes = [...centres, ...toutes.filter((u) => u.slug !== groupement.centre)];
+  }
   const aPlacer = toutes.slice(0, PLAFOND_EXEMPLAIRES);
   const horsPlafond = toutes.length - aPlacer.length;
 
@@ -775,8 +788,12 @@ function elevationAssis(m: ModeleSilhouette, assiseM: number): number {
   return Math.max(assiseM - (a.fessesY ?? 0) * m.echelle, -a.semelleY * m.echelle);
 }
 
-/** Au-delà, la scène devient une foule illisible et le rendu s'alourdit pour rien. */
-const PLAFOND_PERSONNES = 28;
+/** Au-delà, le rendu s'alourdit pour rien. 28 à l'origine — posé quand la
+ *  scène était un petit lounge, et FAUX depuis le banquet : à 60 couverts dits,
+ *  la moitié des chaises restaient vides et la scène passait pour cassée
+ *  (consigne de Daniel, 26/08/2026 : « si on dit 60 personnes tu mets 60
+ *  personnes »). 100 couvre le plafond des meubles (60) plus les debout. */
+const PLAFOND_PERSONNES = 100;
 
 export function personnes(
   meubles: MeublePose[],
@@ -869,6 +886,12 @@ export function personnes(
           duMeuble: mi,
         });
       }
+    } else if (attablables?.has(m.slug)) {
+      /* Une table où l'on DÎNE n'attire personne debout : ses convives sont
+         sur les chaises qui l'entourent. La traiter en mange-debout postait
+         deux silhouettes debout par table, qui mangeaient le quota d'invités —
+         et les dernières chaises restaient vides sans un seul refus. */
+      continue;
     } else {
       /* Debout : deux silhouettes de part et d'autre du mange-debout, tournées
          vers lui — c'est ainsi qu'on se tient autour d'une table haute. */
