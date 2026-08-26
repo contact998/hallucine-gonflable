@@ -614,7 +614,9 @@ describe("tablées — les chaises tiennent autour de leur table", () => {
 
     /* Une chaise appartient à sa table si elle est plus près d'elle que la
        demi-diagonale d'une tablée — au-delà, elle mange ailleurs. */
-    const PORTEE = 2.6;
+    /* Depuis que la chaise se glisse au bord du plateau, la tablée est
+       compacte : la portée se resserre d'autant. */
+    const PORTEE = 1.6;
     for (const c of chaises) {
       const d = Math.min(...tables.map((t) => Math.hypot(t.x - c.x, t.z - c.z)));
       expect(d, `chaise à ${d.toFixed(2)} m de toute table`).toBeLessThan(PORTEE);
@@ -624,9 +626,16 @@ describe("tablées — les chaises tiennent autour de leur table", () => {
   it("répartit huit chaises par table, pas seize autour d'une seule", () => {
     const { meubles } = poser();
     const tables = meubles.filter((m) => m.slug === TABLE);
-    const parTable = tables.map((t) =>
-      meubles.filter((m) => m.slug === CHAISE && Math.hypot(t.x - m.x, t.z - m.z) < 2.6).length,
-    );
+    /* Chaque chaise appartient à la table LA PLUS PROCHE — un rayon fixe
+       attrapait la voisine depuis que les tablées sont compactes. */
+    const parTable = tables.map(() => 0);
+    for (const m of meubles.filter((x) => x.slug === CHAISE)) {
+      let best = 0;
+      tables.forEach((t, i) => {
+        if (Math.hypot(t.x - m.x, t.z - m.z) < Math.hypot(tables[best].x - m.x, tables[best].z - m.z)) best = i;
+      });
+      parTable[best]++;
+    }
     expect(parTable).toEqual([8, 8]);
   });
 
@@ -654,7 +663,7 @@ describe("tablées — les chaises tiennent autour de leur table", () => {
     const tables = meubles.filter((m) => m.slug === TABLE);
     for (const t of tables) {
       const autour = meubles.filter(
-        (m) => m.slug === CHAISE && Math.hypot(t.x - m.x, t.z - m.z) < 2.6,
+        (m) => m.slug === CHAISE && Math.hypot(t.x - m.x, t.z - m.z) < 1.6,
       );
       /* Un côté = les chaises du même signe en z. */
       for (const cote of [autour.filter((c) => c.z < t.z), autour.filter((c) => c.z > t.z)]) {

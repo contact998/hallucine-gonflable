@@ -311,6 +311,11 @@ function blocFaceAFace(a: Unite, b: Unite, passage: number, quartDeTour: boolean
  *
  * Déterministe : aucun tirage, la répartition ne dépend que du nombre.
  */
+/** Le jeu entre le bord du plateau et la chaise : on dîne À la table, la
+ *  chaise s'y glisse. Le passage d'îlot (0,6 m) est un couloir de circulation —
+ *  l'employer ici posait les convives à soixante centimètres de leur assiette. */
+const JEU_TABLE_M = 0.05;
+
 function blocTablee(table: Unite, chaises: Unite[], passage: number): Bloc {
   const wT = table.item.largeurCm / 100, dT = table.item.profondeurCm / 100;
   /* Une chaise glissée sous la table n'occupe que sa profondeur au-delà du
@@ -323,8 +328,8 @@ function blocTablee(table: Unite, chaises: Unite[], passage: number): Bloc {
   const auxLongs = Math.min(chaises.length, parLong * 2);
   const auxBouts = chaises.length - auxLongs;
 
-  const wM = wT + (auxBouts > 0 ? 2 * (dC + passage) : 0);
-  const dM = dT + (auxLongs > 0 ? 2 * (dC + passage) : 0);
+  const wM = wT + (auxBouts > 0 ? 2 * (dC + JEU_TABLE_M) : 0);
+  const dM = dT + (auxLongs > 0 ? 2 * (dC + JEU_TABLE_M) : 0);
 
   return {
     wM,
@@ -332,7 +337,7 @@ function blocTablee(table: Unite, chaises: Unite[], passage: number): Bloc {
     unites: [table, ...chaises],
     deplier: (x, z) => {
       const poses: MeublePose[] = [{ slug: table.slug, x, z, rotation: 0 }];
-      const ecart = (d: number) => d / 2 + passage + dC / 2;
+      const ecart = (d: number) => d / 2 + JEU_TABLE_M + dC / 2;
       /* Combien atterrissent VRAIMENT de chaque côté — c'est ce nombre-là qui
          donne l'écartement, pas le maximum théorique. Répartir huit chaises au
          pas de dix les tassait sur la moitié gauche de la table : on croyait
