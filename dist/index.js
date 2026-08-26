@@ -39,6 +39,8 @@ export { HabillageMobilier } from "./HabillageMobilier.js";
    liste pendant que le client voyait son lounge. Même remède que la tente. */
 export * from "./implantationMobilier.js";
 export { default as MobilierViewer } from "./MobilierViewer.js";
+/* La visée d'un côté : une seule mécanique, celle que montent les deux scènes. */
+export { azimutPourCote, prochainAzimut, viser, viseeNeuve } from "./viseeCote.js";
 /* L'écran étanche : sa scène, et la règle qui le met à n'importe quelle taille
    depuis l'unique modèle du fournisseur (voir ecran.ts). */
 export { default as EcranViewer } from "./EcranViewer.js";

@@ -58,6 +58,7 @@ import { chargerImage } from "./visuel.js";
 import { chargerEcranGlb, poserTaille } from "./ecranGlb.js";
 import { urlPiece, echelle, piecesAbri, rangeeAbri, axeRangee, decalageVoisin, porteVitre, pieceImprimable, urlMeuble, urlPersonne, FOND_SCENE } from "./vue3d.js";
 import { modele as modeleTente } from "./composition.js";
+import { prochainAzimut, viser, viseeNeuve } from "./viseeCote.js";
 import { TEINTE_NUE, hexDeTeinte } from "./couleurs.js";
 import { marquerVitre, estVitre } from "./vitre.js";
 import { enroulerAutourDeLaTente } from "./enrouler.js";
@@ -457,12 +458,15 @@ function construireSol(sol) {
    La règle de projection dit la première rangée à une largeur d'écran au
    moins ; c'est celle-ci, et elle se voit dans la scène. */
 const RECUL_ECRAN_M = 3;
-export default function MobilierViewer({ implantation, labelChargement, labelEchec, captureRef, abri, ecran, habillages, visuels, libellesOutils, effacerParois }) {
+export default function MobilierViewer({ implantation, labelChargement, labelEchec, captureRef, abri, coteActif, ecran, habillages, visuels, libellesOutils, effacerParois }) {
     const hote = useRef(null);
     /* Lu par la boucle de rendu, montée une seule fois : un ref, pas une
        dépendance d'effet — changer d'avis ne remonte pas la scène. */
     const effacerParoisRef = useRef(true);
     effacerParoisRef.current = effacerParois ?? true;
+    /* La visée en cours, lue par la boucle de rendu — un ref, comme le reste :
+       changer de côté ne remonte pas la scène. */
+    const visee = useRef(viseeNeuve());
     /* Même mécanique : lue par le cadrage, montée une seule fois. */
     const elevationRef = useRef(0.4);
     elevationRef.current = ecran ? 0.78 : 0.4;
@@ -560,11 +564,21 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
                voyait qu'une tente fermée, « rien ne se passe » (vécu par Daniel,
                24/08/2026). Une scène qui ne se laisse pas traverser du regard reste
                là où on l'a laissée. */
-            if (effacerParoisRef.current && performance.now() - derniereAction > REPOS_MS) {
-                const off = cam.position.clone().sub(orbite.target);
-                const az = Math.atan2(off.y, off.x) + 0.0012;
-                const rH = Math.hypot(off.x, off.y);
+            const off = cam.position.clone().sub(orbite.target);
+            const azCourant = Math.atan2(off.y, off.x);
+            const rH = Math.hypot(off.x, off.y);
+            const tourner = (az) => {
                 cam.position.set(orbite.target.x + rH * Math.cos(az), orbite.target.y + rH * Math.sin(az), cam.position.z);
+            };
+            /* Le côté qu'on vient de cliquer passe AVANT la vitrine : une caméra
+               qui dérive pendant qu'elle vise n'arriverait jamais. */
+            const vise = prochainAzimut(visee.current, azCourant);
+            if (vise !== null) {
+                tourner(vise);
+                derniereAction = performance.now();
+            }
+            else if (effacerParoisRef.current && performance.now() - derniereAction > REPOS_MS) {
+                tourner(azCourant + 0.0012);
             }
             orbite.update();
             /* La paroi entre la caméra et le lounge s'efface, les autres restent :
@@ -778,6 +792,15 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
             setPret(true);
         });
     }, [implantation, abri, ecran, habillages, visuels]);
+    /* ── Choisir un côté = l'abri le présente de face ────────────────────── */
+    useEffect(() => {
+        if (!pret || !abri || !coteActif)
+            return;
+        const m = modeleTente(abri.modele);
+        if (!m.cotes.includes(coteActif))
+            return;
+        viser(visee.current, m, coteActif);
+    }, [coteActif, abri, pret]);
     return (
     /* Le fond du studio est peint ICI, par la scène. Il était écrit en dur dans
        chaque page qui la montait — trois fois, dans deux dépôts — et le cliquet

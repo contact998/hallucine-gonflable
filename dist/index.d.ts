@@ -11,6 +11,7 @@ export { ReglagesPose, type ClassesPose } from "./ReglagesPose.js";
 export { HabillageMobilier, type ClassesHabillage } from "./HabillageMobilier.js";
 export * from "./implantationMobilier.js";
 export { default as MobilierViewer, type EcranLounge } from "./MobilierViewer.js";
+export { azimutPourCote, prochainAzimut, viser, viseeNeuve, type Visee } from "./viseeCote.js";
 export { default as EcranViewer } from "./EcranViewer.js";
 export { OutilsVue, imprimerImage } from "./OutilsVue.js";
 export { PlanCotes, planDeVisee, type ClassesPlanCotes } from "./PlanCotes.js";

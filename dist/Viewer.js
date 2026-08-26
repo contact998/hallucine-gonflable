@@ -33,7 +33,8 @@ import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeome
 import { ZONES_COULEUR, ZONE_AUVENT, TEINTE_NUE, hexDeTeinte } from "./couleurs.js";
 import { marquerVitre, estVitre } from "./vitre.js";
 import { modele as trouverModele, rangeeTentes } from "./composition.js";
-import { vue3d, urlPiece, echelle, angleCote, pieceDeCote, pieceDemiMur, porteLisere, porteVitre, ANGLE_COTE_DEFAUT, decalageVoisin } from "./vue3d.js";
+import { prochainAzimut, viser, viseeNeuve } from "./viseeCote.js";
+import { vue3d, urlPiece, echelle, angleCote, pieceDeCote, pieceDemiMur, porteLisere, porteVitre, decalageVoisin } from "./vue3d.js";
 import { composerPan, chargerImage } from "./visuel.js";
 import { enroulerAutourDeLaTente } from "./enrouler.js";
 import { ratioGabarit, centreDuTissu, QUART_DE_TOUR, orienter } from "./gabarit.js";
@@ -232,7 +233,7 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
        dessin. Recomposer à chaque image de la boucle de rendu serait ruineux. */
     const pans = useRef(new Map());
     /* Azimut caméra visé (rad) — la boucle de rendu s'en rapproche en douceur. */
-    const azimut = useRef({ cible: -1.0, anime: false });
+    const azimut = useRef(viseeNeuve(-1.0));
     const [pret, setPret] = useState(false);
     /* ── Mise en place : une seule fois ─────────────────────────────────── */
     useEffect(() => {
@@ -353,19 +354,14 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
             const a = azimut.current;
             const off = cam.position.clone().sub(orbite.target);
             const cur = Math.atan2(off.y, off.x);
-            if (a.anime) {
-                let d = a.cible - cur;
-                while (d > Math.PI)
-                    d -= 2 * Math.PI;
-                while (d < -Math.PI)
-                    d += 2 * Math.PI;
-                if (Math.abs(d) < 0.004) {
-                    a.anime = false;
-                    derniereAction = performance.now();
-                }
-                else {
-                    tournerCamera(cur + d * 0.12);
-                }
+            const suite = prochainAzimut(a, cur);
+            if (suite !== null) {
+                tournerCamera(suite);
+            }
+            else if (a.anime) {
+                /* `prochainAzimut` vient d'éteindre l'animation : on est arrivé, et la
+                   vitrine ne doit pas repartir dans la seconde. */
+                derniereAction = performance.now();
             }
             else if (performance.now() - derniereAction > REPOS_MS) {
                 /* Vitrine : au repos, la tente tourne lentement toute seule. */
@@ -646,15 +642,11 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
     useEffect(() => {
         if (!pret || !actif)
             return;
-        /* La caméra part du MÊME azimut que la pièce, à un quart de tour près —
-           l'écart entre le plan vu de dessus et la sphère de la caméra, rien
-           d'autre. Deux tables séparées auraient divergé au premier modèle dont la
-           façade n'est pas celle de la tente X : la N, justement. */
-        const azimuts = VUE.angleCote ?? ANGLE_COTE_DEFAUT;
-        if (!(actif in azimuts))
+        /* La mécanique vit dans `viseeCote` : le lounge présente ses côtés avec
+           exactement la même, amorti et chemin court compris. */
+        if (!M.cotes.includes(actif))
             return;
-        azimut.current.cible = (90 - azimuts[actif]) * RAD;
-        azimut.current.anime = true;
+        viser(azimut.current, M, actif);
     }, [actif, pret]);
     /* ── La taille : le même dessin, agrandi ────────────────────────────── */
     useEffect(() => {

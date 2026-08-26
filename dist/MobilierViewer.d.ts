@@ -51,6 +51,11 @@ type Props = {
         quitter?: string;
         imprimer?: string;
     };
+    /** Le côté de l'abri à présenter de face — celui qu'on vient de cliquer sur
+     *  le plan de visée. La scène pivote jusqu'à lui, exactement comme le
+     *  visualiseur de tente : c'est la MÊME mécanique (`viseeCote`), pas une
+     *  seconde. Absent : la caméra reste où on l'a laissée. */
+    coteActif?: string | null;
     /** L'écran de projection devant les assises, ou rien. Une taille qui sort de
      *  ce que la géométrie sait rendre laisse la scène SANS écran plutôt qu'avec
      *  un dessin faux — le lounge ne s'en trouve pas amputé. */
@@ -61,5 +66,5 @@ type Props = {
      *  site, où la tente doit se montrer telle qu'elle sera construite. */
     effacerParois?: boolean;
 };
-export default function MobilierViewer({ implantation, labelChargement, labelEchec, captureRef, abri, ecran, habillages, visuels, libellesOutils, effacerParois }: Props): import("react").JSX.Element;
+export default function MobilierViewer({ implantation, labelChargement, labelEchec, captureRef, abri, coteActif, ecran, habillages, visuels, libellesOutils, effacerParois }: Props): import("react").JSX.Element;
 export {};
