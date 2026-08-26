@@ -648,6 +648,30 @@ describe("tablées — les chaises tiennent autour de leur table", () => {
     }
   });
 
+  it("étale les chaises SUR TOUTE la longueur de la table, centrées — pas tassées d'un bout", () => {
+    const { meubles } = poser();
+    const tables = meubles.filter((m) => m.slug === TABLE);
+    for (const t of tables) {
+      const autour = meubles.filter(
+        (m) => m.slug === CHAISE && Math.hypot(t.x - m.x, t.z - m.z) < 2.6,
+      );
+      /* Un côté = les chaises du même signe en z. */
+      for (const cote of [autour.filter((c) => c.z < t.z), autour.filter((c) => c.z > t.z)]) {
+        if (cote.length < 2) continue;
+        const ecarts = cote.map((c) => c.x - t.x).sort((a, b) => a - b);
+        const centre = ecarts.reduce((s, e) => s + e, 0) / ecarts.length;
+        /* Centrées : la moyenne des écarts tient près de zéro. Avec l'ancien
+           pas — la table divisée par le nombre MAXIMAL de chaises, pas par
+           celles réellement posées — ce centre tombait à −0,23 m et les
+           quatre chaises se tassaient sur la moitié gauche du plateau. */
+        expect(Math.abs(centre), `côté décentré de ${centre.toFixed(2)} m`).toBeLessThan(0.05);
+        /* Et étalées : la portée couvre l'essentiel du plateau (2,26 m). */
+        const portee = ecarts[ecarts.length - 1] - ecarts[0];
+        expect(portee, `côté étalé sur ${portee.toFixed(2)} m seulement`).toBeGreaterThan(1.5);
+      }
+    }
+  });
+
   it("ne fait jamais disparaître une chaise en trop — une capacité fausse est pire qu'un surplus", () => {
     const { meubles, nonPoses } = implanter(
       [{ slug: TABLE, qte: 1 }, { slug: CHAISE, qte: 11 }],

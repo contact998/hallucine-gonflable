@@ -333,13 +333,20 @@ function blocTablee(table: Unite, chaises: Unite[], passage: number): Bloc {
     deplier: (x, z) => {
       const poses: MeublePose[] = [{ slug: table.slug, x, z, rotation: 0 }];
       const ecart = (d: number) => d / 2 + passage + dC / 2;
+      /* Combien atterrissent VRAIMENT de chaque côté — c'est ce nombre-là qui
+         donne l'écartement, pas le maximum théorique. Répartir huit chaises au
+         pas de dix les tassait sur la moitié gauche de la table : on croyait
+         voir une file d'attente, pas un couvert dressé. */
+      const auNord = Math.ceil(auxLongs / 2);
+      const auSud = auxLongs - auNord;
       chaises.forEach((c, i) => {
         if (i < auxLongs) {
-          /* Les grands côtés : au nord et au sud, alternés, étalés en largeur. */
+          /* Les grands côtés : au nord et au sud, alternés, centrés sur la table. */
           const sud = i % 2 === 1;
           const rang = Math.floor(i / 2);
-          const pas = wT / parLong;
-          const dx = -wT / 2 + pas / 2 + rang * pas;
+          const surCeCote = Math.max(1, sud ? auSud : auNord);
+          const pas = wT / surCeCote;
+          const dx = -wT / 2 + pas * (rang + 0.5);
           poses.push({
             slug: c.slug,
             x: x + dx,
