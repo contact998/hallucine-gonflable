@@ -168,7 +168,12 @@ invites?: number,
 sol?: {
     largeurM: number;
     profondeurM: number;
-}): Personne[];
+}, 
+/** Les meubles auxquels on S'ATTABLE — une personne a le droit de les
+ *  chevaucher, c'est même tout l'objet d'un couvert. Sans cette exception,
+ *  le contrôle anti-chevauchement refusait les convives d'une tablée : les
+ *  chaises restaient dressées et vides autour de la table. */
+attablables?: ReadonlySet<string>): Personne[];
 /**
  * Quel modèle 3D pour quelle silhouette, et à quelle échelle.
  *

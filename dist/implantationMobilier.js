@@ -477,7 +477,7 @@ groupement) {
         meubles,
         /* Le sol SANS liseré : les debout libres se tiennent sur la surface vraie
            (celle de la tente ou celle demandée), pas sur la marge dessinée. */
-        personnes: personnes(meubles, catalogue, invites, { largeurM, profondeurM }),
+        personnes: personnes(meubles, catalogue, invites, { largeurM, profondeurM }, groupement ? new Set([groupement.centre]) : undefined),
         nonPoses: horsPlafond + echecsGeometrie,
     };
 }
@@ -560,7 +560,12 @@ export function personnes(meubles, catalogue,
     5 invités sur 2 places, c'est 2 assis et 3 debout, pas 2 personnes. */
 invites, 
 /** Le sol où les debout libres ont le droit de se tenir. */
-sol) {
+sol, 
+/** Les meubles auxquels on S'ATTABLE — une personne a le droit de les
+ *  chevaucher, c'est même tout l'objet d'un couvert. Sans cette exception,
+ *  le contrôle anti-chevauchement refusait les convives d'une tablée : les
+ *  chaises restaient dressées et vides autour de la table. */
+attablables) {
     const quota = invites === undefined ? Infinity : Math.min(invites, PLAFOND_PERSONNES);
     /* Une personne « occupe » ce rayon : en deçà, deux silhouettes fusionnent
        visuellement. 0,20 m laisse passer deux voisins d'une banquette 4 places
@@ -585,6 +590,10 @@ sol) {
             if (j === p.duMeuble)
                 continue;
             const m = meubles[j];
+            /* On s'approche d'une table pour y manger : elle ne peut pas servir de
+               motif à refuser celui qui s'y attable. */
+            if (attablables?.has(m.slug))
+                continue;
             const it = catalogue[m.slug];
             if (!it)
                 continue;

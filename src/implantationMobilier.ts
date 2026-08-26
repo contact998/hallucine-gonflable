@@ -655,7 +655,10 @@ export function implanter(
     meubles,
     /* Le sol SANS liseré : les debout libres se tiennent sur la surface vraie
        (celle de la tente ou celle demandée), pas sur la marge dessinée. */
-    personnes: personnes(meubles, catalogue, invites, { largeurM, profondeurM }),
+    personnes: personnes(
+      meubles, catalogue, invites, { largeurM, profondeurM },
+      groupement ? new Set([groupement.centre]) : undefined,
+    ),
     nonPoses: horsPlafond + echecsGeometrie,
   };
 }
@@ -785,6 +788,11 @@ export function personnes(
   invites?: number,
   /** Le sol où les debout libres ont le droit de se tenir. */
   sol?: { largeurM: number; profondeurM: number },
+  /** Les meubles auxquels on S'ATTABLE — une personne a le droit de les
+   *  chevaucher, c'est même tout l'objet d'un couvert. Sans cette exception,
+   *  le contrôle anti-chevauchement refusait les convives d'une tablée : les
+   *  chaises restaient dressées et vides autour de la table. */
+  attablables?: ReadonlySet<string>,
 ): Personne[] {
   const quota = invites === undefined ? Infinity : Math.min(invites, PLAFOND_PERSONNES);
   /* Une personne « occupe » ce rayon : en deçà, deux silhouettes fusionnent
@@ -808,6 +816,9 @@ export function personnes(
     for (let j = 0; j < meubles.length; j++) {
       if (j === p.duMeuble) continue;
       const m = meubles[j];
+      /* On s'approche d'une table pour y manger : elle ne peut pas servir de
+         motif à refuser celui qui s'y attable. */
+      if (attablables?.has(m.slug)) continue;
       const it = catalogue[m.slug];
       if (!it) continue;
       const c = Math.cos(m.rotation), s = Math.sin(m.rotation);
