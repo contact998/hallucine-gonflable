@@ -20,12 +20,15 @@ export interface Abri {
     teinte?: string | null;
 }
 import type { VisuelPose } from "./pose.js";
+import type { GammeEcran3D } from "./ecran.js";
 import { type CompositionAbri } from "./vue3d.js";
 /** L'écran du cinéma, décrit par l'application : le paquet sait le dessiner et
  *  le dimensionner, pas le tarifer. Les deux cotes sortent du catalogue CRM
  *  (`CatalogueSpecs`), jamais d'un nombre écrit dans une page. Gamme ÉTANCHE
  *  seulement — c'est la seule que Bayes a modélisée. */
 export interface EcranLounge {
+    /** Quel modèle poser. Se lit sur le slug du catalogue (`gammeEcran3D`). */
+    gamme: GammeEcran3D;
     /** Largeur de la toile de projection, en mètres — le « 6 m » du catalogue. */
     toileLargeurM: number;
     /** Hauteur de la base de l'image. Absente : la géométrie du fournisseur est

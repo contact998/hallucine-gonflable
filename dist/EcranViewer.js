@@ -1,6 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 /*
- * La scène 3D de l'écran gonflable étanche.
+ * La scène 3D de l'écran gonflable — étanche ou soufflerie.
  *
  * Mêmes conventions que le lounge et la tente : Z vertical, modèle en
  * millimètres, fond de studio, ciel + soleil, ni tone mapping ni environnement
@@ -13,9 +13,10 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
  *    un 10 m, le dessin est le même à l'écran. La personne de 1,75 m est la
  *    seule chose qui donne l'échelle, et c'est la question que pose tout client.
  *
- * Le modèle est UNIQUE, quelle que soit la taille vendue : voir `ecran.ts` pour
- * le facteur et l'étirement de la jupe. Changer de taille ne recharge donc
- * rien — on réécrit des sommets déjà là.
+ * Le modèle est UNIQUE par gamme, quelle que soit la taille vendue : voir
+ * `ecran.ts` pour le facteur et l'étirement du bandeau noir. Changer de TAILLE
+ * ne recharge donc rien — on réécrit des sommets déjà là. Changer de GAMME, si :
+ * c'est un autre produit, donc un autre fichier, donc la scène se remonte.
  */
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
@@ -25,7 +26,7 @@ import { FOND_SCENE, urlPersonne } from "./vue3d.js";
 import { chargerEcranGlb, poserTaille } from "./ecranGlb.js";
 import { OutilsVue } from "./OutilsVue.js";
 const TAILLE_HOMME_M = 1.75;
-export default function EcranViewer({ toileLargeurM, baseImageM = null, silhouette = true, captureRef, labelChargement, labelEchec, libellesOutils, }) {
+export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, silhouette = true, captureRef, labelChargement, labelEchec, libellesOutils, }) {
     const hote = useRef(null);
     const captureInterne = useRef(null);
     const [pret, setPret] = useState(false);
@@ -36,6 +37,9 @@ export default function EcranViewer({ toileLargeurM, baseImageM = null, silhouet
         const el = hote.current;
         if (!el)
             return;
+        /* La gamme a pu changer : on repart d'une scène qui ne sait rien. */
+        setPret(false);
+        setEchec(false);
         const sc = new THREE.Scene();
         sc.background = new THREE.Color(FOND_SCENE);
         sc.add(new THREE.HemisphereLight(0xdfe9f2, 0x20262e, 2.1));
@@ -121,7 +125,7 @@ export default function EcranViewer({ toileLargeurM, baseImageM = null, silhouet
             captureRef.current = prendre;
         let vivant = true;
         const loader = new GLTFLoader();
-        const chargerEcran = chargerEcranGlb(loader).then((e) => {
+        const chargerEcran = chargerEcranGlb(loader, gamme).then((e) => {
             sc.add(e.groupe);
             return e;
         });
@@ -165,9 +169,10 @@ export default function EcranViewer({ toileLargeurM, baseImageM = null, silhouet
             if (captureRef)
                 captureRef.current = null;
         };
-        // Monté une seule fois : la taille se rejoue plus bas, sans recharger.
+        // Remonté à chaque GAMME, jamais à chaque taille : celle-ci se rejoue plus
+        // bas en réécrivant des sommets déjà chargés.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [gamme]);
     /* ── La taille : réécrite sur les mêmes sommets ─────────────────────── */
     useEffect(() => {
         const o = outils.current;
@@ -182,8 +187,10 @@ export default function EcranViewer({ toileLargeurM, baseImageM = null, silhouet
             return;
         }
         o.homme.visible = silhouette;
-        // Un pas de côté, et un pas en avant : de face, il masquerait la toile.
-        o.homme.position.set(taille.largeurM / 2 + 0.9, -0.4, 0);
+        /* Un pas de côté, et un pas en avant : de face, il masquerait la toile. Le
+           pas de côté se prend sur le BORD, pas sur la demi-largeur — sinon la
+           silhouette se retrouve les pieds dans le manchon de la soufflerie. */
+        o.homme.position.set(taille.bordDroitM + 0.9, -0.4, 0);
         o.cadrer(taille.hauteurM, taille.largeurM);
     }, [pret, toileLargeurM, baseImageM, silhouette]);
     return (

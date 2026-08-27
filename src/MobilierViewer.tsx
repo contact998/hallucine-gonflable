@@ -77,6 +77,7 @@ import { composerPan } from "./visuel.js";
 import { chargerImage } from "./visuel.js";
 import type { VisuelPose } from "./pose.js";
 import { chargerEcranGlb, poserTaille, type EcranCharge } from "./ecranGlb.js";
+import type { GammeEcran3D } from "./ecran.js";
 import { urlPiece, echelle, piecesAbri, rangeeAbri, axeRangee, decalageVoisin, porteVitre, pieceImprimable, urlMeuble, urlPersonne, FOND_SCENE, type CompositionAbri } from "./vue3d.js";
 import { modele as modeleTente } from "./composition.js";
 import { prochainAzimut, viser, viseeNeuve } from "./viseeCote.js";
@@ -478,6 +479,8 @@ function construireSol(sol: Implantation["sol"]): THREE.Mesh {
  *  (`CatalogueSpecs`), jamais d'un nombre écrit dans une page. Gamme ÉTANCHE
  *  seulement — c'est la seule que Bayes a modélisée. */
 export interface EcranLounge {
+  /** Quel modèle poser. Se lit sur le slug du catalogue (`gammeEcran3D`). */
+  gamme: GammeEcran3D;
   /** Largeur de la toile de projection, en mètres — le « 6 m » du catalogue. */
   toileLargeurM: number;
   /** Hauteur de la base de l'image. Absente : la géométrie du fournisseur est
@@ -785,7 +788,7 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
        meuble manquant : un lounge sans son écran reste un lounge. Une taille
        que la géométrie ne sait pas rendre le laisse absent, jamais faux. */
     const ecranPromis: Promise<EcranCharge | null> = ecran
-      ? chargerEcranGlb(o.loader)
+      ? chargerEcranGlb(o.loader, ecran.gamme)
           .then((e) => {
             const t = poserTaille(e, ecran.toileLargeurM, ecran.baseImageM ?? null);
             /* AU NORD du sol (y négatif), face aux assises : c'est le repère du

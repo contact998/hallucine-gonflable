@@ -1,5 +1,5 @@
 /*
- * La scène 3D de l'écran gonflable étanche.
+ * La scène 3D de l'écran gonflable — étanche ou soufflerie.
  *
  * Mêmes conventions que le lounge et la tente : Z vertical, modèle en
  * millimètres, fond de studio, ciel + soleil, ni tone mapping ni environnement
@@ -12,9 +12,10 @@
  *    un 10 m, le dessin est le même à l'écran. La personne de 1,75 m est la
  *    seule chose qui donne l'échelle, et c'est la question que pose tout client.
  *
- * Le modèle est UNIQUE, quelle que soit la taille vendue : voir `ecran.ts` pour
- * le facteur et l'étirement de la jupe. Changer de taille ne recharge donc
- * rien — on réécrit des sommets déjà là.
+ * Le modèle est UNIQUE par gamme, quelle que soit la taille vendue : voir
+ * `ecran.ts` pour le facteur et l'étirement du bandeau noir. Changer de TAILLE
+ * ne recharge donc rien — on réécrit des sommets déjà là. Changer de GAMME, si :
+ * c'est un autre produit, donc un autre fichier, donc la scène se remonte.
  */
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
@@ -22,11 +23,16 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { FOND_SCENE, urlPersonne } from "./vue3d.js";
 import { chargerEcranGlb, poserTaille, type EcranCharge } from "./ecranGlb.js";
+import type { GammeEcran3D } from "./ecran.js";
 import { OutilsVue } from "./OutilsVue.js";
 
 const TAILLE_HOMME_M = 1.75;
 
 type Props = {
+  /** Quel modèle montrer. Se lit sur le slug du catalogue (`gammeEcran3D`),
+   *  jamais écrit à la main dans une page : un écran dessiné dans la mauvaise
+   *  gamme est un écran que le client ne recevra pas. */
+  gamme: GammeEcran3D;
   /** Largeur de la toile de projection, en mètres — la cote que le catalogue
    *  appelle « 6 m ». Vient de `CatalogueSpecs.toileLargeurM` (CRM), jamais
    *  d'un nombre écrit dans une page. */
@@ -45,7 +51,7 @@ type Props = {
 };
 
 export default function EcranViewer({
-  toileLargeurM, baseImageM = null, silhouette = true,
+  gamme, toileLargeurM, baseImageM = null, silhouette = true,
   captureRef, labelChargement, labelEchec, libellesOutils,
 }: Props) {
   const hote = useRef<HTMLDivElement>(null);
@@ -63,6 +69,9 @@ export default function EcranViewer({
   useEffect(() => {
     const el = hote.current;
     if (!el) return;
+    /* La gamme a pu changer : on repart d'une scène qui ne sait rien. */
+    setPret(false);
+    setEchec(false);
 
     const sc = new THREE.Scene();
     sc.background = new THREE.Color(FOND_SCENE);
@@ -165,7 +174,7 @@ export default function EcranViewer({
     let vivant = true;
     const loader = new GLTFLoader();
 
-    const chargerEcran = chargerEcranGlb(loader).then((e) => {
+    const chargerEcran = chargerEcranGlb(loader, gamme).then((e) => {
       sc.add(e.groupe);
       return e;
     });
@@ -208,9 +217,10 @@ export default function EcranViewer({
       captureInterne.current = null;
       if (captureRef) captureRef.current = null;
     };
-    // Monté une seule fois : la taille se rejoue plus bas, sans recharger.
+    // Remonté à chaque GAMME, jamais à chaque taille : celle-ci se rejoue plus
+    // bas en réécrivant des sommets déjà chargés.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [gamme]);
 
   /* ── La taille : réécrite sur les mêmes sommets ─────────────────────── */
   useEffect(() => {
@@ -226,8 +236,10 @@ export default function EcranViewer({
     }
 
     o.homme.visible = silhouette;
-    // Un pas de côté, et un pas en avant : de face, il masquerait la toile.
-    o.homme.position.set(taille.largeurM / 2 + 0.9, -0.4, 0);
+    /* Un pas de côté, et un pas en avant : de face, il masquerait la toile. Le
+       pas de côté se prend sur le BORD, pas sur la demi-largeur — sinon la
+       silhouette se retrouve les pieds dans le manchon de la soufflerie. */
+    o.homme.position.set(taille.bordDroitM + 0.9, -0.4, 0);
     o.cadrer(taille.hauteurM, taille.largeurM);
   }, [pret, toileLargeurM, baseImageM, silhouette]);
 

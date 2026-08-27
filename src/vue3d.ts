@@ -15,6 +15,7 @@
  *   arrière = 0°, droit = +90°, avant = 180°, gauche = −90°.
  */
 import { MODELES, demiMurPossible, rangeeTentes, type Modele } from "./composition.js";
+import type { GammeEcran3D } from "./ecran.js";
 
 /** Un modèle 3D par tente, servi depuis R2 : le site et le CRM lisent la même
  *  adresse, personne ne transporte les fichiers en double. */
@@ -35,7 +36,11 @@ export const FOND_SCENE = "#eef2f5";
    un écran n'a pas à embarquer le lounge pour connaître une URL. */
 export const urlMeuble = (slug: string) => `${BASE_R2}/mobilier/${slug}.glb`;
 export const urlPersonne = (fichier: string) => `${BASE_R2}/personnes/${fichier}.glb`;
-export const urlEcran = () => `${BASE_R2}/ecran/ecran.glb`;
+/* Un fichier par gamme, nommé par elle : `ecran.glb` tout court avait suffi
+   tant que l'étanche était seule, mais un nom qui ne dit pas ce qu'il contient
+   se prête au premier ajout venu. L'ancien fichier reste sur R2 — les versions
+   du site déjà en ligne le demandent encore. */
+export const urlEcran = (gamme: GammeEcran3D) => `${BASE_R2}/ecran/ecran-${gamme}.glb`;
 
 export interface Vue3D {
   /** Dossier R2. Il ne suit pas le slug du modèle : la tente X a été déposée

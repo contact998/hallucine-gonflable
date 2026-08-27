@@ -1,4 +1,5 @@
 import { type Modele } from "./composition.js";
+import type { GammeEcran3D } from "./ecran.js";
 /** Un modèle 3D par tente, servi depuis R2 : le site et le CRM lisent la même
  *  adresse, personne ne transporte les fichiers en double. */
 export declare const BASE_R2 = "https://pub-dc19082f8e054e8b8a192d8d29df2aa0.r2.dev/models";
@@ -8,7 +9,7 @@ export declare const BASE_R2 = "https://pub-dc19082f8e054e8b8a192d8d29df2aa0.r2.
 export declare const FOND_SCENE = "#eef2f5";
 export declare const urlMeuble: (slug: string) => string;
 export declare const urlPersonne: (fichier: string) => string;
-export declare const urlEcran: () => string;
+export declare const urlEcran: (gamme: GammeEcran3D) => string;
 export interface Vue3D {
     /** Dossier R2. Il ne suit pas le slug du modèle : la tente X a été déposée
      *  sous « tente-x » avant que la gamme existe, les trois autres sous le nom

@@ -683,7 +683,7 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
            meuble manquant : un lounge sans son écran reste un lounge. Une taille
            que la géométrie ne sait pas rendre le laisse absent, jamais faux. */
         const ecranPromis = ecran
-            ? chargerEcranGlb(o.loader)
+            ? chargerEcranGlb(o.loader, ecran.gamme)
                 .then((e) => {
                 const t = poserTaille(e, ecran.toileLargeurM, ecran.baseImageM ?? null);
                 /* AU NORD du sol (y négatif), face aux assises : c'est le repère du

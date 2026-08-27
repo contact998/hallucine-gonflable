@@ -15,12 +15,13 @@
 import * as THREE from "three";
 import type { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { urlEcran } from "./vue3d.js";
-import { calerEcran, type MesuresEcran } from "./ecran.js";
+import { calerEcran, type GammeEcran3D, type MesuresEcran } from "./ecran.js";
 
 const MM_EN_M = 0.001;
 /** Matières nommées par le convertisseur — le seul contrat avec le GLB. */
 const TOILE = "toile";
 const RENFORT = "renfort";
+const JUPE = "jupe";
 const QUINCAILLERIE = "quincaillerie";
 
 export interface CorpsEcran {
@@ -42,9 +43,17 @@ export interface EcranCharge {
 /** Ce qu'on obtient une fois la taille appliquée, en mètres. */
 export interface TailleEcran {
   hauteurM: number;
+  /** Encombrement en largeur, manchon de gonflage compris. */
   largeurM: number;
   /** Base de l'image obtenue — butée comprise, voir `calerEcran`. */
   baseM: number;
+  /**
+   * Abscisse du bord le plus à droite. Ce n'est PAS la moitié de la largeur :
+   * le modèle est centré sur sa face de projection, et le manchon de la
+   * soufflerie sort d'un côté seulement. C'est là qu'on pose la silhouette pour
+   * qu'elle se tienne à côté de l'écran et non dessus.
+   */
+  bordDroitM: number;
 }
 
 /**
@@ -54,11 +63,12 @@ export interface TailleEcran {
  * livraison Bayes ne doit pas obliger à retoucher des nombres à la main —
  * c'est ce qui avait fait dériver la tente N.
  */
-export async function chargerEcranGlb(loader: GLTFLoader): Promise<EcranCharge> {
-  const gltf = await loader.loadAsync(urlEcran());
+export async function chargerEcranGlb(loader: GLTFLoader, gamme: GammeEcran3D): Promise<EcranCharge> {
+  const gltf = await loader.loadAsync(urlEcran(gamme));
   const corps: CorpsEcran[] = [];
   const toiles: THREE.Mesh[] = [];
   const renforts: THREE.Mesh[] = [];
+  const jupes: THREE.Mesh[] = [];
   gltf.scene.traverse((o) => {
     const maille = o as THREE.Mesh;
     if (!maille.isMesh) return;
@@ -77,8 +87,9 @@ export async function chargerEcranGlb(loader: GLTFLoader): Promise<EcranCharge> 
     });
     if (mat.name === TOILE) toiles.push(maille);
     if (mat.name === RENFORT) renforts.push(maille);
+    if (mat.name === JUPE) jupes.push(maille);
   });
-  if (!toiles.length || !renforts.length) throw new Error("modèle d'écran sans toile ni renfort");
+  if (!toiles.length || !jupes.length) throw new Error("modèle d'écran sans toile ni bandeau noir");
 
   const boiteDes = (l: THREE.Mesh[]) => {
     const b = new THREE.Box3();
@@ -88,7 +99,10 @@ export async function chargerEcranGlb(loader: GLTFLoader): Promise<EcranCharge> 
   const bt = boiteDes(toiles);
   const mesures: MesuresEcran = {
     largeurToileMM: bt.max.x - bt.min.x,
-    zSocleMM: boiteDes(renforts).max.z,
+    /* La bande d'usure quand il y en a une — c'est elle qui touche terre.
+       Sans elle (la soufflerie), le bas du bandeau noir fait le socle : son
+       armature en étoile, elle, monte jusqu'au sommet et ne dirait rien. */
+    zSocleMM: renforts.length ? boiteDes(renforts).max.z : boiteDes(jupes).min.z,
     zToileMM: bt.min.z,
     hauteurBruteMM: new THREE.Box3().setFromObject(gltf.scene).max.z,
   };
@@ -136,5 +150,12 @@ export function poserTaille(
 
   e.groupe.scale.setScalar(MM_EN_M * calage.facteur);
   const boite = new THREE.Box3().setFromObject(e.groupe);
-  return { hauteurM: calage.hauteurM, largeurM: boite.max.x * 2, baseM: calage.baseM };
+  return {
+    hauteurM: calage.hauteurM,
+    /* Les deux bords, pas le double d'un seul : l'écran est centré sur sa face
+       de projection, et le manchon de la soufflerie déborde à droite. */
+    largeurM: boite.max.x - boite.min.x,
+    baseM: calage.baseM,
+    bordDroitM: boite.max.x,
+  };
 }

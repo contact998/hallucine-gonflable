@@ -19,6 +19,7 @@ const MM_EN_M = 0.001;
 /** Matières nommées par le convertisseur — le seul contrat avec le GLB. */
 const TOILE = "toile";
 const RENFORT = "renfort";
+const JUPE = "jupe";
 const QUINCAILLERIE = "quincaillerie";
 /**
  * Charge le modèle, le mesure, et rend de quoi le redimensionner.
@@ -27,11 +28,12 @@ const QUINCAILLERIE = "quincaillerie";
  * livraison Bayes ne doit pas obliger à retoucher des nombres à la main —
  * c'est ce qui avait fait dériver la tente N.
  */
-export async function chargerEcranGlb(loader) {
-    const gltf = await loader.loadAsync(urlEcran());
+export async function chargerEcranGlb(loader, gamme) {
+    const gltf = await loader.loadAsync(urlEcran(gamme));
     const corps = [];
     const toiles = [];
     const renforts = [];
+    const jupes = [];
     gltf.scene.traverse((o) => {
         const maille = o;
         if (!maille.isMesh)
@@ -53,9 +55,11 @@ export async function chargerEcranGlb(loader) {
             toiles.push(maille);
         if (mat.name === RENFORT)
             renforts.push(maille);
+        if (mat.name === JUPE)
+            jupes.push(maille);
     });
-    if (!toiles.length || !renforts.length)
-        throw new Error("modèle d'écran sans toile ni renfort");
+    if (!toiles.length || !jupes.length)
+        throw new Error("modèle d'écran sans toile ni bandeau noir");
     const boiteDes = (l) => {
         const b = new THREE.Box3();
         for (const o of l)
@@ -65,7 +69,10 @@ export async function chargerEcranGlb(loader) {
     const bt = boiteDes(toiles);
     const mesures = {
         largeurToileMM: bt.max.x - bt.min.x,
-        zSocleMM: boiteDes(renforts).max.z,
+        /* La bande d'usure quand il y en a une — c'est elle qui touche terre.
+           Sans elle (la soufflerie), le bas du bandeau noir fait le socle : son
+           armature en étoile, elle, monte jusqu'au sommet et ne dirait rien. */
+        zSocleMM: renforts.length ? boiteDes(renforts).max.z : boiteDes(jupes).min.z,
         zToileMM: bt.min.z,
         hauteurBruteMM: new THREE.Box3().setFromObject(gltf.scene).max.z,
     };
@@ -106,5 +113,12 @@ export function poserTaille(e, toileLargeurM, baseImageM) {
     }
     e.groupe.scale.setScalar(MM_EN_M * calage.facteur);
     const boite = new THREE.Box3().setFromObject(e.groupe);
-    return { hauteurM: calage.hauteurM, largeurM: boite.max.x * 2, baseM: calage.baseM };
+    return {
+        hauteurM: calage.hauteurM,
+        /* Les deux bords, pas le double d'un seul : l'écran est centré sur sa face
+           de projection, et le manchon de la soufflerie déborde à droite. */
+        largeurM: boite.max.x - boite.min.x,
+        baseM: calage.baseM,
+        bordDroitM: boite.max.x,
+    };
 }

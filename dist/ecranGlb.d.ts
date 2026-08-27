@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { type MesuresEcran } from "./ecran.js";
+import { type GammeEcran3D, type MesuresEcran } from "./ecran.js";
 export interface CorpsEcran {
     objet: THREE.Mesh;
     origine: Float32Array;
@@ -18,9 +18,17 @@ export interface EcranCharge {
 /** Ce qu'on obtient une fois la taille appliquée, en mètres. */
 export interface TailleEcran {
     hauteurM: number;
+    /** Encombrement en largeur, manchon de gonflage compris. */
     largeurM: number;
     /** Base de l'image obtenue — butée comprise, voir `calerEcran`. */
     baseM: number;
+    /**
+     * Abscisse du bord le plus à droite. Ce n'est PAS la moitié de la largeur :
+     * le modèle est centré sur sa face de projection, et le manchon de la
+     * soufflerie sort d'un côté seulement. C'est là qu'on pose la silhouette pour
+     * qu'elle se tienne à côté de l'écran et non dessus.
+     */
+    bordDroitM: number;
 }
 /**
  * Charge le modèle, le mesure, et rend de quoi le redimensionner.
@@ -29,7 +37,7 @@ export interface TailleEcran {
  * livraison Bayes ne doit pas obliger à retoucher des nombres à la main —
  * c'est ce qui avait fait dériver la tente N.
  */
-export declare function chargerEcranGlb(loader: GLTFLoader): Promise<EcranCharge>;
+export declare function chargerEcranGlb(loader: GLTFLoader, gamme: GammeEcran3D): Promise<EcranCharge>;
 /**
  * Donne sa taille à un écran déjà chargé — on réécrit des sommets déjà là,
  * rien ne se recharge.

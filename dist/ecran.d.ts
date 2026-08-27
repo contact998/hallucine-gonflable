@@ -1,15 +1,23 @@
 /** Dossier du modèle sur R2, à côté de `tente-x` et `mobilier`. */
 export declare const DOSSIER_ECRAN = "ecran";
+/** Les gammes d'écran qui ont leur propre modèle 3D. Une gamme = un fichier :
+ *  l'étanche se ferme et se gonfle une fois, la soufflerie garde sa soufflerie
+ *  et son manchon. Plaquer l'un sur l'autre montrerait au client un écran qu'il
+ *  ne recevra pas. */
+export type GammeEcran3D = "etanche" | "soufflerie";
 /**
- * Quels écrans du catalogue ce modèle représente : la gamme ÉTANCHE, et elle
- * seule.
+ * La gamme dont relève ce slug, ou `null` quand aucun modèle ne la représente.
  *
- * La gamme SOUFFLERIE n'est pas le même produit — manchon de gonflage, autres
- * proportions, autre structure — et lui plaquer ce modèle montrerait au client
- * un écran qu'il ne recevra pas. La gamme KEMI (l'économique), elle, n'a même
- * pas de cotes au catalogue. Dans les deux cas : pas de 3D, comme la jonction
- * de tente tant que Bayes ne l'a pas livrée. Mieux vaut rien qu'un à-peu-près.
+ * Le KEMI, l'économique, n'a rien — pas même des cotes au catalogue : pas de
+ * 3D, comme la jonction de tente tant que Bayes ne l'a pas livrée. Mieux vaut
+ * rien qu'un à-peu-près, et le visualiseur le DIT.
+ *
+ * Le drive-in, lui, EST dessiné : c'est une soufflerie 9 m dont le catalogue
+ * relève la base d'image à 3 m. Même modèle, bandeau noir plus haut — très
+ * exactement ce que `calerEcran` sait faire.
  */
+export declare const gammeEcran3D: (slugSite: string) => GammeEcran3D | null;
+/** Vrai quand un modèle 3D sait dessiner cet écran du catalogue. */
 export declare const ecranModelise: (slugSite: string) => boolean;
 /**
  * Ce qu'on mesure sur le GLB au chargement, en millimètres du modèle.
@@ -19,7 +27,12 @@ export declare const ecranModelise: (slugSite: string) => boolean;
 export interface MesuresEcran {
     /** Largeur de la seule toile de projection (matière `toile`). */
     largeurToileMM: number;
-    /** Haut du renfort d'usure : sous lui, c'est le contact au sol, rien ne bouge. */
+    /**
+     * Le plancher du bandeau noir : sous lui, c'est le contact au sol, rien ne
+     * bouge. Haut de la bande d'usure quand il y en a une (l'étanche), sinon bas
+     * du bandeau lui-même (la soufflerie, dont l'armature en étoile monte jusqu'au
+     * sommet et ne dit donc rien du socle).
+     */
     zSocleMM: number;
     /** Bas de la toile de projection = la base de l'image. */
     zToileMM: number;

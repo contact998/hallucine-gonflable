@@ -1,21 +1,24 @@
 /*
- * L'écran gonflable étanche : comment le dessiner à n'importe quelle taille à
- * partir de l'unique modèle livré par Bayes.
+ * L'écran gonflable : comment le dessiner à n'importe quelle taille à partir
+ * du seul modèle que le fournisseur ait livré pour sa gamme.
  *
- * Bayes n'a modelé QU'UNE taille — l'étanche 3 m — comme pour la tente. Toutes
- * les autres se déduisent d'un facteur pris sur la LARGEUR DE LA TOILE : au
- * catalogue, « 6 m » désigne six mètres de toile, jamais le hors-tout (qui
- * déborde des D-rings et des sangles).
+ * Bayes ne modèle QU'UNE taille par gamme — l'étanche 3 m, la soufflerie 9 m —
+ * comme pour la tente. Toutes les autres se déduisent d'un facteur pris sur la
+ * LARGEUR DE LA TOILE : au catalogue, « 6 m » désigne six mètres de toile,
+ * jamais le hors-tout (qui déborde des D-rings, des sangles, et chez la
+ * soufflerie du manchon de gonflage).
  *
  * ⚠️ UNE cote ne suit pas ce facteur : la hauteur de la base de l'image. Le
- * catalogue la met à 0,50 m sur le 3 m et à 1,50 m sur le 6 m — trois fois plus
- * haute pour un écran deux fois plus grand, parce qu'un écran plus large se
- * regarde de plus loin, au-dessus de plus de têtes. Doubler bêtement donnerait
- * 1,33 m et ferait mentir le dessin sur la seule cote qui décide si le public
- * voit le film.
+ * catalogue la met à 0,50 m sur l'étanche 3 m et à 1,50 m sur le 6 m — trois
+ * fois plus haute pour un écran deux fois plus grand, parce qu'un écran plus
+ * large se regarde de plus loin, au-dessus de plus de têtes. Elle plafonne
+ * ensuite : 1,60 m sur tous les étanches à partir du 7 m, 2,20 m sur toutes les
+ * souffleries à partir du 10 m. Doubler bêtement donnerait 1,33 m sur le 6 m et
+ * ferait mentir le dessin sur la seule cote qui décide si le public voit le
+ * film.
  *
- * D'où l'étirement en trois zones, ci-dessous : le socle ne bouge pas, la jupe
- * noire absorbe tout l'écart, et la toile garde sa hauteur exacte.
+ * D'où l'étirement en trois zones, ci-dessous : le socle ne bouge pas, le
+ * bandeau noir absorbe tout l'écart, et la toile garde sa hauteur exacte.
  *
  * Ce module ne connaît AUCUN prix ni aucune taille commerciale : les deux
  * nombres dont il a besoin — largeur de toile, hauteur de base — viennent du
@@ -26,17 +29,32 @@
 /** Dossier du modèle sur R2, à côté de `tente-x` et `mobilier`. */
 export const DOSSIER_ECRAN = "ecran";
 
+/** Les gammes d'écran qui ont leur propre modèle 3D. Une gamme = un fichier :
+ *  l'étanche se ferme et se gonfle une fois, la soufflerie garde sa soufflerie
+ *  et son manchon. Plaquer l'un sur l'autre montrerait au client un écran qu'il
+ *  ne recevra pas. */
+export type GammeEcran3D = "etanche" | "soufflerie";
+
 /**
- * Quels écrans du catalogue ce modèle représente : la gamme ÉTANCHE, et elle
- * seule.
+ * La gamme dont relève ce slug, ou `null` quand aucun modèle ne la représente.
  *
- * La gamme SOUFFLERIE n'est pas le même produit — manchon de gonflage, autres
- * proportions, autre structure — et lui plaquer ce modèle montrerait au client
- * un écran qu'il ne recevra pas. La gamme KEMI (l'économique), elle, n'a même
- * pas de cotes au catalogue. Dans les deux cas : pas de 3D, comme la jonction
- * de tente tant que Bayes ne l'a pas livrée. Mieux vaut rien qu'un à-peu-près.
+ * Le KEMI, l'économique, n'a rien — pas même des cotes au catalogue : pas de
+ * 3D, comme la jonction de tente tant que Bayes ne l'a pas livrée. Mieux vaut
+ * rien qu'un à-peu-près, et le visualiseur le DIT.
+ *
+ * Le drive-in, lui, EST dessiné : c'est une soufflerie 9 m dont le catalogue
+ * relève la base d'image à 3 m. Même modèle, bandeau noir plus haut — très
+ * exactement ce que `calerEcran` sait faire.
  */
-export const ecranModelise = (slugSite: string) => slugSite.startsWith("ecran-etanche-");
+export const gammeEcran3D = (slugSite: string): GammeEcran3D | null =>
+  slugSite.startsWith("ecran-etanche-")
+    ? "etanche"
+    : slugSite.startsWith("ecran-soufflerie-")
+      ? "soufflerie"
+      : null;
+
+/** Vrai quand un modèle 3D sait dessiner cet écran du catalogue. */
+export const ecranModelise = (slugSite: string) => gammeEcran3D(slugSite) !== null;
 
 /**
  * Ce qu'on mesure sur le GLB au chargement, en millimètres du modèle.
@@ -46,7 +64,12 @@ export const ecranModelise = (slugSite: string) => slugSite.startsWith("ecran-et
 export interface MesuresEcran {
   /** Largeur de la seule toile de projection (matière `toile`). */
   largeurToileMM: number;
-  /** Haut du renfort d'usure : sous lui, c'est le contact au sol, rien ne bouge. */
+  /**
+   * Le plancher du bandeau noir : sous lui, c'est le contact au sol, rien ne
+   * bouge. Haut de la bande d'usure quand il y en a une (l'étanche), sinon bas
+   * du bandeau lui-même (la soufflerie, dont l'armature en étoile monte jusqu'au
+   * sommet et ne dit donc rien du socle).
+   */
   zSocleMM: number;
   /** Bas de la toile de projection = la base de l'image. */
   zToileMM: number;
@@ -68,9 +91,19 @@ export interface CalageEcran {
   butee: boolean;
 }
 
-/** Une jupe ne se replie pas sur elle-même : on lui en garde toujours un
- *  cinquième. Sans cette butée, une cote aberrante retournerait la géométrie. */
-const PART_MINIMALE_JUPE = 0.2;
+/**
+ * Un bandeau ne se replie pas sur lui-même : on lui en garde toujours un
+ * vingtième. Sans cette butée, une cote aberrante retournerait la géométrie et
+ * l'écran sortirait à l'envers.
+ *
+ * C'était un cinquième tant que l'étanche était seul — aucune de ses dix
+ * tailles n'en approchait. La soufflerie, elle, repose sur un boudin de base
+ * bien plus haut : à 22 m ce boudin fait déjà 1,96 m à lui seul, et la cote de
+ * 2,20 m du catalogue ne laisse au bandeau que 24 cm. Un cinquième mettait donc
+ * DEUX tailles vendues hors d'atteinte — dessinées 52 cm trop haut, sans que
+ * rien ne le dise. Un vingtième interdit toujours le retournement.
+ */
+const PART_MINIMALE_JUPE = 0.05;
 
 /**
  * Le facteur d'échelle et l'étirement de jupe pour une taille donnée.

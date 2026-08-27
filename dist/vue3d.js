@@ -32,7 +32,11 @@ export const FOND_SCENE = "#eef2f5";
    un écran n'a pas à embarquer le lounge pour connaître une URL. */
 export const urlMeuble = (slug) => `${BASE_R2}/mobilier/${slug}.glb`;
 export const urlPersonne = (fichier) => `${BASE_R2}/personnes/${fichier}.glb`;
-export const urlEcran = () => `${BASE_R2}/ecran/ecran.glb`;
+/* Un fichier par gamme, nommé par elle : `ecran.glb` tout court avait suffi
+   tant que l'étanche était seule, mais un nom qui ne dit pas ce qu'il contient
+   se prête au premier ajout venu. L'ancien fichier reste sur R2 — les versions
+   du site déjà en ligne le demandent encore. */
+export const urlEcran = (gamme) => `${BASE_R2}/ecran/ecran-${gamme}.glb`;
 const SOCLE_COMMUN = ["roof", "LEG", "zipper_cover"];
 export const VUE_3D = {
     x: {

@@ -1,4 +1,9 @@
+import type { GammeEcran3D } from "./ecran.js";
 type Props = {
+    /** Quel modèle montrer. Se lit sur le slug du catalogue (`gammeEcran3D`),
+     *  jamais écrit à la main dans une page : un écran dessiné dans la mauvaise
+     *  gamme est un écran que le client ne recevra pas. */
+    gamme: GammeEcran3D;
     /** Largeur de la toile de projection, en mètres — la cote que le catalogue
      *  appelle « 6 m ». Vient de `CatalogueSpecs.toileLargeurM` (CRM), jamais
      *  d'un nombre écrit dans une page. */
@@ -19,5 +24,5 @@ type Props = {
         imprimer?: string;
     };
 };
-export default function EcranViewer({ toileLargeurM, baseImageM, silhouette, captureRef, labelChargement, labelEchec, libellesOutils, }: Props): import("react").JSX.Element;
+export default function EcranViewer({ gamme, toileLargeurM, baseImageM, silhouette, captureRef, labelChargement, labelEchec, libellesOutils, }: Props): import("react").JSX.Element;
 export {};
