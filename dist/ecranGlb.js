@@ -78,7 +78,7 @@ export async function chargerEcranGlb(loader, gamme) {
     };
     const groupe = new THREE.Group();
     groupe.add(gltf.scene);
-    return { groupe, corps, mesures };
+    return { groupe, corps, mesures, yToileMM: bt.min.y };
 }
 /**
  * Donne sa taille à un écran déjà chargé — on réécrit des sommets déjà là,
@@ -120,5 +120,6 @@ export function poserTaille(e, toileLargeurM, baseImageM) {
         largeurM: boite.max.x - boite.min.x,
         baseM: calage.baseM,
         bordDroitM: boite.max.x,
+        toileYM: e.yToileMM * MM_EN_M * calage.facteur,
     };
 }

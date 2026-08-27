@@ -14,6 +14,8 @@ export interface EcranCharge {
     groupe: THREE.Group;
     corps: CorpsEcran[];
     mesures: MesuresEcran;
+    /** Plan avant de la toile, en millimètres du modèle (la face regarde −Y). */
+    yToileMM: number;
 }
 /** Ce qu'on obtient une fois la taille appliquée, en mètres. */
 export interface TailleEcran {
@@ -27,8 +29,14 @@ export interface TailleEcran {
      * le modèle est centré sur sa face de projection, et le manchon de la
      * soufflerie sort d'un côté seulement. C'est là qu'on pose la silhouette pour
      * qu'elle se tienne à côté de l'écran et non dessus.
+     *
+     * Son ordonnée est `toileYM` : hors du plan de la toile, la perspective ment
+     * — un pas devant, la silhouette paraît plus grande que nature ; un pas
+     * derrière, c'est l'écran qui flatte.
      */
     bordDroitM: number;
+    /** Ordonnée du plan de la toile (sa face avant), en mètres. */
+    toileYM: number;
 }
 /**
  * Charge le modèle, le mesure, et rend de quoi le redimensionner.

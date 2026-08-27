@@ -187,10 +187,12 @@ export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, s
             return;
         }
         o.homme.visible = silhouette;
-        /* Un pas de côté, et un pas en avant : de face, il masquerait la toile. Le
-           pas de côté se prend sur le BORD, pas sur la demi-largeur — sinon la
-           silhouette se retrouve les pieds dans le manchon de la soufflerie. */
-        o.homme.position.set(taille.bordDroitM + 0.9, -0.4, 0);
+        /* Un pas de côté, DANS le plan de la toile. Le pas de côté se prend sur le
+           BORD, pas sur la demi-largeur — sinon la silhouette se retrouve les pieds
+           dans le manchon de la soufflerie. Et pas un pas en avant : hors du plan
+           de l'image, la perspective fausse la comparaison qui est toute la raison
+           d'être de cette silhouette. */
+        o.homme.position.set(taille.bordDroitM + 0.9, taille.toileYM, 0);
         o.cadrer(taille.hauteurM, taille.largeurM);
     }, [pret, toileLargeurM, baseImageM, silhouette]);
     return (

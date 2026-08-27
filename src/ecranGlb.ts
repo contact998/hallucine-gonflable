@@ -38,6 +38,8 @@ export interface EcranCharge {
   groupe: THREE.Group;
   corps: CorpsEcran[];
   mesures: MesuresEcran;
+  /** Plan avant de la toile, en millimètres du modèle (la face regarde −Y). */
+  yToileMM: number;
 }
 
 /** Ce qu'on obtient une fois la taille appliquée, en mètres. */
@@ -52,8 +54,14 @@ export interface TailleEcran {
    * le modèle est centré sur sa face de projection, et le manchon de la
    * soufflerie sort d'un côté seulement. C'est là qu'on pose la silhouette pour
    * qu'elle se tienne à côté de l'écran et non dessus.
+   *
+   * Son ordonnée est `toileYM` : hors du plan de la toile, la perspective ment
+   * — un pas devant, la silhouette paraît plus grande que nature ; un pas
+   * derrière, c'est l'écran qui flatte.
    */
   bordDroitM: number;
+  /** Ordonnée du plan de la toile (sa face avant), en mètres. */
+  toileYM: number;
 }
 
 /**
@@ -109,7 +117,7 @@ export async function chargerEcranGlb(loader: GLTFLoader, gamme: GammeEcran3D): 
 
   const groupe = new THREE.Group();
   groupe.add(gltf.scene);
-  return { groupe, corps, mesures };
+  return { groupe, corps, mesures, yToileMM: bt.min.y };
 }
 
 /**
@@ -157,5 +165,6 @@ export function poserTaille(
     largeurM: boite.max.x - boite.min.x,
     baseM: calage.baseM,
     bordDroitM: boite.max.x,
+    toileYM: e.yToileMM * MM_EN_M * calage.facteur,
   };
 }
