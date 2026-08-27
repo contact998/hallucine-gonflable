@@ -13,6 +13,11 @@ export interface Abri {
      *  (toit, parois, auvents), jamais sur les meubles. Même mécanique que la
      *  portée « tente » du viewer tente. Absente : la toile sort d'usine. */
     visuel?: VisuelPose | null;
+    /** La teinte de la toile — une clé de `TEINTES`, la même palette que le
+     *  viewer tente. Elle peint tout ce qui s'imprime (les vitres restent des
+     *  vitres) et sert de FOND sous le visuel du client, comme la teinte d'une
+     *  zone chez la tente. Absente ou nue : la toile sort d'usine. */
+    teinte?: string | null;
 }
 import type { VisuelPose } from "./pose.js";
 import { type CompositionAbri } from "./vue3d.js";

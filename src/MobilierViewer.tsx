@@ -66,6 +66,11 @@ export interface Abri {
    *  (toit, parois, auvents), jamais sur les meubles. Même mécanique que la
    *  portée « tente » du viewer tente. Absente : la toile sort d'usine. */
   visuel?: VisuelPose | null;
+  /** La teinte de la toile — une clé de `TEINTES`, la même palette que le
+   *  viewer tente. Elle peint tout ce qui s'imprime (les vitres restent des
+   *  vitres) et sert de FOND sous le visuel du client, comme la teinte d'une
+   *  zone chez la tente. Absente ou nue : la toile sort d'usine. */
+  teinte?: string | null;
 }
 import { habillageMobilier as habillage, HABILLAGE_MOBILIER_DEFAUT as HABILLAGE_DEFAUT } from "./mobilier.js";
 import { composerPan } from "./visuel.js";
@@ -225,11 +230,12 @@ async function construireAbri(loader: GLTFLoader, a: Abri): Promise<THREE.Group 
         · `DoubleSide` — le fichier CAO livre des normales tournées vers
           l'intérieur sur certaines parois, et tout l'intérêt de cette vue est
           de regarder SOUS l'abri ;
-        · la teinte NUE (blanc) — le code de configuration ne porte pas les
-          couleurs, on dessine donc la toile telle qu'elle sort d'usine ;
-        · les VITRES gardent leur matière : peintes en blanc, une fenêtre
-          devient un mur — `marquerVitre` est la même heuristique que là-bas. */
-    const blanc = new THREE.Color(hexDeTeinte(TEINTE_NUE));
+        · la TEINTE de l'abri — celle que l'application a choisie, la toile
+          d'usine sinon (le code de configuration TENTE ne porte pas les
+          couleurs ; celui du lounge, si — c'est lui qui remplit `teinte`) ;
+        · les VITRES gardent leur matière : peintes, une fenêtre devient un
+          mur — `marquerVitre` est la même heuristique que là-bas. */
+    const toile = new THREE.Color(hexDeTeinte(a.teinte ?? TEINTE_NUE));
     charges.forEach((pieces, i) => {
     /* La rangée reste CENTRÉE sur le sol du lounge, comme la tente seule :
        le sol fait n·L × P, la tente i se pose à (i − (n−1)/2) pas du centre. */
@@ -251,7 +257,7 @@ async function construireAbri(loader: GLTFLoader, a: Abri): Promise<THREE.Group 
         mail.material = mat.clone();
         const m2 = mail.material as THREE.MeshStandardMaterial;
         m2.side = THREE.DoubleSide;
-        if (!estVitre(mail)) m2.color = blanc;
+        if (!estVitre(mail)) m2.color = toile;
         if (piece.azimut != null) {
           /* Prête pour l'effacement : transparente d'office (le basculer en
              cours de route recompilerait la matière), et son opacité PROPRE
@@ -282,7 +288,7 @@ async function construireAbri(loader: GLTFLoader, a: Abri): Promise<THREE.Group 
     });
     if (!groupe.children.length) return null;
     groupe.scale.setScalar(MM_EN_M * echelle(m, a.taille));
-    if (a.visuel) await habillerAbri(groupe, a.visuel);
+    if (a.visuel) await habillerAbri(groupe, a.visuel, hexDeTeinte(a.teinte ?? TEINTE_NUE));
     return groupe;
   } catch {
     /* Modèle ou taille inconnus du module partagé : pas d'abri dessiné, et le
@@ -300,10 +306,9 @@ async function construireAbri(loader: GLTFLoader, a: Abri): Promise<THREE.Group 
  * Le repère est celui du groupe, centré par construction : les UV posés ici
  * survivent aux déplacements que la scène fera ensuite.
  */
-async function habillerAbri(groupe: THREE.Group, pose: VisuelPose): Promise<void> {
+async function habillerAbri(groupe: THREE.Group, pose: VisuelPose, fond: string): Promise<void> {
   try {
     const image = await chargerImage(pose.url);
-    const blanc = hexDeTeinte(TEINTE_NUE);
     /* La PORTÉE commande, comme sur le configurateur tente — c'est la barre de
        réglage qui la choisit, plus une règle cachée ici :
         · « tente » : une seule image ENROULÉE autour de l'ensemble. Elle
@@ -321,7 +326,7 @@ async function habillerAbri(groupe: THREE.Group, pose: VisuelPose): Promise<void
       enroulerAutourDeLaTente(groupe, hauteur);
       /* Proportions du développé : le tour sur la hauteur — mesuré, pas deviné. */
       const ratio = (Math.PI * Math.max(dim.x, dim.y)) / hauteur;
-      const tex = new THREE.CanvasTexture(composerPan(image, pose, ratio, blanc));
+      const tex = new THREE.CanvasTexture(composerPan(image, pose, ratio, fond));
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.flipY = false;
       tex.channel = 1;
@@ -350,7 +355,7 @@ async function habillerAbri(groupe: THREE.Group, pose: VisuelPose): Promise<void
       const cle = `${nom}|${pose.mode}|${pose.taille}|${donnees.ratioGabarit.toFixed(3)}`;
       let tex = parPiece.get(cle);
       if (!tex) {
-        tex = new THREE.CanvasTexture(composerPan(image, pose, donnees.ratioGabarit, blanc, cible));
+        tex = new THREE.CanvasTexture(composerPan(image, pose, donnees.ratioGabarit, fond, cible));
         tex.colorSpace = THREE.SRGBColorSpace;
         tex.flipY = false; // glTF : origine UV en haut à gauche
         orienter(tex, quarts);
