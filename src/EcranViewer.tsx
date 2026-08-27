@@ -236,12 +236,22 @@ export default function EcranViewer({
     }
 
     o.homme.visible = silhouette;
-    /* Un pas de côté, DANS le plan de la toile. Le pas de côté se prend sur le
-       BORD, pas sur la demi-largeur — sinon la silhouette se retrouve les pieds
-       dans le manchon de la soufflerie. Et pas un pas en avant : hors du plan
-       de l'image, la perspective fausse la comparaison qui est toute la raison
-       d'être de cette silhouette. */
-    o.homme.position.set(taille.bordDroitM + 0.9, taille.toileYM, 0);
+    /* DEVANT le bandeau noir dès qu'elle passe entière sous le bas de l'image :
+       la tête sous la ligne blanche, c'est l'argument que la scène existe pour
+       montrer — l'image passe au-dessus des têtes. Décalée du centre pour ne
+       pas jouer les présentateurs, un petit pas devant la toile pour ne pas
+       être dedans — assez peu pour que la perspective ne fausse rien.
+
+       Quand le bas de l'image est plus bas qu'elle (toutes les étanches), elle
+       masquerait la toile : elle se tient alors à CÔTÉ, sur le bord — le BORD
+       mesuré, pas la demi-largeur, sinon elle a les pieds dans le manchon —
+       et DANS le plan de la toile : hors de ce plan, la perspective fausse la
+       seule comparaison qui reste. */
+    if (taille.baseM >= TAILLE_HOMME_M) {
+      o.homme.position.set(toileLargeurM / 4, taille.toileYM - 0.25, 0);
+    } else {
+      o.homme.position.set(taille.bordDroitM + 0.9, taille.toileYM, 0);
+    }
     o.cadrer(taille.hauteurM, taille.largeurM);
   }, [pret, toileLargeurM, baseImageM, silhouette]);
 
