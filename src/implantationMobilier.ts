@@ -85,11 +85,30 @@ const CIRCULATION_M = 0.6;
  * Le plafond d'exemplaires posés. 60 à l'origine — dimensionné pour un lounge
  * de canapés, et crevé PAR CONSTRUCTION par un banquet : 60 couverts font
  * 68 pièces (les chaises plus leurs tables), et les huit manquantes laissaient
- * huit convives debout en file devant des tables nues. 120 couvre un banquet
- * de 100 couverts (113 pièces) ; les GLB clonés partagent leur géométrie, le
- * rendu ne s'alourdit pas d'autant.
+ * huit convives debout en file devant des tables nues. 120 couvrait ensuite un
+ * banquet de 100 couverts (113 pièces).
+ *
+ * ⚠️ 120 BRIDAIT LA RANGÉE, ET ÇA NE SE VOYAIT PAS : le configurateur
+ * répondait « ça ne rentre pas » pour un terrain vide aux trois quarts.
+ * Mesuré le 28/08/2026 sur le vrai rangeur, table rectangulaire de 8 :
+ *
+ *              surface   plafond 120   plafond levé
+ *   1 tente     64 m²        72             72
+ *   2 tentes   128 m²       104            144
+ *   3 tentes   192 m²       104            216
+ *   4 tentes   256 m²       104            288
+ *
+ * Le signe qui trahit le butoir : à 120, la densité se dégrade à mesure qu'on
+ * ajoute des tentes — 1,2 puis 1,8 puis 2,5 m² par couvert. Levé, elle reste
+ * PLATE à 0,9 m² par couvert sur toute la gamme. Trois tentes ne servaient pas
+ * un couvert de plus que deux, et quatre non plus.
+ *
+ * 400 couvre la rangée pleine de quatre tentes — 36 tables + 288 chaises =
+ * 324 pièces — avec de la marge. Le rangement coûte moins d'une milliseconde,
+ * la recherche de capacité 13 ms au pire (contre 1 ms à 120) : le calcul n'est
+ * pas le sujet. Le rendu l'est, et les GLB clonés partagent leur géométrie.
  */
-const PLAFOND_EXEMPLAIRES = 120;
+const PLAFOND_EXEMPLAIRES = 400;
 
 /** Le sol demandé se rend en 4:3, largeur sur profondeur. */
 const RATIO_SOL = 4 / 3;
@@ -804,8 +823,14 @@ function elevationAssis(m: ModeleSilhouette, assiseM: number): number {
  *  scène était un petit lounge, et FAUX depuis le banquet : à 60 couverts dits,
  *  la moitié des chaises restaient vides et la scène passait pour cassée
  *  (consigne de Daniel, 26/08/2026 : « si on dit 60 personnes tu mets 60
- *  personnes »). 100 couvre le plafond des meubles (60) plus les debout. */
-const PLAFOND_PERSONNES = 100;
+ *  personnes »). 100 couvrait ensuite le plafond des meubles plus les debout.
+ *
+ *  ⚠️ IL SUIT `PLAFOND_EXEMPLAIRES`, TOUJOURS. Le laisser à 100 pendant que les
+ *  meubles montent à 400 rejouerait exactement la panne de la consigne
+ *  ci-dessus, en pire : 288 chaises dressées et 100 convives, donc les deux
+ *  tiers de la salle vides. Un plafond levé seul est un défaut, pas un
+ *  demi-progrès. 300 couvre la rangée de quatre tentes (288 couverts). */
+const PLAFOND_PERSONNES = 300;
 
 export function personnes(
   meubles: MeublePose[],

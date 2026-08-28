@@ -158,12 +158,15 @@ describe("implanter", () => {
     expect(sudDesAssises).toBeLessThanOrEqual(nordDesDebout);
   });
 
-  it("respecte le plafond de 60 exemplaires posés et compte le reste dans nonPoses", () => {
-    const panier: LigneLounge[] = [{ slug: "pouf", qte: 150 }];
+  it("respecte le plafond d'exemplaires posés et compte le reste dans nonPoses", () => {
+    /* Le titre disait « 60 » alors que le plafond valait 120 depuis des
+       semaines : un test qui ment sur ce qu'il garde. Il dit désormais le
+       nombre, et le nombre est ici. */
+    const panier: LigneLounge[] = [{ slug: "pouf", qte: 430 }];
     const res = implanter(panier, CAT);
-    expect(res.meubles.length).toBe(120);
+    expect(res.meubles.length).toBe(400);
     expect(res.nonPoses).toBe(30);
-    // et les 120 posés restent disjoints malgré la densité
+    // et les 400 posés restent disjoints malgré la densité
     const rects = res.meubles.map((m) => rectDe(m, CAT));
     for (let i = 0; i < rects.length; i++) {
       for (let j = i + 1; j < rects.length; j++) {
