@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { MODELES, modele } from "./composition.js";
 import {
-  VUE_3D, vue3d, urlPiece, echelle, pieceImprimable, MODELES_SANS_VUE,
+  VUE_3D, vue3d, urlPiece, urlMeuble, urlPersonne, urlEcran, echelle, pieceImprimable, MODELES_SANS_VUE,
   angleCote, pieceDeCote, ANGLE_COTE_DEFAUT, estPiece, porteLisere, porteVitre, dessinable,
   pieceDemiMur as pieceDemiMurDe, decalageVoisin, piecesAbri, axeRangee, rangeeAbri,
 } from "./vue3d.js";
@@ -14,7 +14,23 @@ describe("la vue 3D de chaque modèle", () => {
   it("chaque dossier R2 est déclaré : il ne suit pas le slug", () => {
     expect(vue3d(modele("x")).dossier).toBe("tente-x");
     expect(vue3d(modele("spider")).dossier).toBe("spider-tent");
-    expect(urlPiece(modele("spider"), "roof")).toMatch(/\/models\/spider-tent\/roof\.glb$/);
+    expect(urlPiece(modele("spider"), "roof")).toMatch(/\/models\/meshopt\/spider-tent\/roof\.glb$/);
+  });
+
+  it("⛔ toutes les adresses pointent le dossier REPLIÉ, pas les originaux", () => {
+    /* Les deux jeux cohabitent sur R2 : `models/…` pour les versions déjà en
+       ligne, `models/meshopt/…` pour celle-ci. Une seule adresse restée sur
+       l'ancien dossier ne casserait rien — le fichier existe, il se charge, il
+       est juste deux fois plus lourd. C'est exactement pour ça qu'il faut un
+       test : ça ne se voit pas. */
+    const adresses = [
+      urlMeuble("pouf"),
+      urlPersonne("femme-debout"),
+      urlEcran("etanche"),
+      urlEcran("soufflerie"),
+      ...MODELES.map((m) => urlPiece(m, "roof")),
+    ];
+    for (const a of adresses) expect(a, a).toContain("/models/meshopt/");
   });
 
   it("toute pièce proposée au choix a son azimut mesuré", () => {

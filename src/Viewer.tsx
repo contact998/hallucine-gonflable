@@ -24,11 +24,12 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OutilsVue } from "./OutilsVue.js";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import type { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
+import { chargeurGLB } from "./chargeurGlb.js";
 import { ZONES_COULEUR, ZONE_AUVENT, TEINTE_NUE, hexDeTeinte } from "./couleurs.js";
 import { marquerVitre, estVitre } from "./vitre.js";
 import type { VisuelPose } from "./pose.js";
@@ -365,7 +366,7 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
     };
     cadrerRef.current = cadrer;
 
-    const loader = new GLTFLoader();
+    const loader = chargeurGLB();
     let vivant = true;
     Promise.all(VUE.socle.map((n) => charger(loader, M, n))).then((gs) => {
       if (!vivant) return;
@@ -723,7 +724,7 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
   useEffect(() => {
     const murs = parois.current;
     if (!murs || !pret) return;
-    const loader = new GLTFLoader();
+    const loader = chargeurGLB();
     let vivant = true;
 
     /* `coteGeo` place la pièce, `cotePeinture` la peint et reçoit son visuel :

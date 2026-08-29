@@ -48,8 +48,9 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OutilsVue } from "./OutilsVue.js";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import type { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { chargeurGLB } from "./chargeurGlb.js";
 import type { Implantation, MeublePose, Personne, ModeleSilhouette } from "./implantationMobilier.js";
 import { LACET_MEUBLE } from "./implantationMobilier.js";
 /** L'abri au-dessus du lounge, décrit par l'application : le paquet sait le
@@ -751,7 +752,7 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
       orbite.update();
     };
 
-    outils.current = { loader: new GLTFLoader(), racine, cadrer, reveiller, regarderDepuisLesAssises };
+    outils.current = { loader: chargeurGLB(), racine, cadrer, reveiller, regarderDepuisLesAssises };
 
     return () => {
       cancelAnimationFrame(raf);

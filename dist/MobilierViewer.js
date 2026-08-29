@@ -49,8 +49,8 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OutilsVue } from "./OutilsVue.js";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { chargeurGLB } from "./chargeurGlb.js";
 import { LACET_MEUBLE } from "./implantationMobilier.js";
 import { habillageMobilier as habillage, HABILLAGE_MOBILIER_DEFAUT as HABILLAGE_DEFAUT } from "./mobilier.js";
 import { composerPan } from "./visuel.js";
@@ -649,7 +649,7 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
             cam.position.set(orbite.target.x + Math.cos(az) * rayon, orbite.target.y + Math.sin(az) * rayon, cam.position.z);
             orbite.update();
         };
-        outils.current = { loader: new GLTFLoader(), racine, cadrer, reveiller, regarderDepuisLesAssises };
+        outils.current = { loader: chargeurGLB(), racine, cadrer, reveiller, regarderDepuisLesAssises };
         return () => {
             cancelAnimationFrame(raf);
             ro.disconnect();

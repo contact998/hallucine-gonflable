@@ -28,6 +28,10 @@ export * from "./mobilier.js";
 export * from "./pose.js";
 export * from "./vue3d.js";
 export * from "./ecran.js";
+/* Le chargeur de modèles. Exporté parce que le site monte une scène de mobilier
+   qui n'est pas celle d'ici : sans lui, elle construirait un `GLTFLoader` nu et
+   n'afficherait plus rien depuis que les fichiers de R2 sont repliés. */
+export { chargeurGLB } from "./chargeurGlb.js";
 /* Le visualiseur 3D et la composition des pans. Ils demandent React et
    three.js — déclarés en dépendances de pair : chaque application fournit
    les siens, on n'en embarque pas un deuxième exemplaire. */

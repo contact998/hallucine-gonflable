@@ -19,8 +19,8 @@
  */
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { chargeurGLB } from "./chargeurGlb.js";
 import { FOND_SCENE, urlPersonne } from "./vue3d.js";
 import { chargerEcranGlb, poserTaille, type EcranCharge } from "./ecranGlb.js";
 import type { GammeEcran3D } from "./ecran.js";
@@ -172,7 +172,7 @@ export default function EcranViewer({
     if (captureRef) captureRef.current = prendre;
 
     let vivant = true;
-    const loader = new GLTFLoader();
+    const loader = chargeurGLB();
 
     const chargerEcran = chargerEcranGlb(loader, gamme).then((e) => {
       sc.add(e.groupe);
