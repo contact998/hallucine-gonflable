@@ -23,29 +23,32 @@ function lignesUneTente(c, prixDe, impCotes) {
         const cle = cleTypeCote(m, c.taille, type, cote);
         const direct = cle ? prixDe(cle) : null;
         if (direct != null)
-            return { prix: direct, provisoire: false };
+            return { prix: direct, provisoire: false, slug: cle };
         if (!dessinable(m, cote, type))
-            return { prix: null, provisoire: false };
+            return { prix: null, provisoire: false, slug: "" };
         const repli = cleRepliCote(m, c.taille, cote);
         const p = repli ? prixDe(repli) : null;
-        return { prix: p, provisoire: p != null };
+        /* Chiffré par le repli : c'est SA référence qui part au devis, pas celle
+           du type demandé — le tarif ne connaît pas ce dernier. */
+        return { prix: p, provisoire: p != null, slug: (repli ?? "") };
     };
     /** L'impression qui chiffre un côté : la plus précise que le tarif connaisse. */
     const impDuType = (type) => impressionsCote(type).find((i) => prixImp(i) != null);
-    const pack = prixDe(cleTente(m, c.taille));
+    const clePack = cleTente(m, c.taille);
+    const pack = prixDe(clePack);
     if (pack != null)
-        out.push({ genre: "base", prix: pack });
+        out.push({ genre: "base", prix: pack, slug: clePack });
     for (const cote of m.cotes) {
         const type = c.cotes[cote] ?? "vide";
         if (type !== "vide") {
-            const { prix, provisoire } = prixType(type, cote);
+            const { prix, provisoire, slug } = prixType(type, cote);
             if (prix != null)
-                out.push({ genre: "cote", cote, cle: typeCote(type).libelle, provisoire, prix });
+                out.push({ genre: "cote", cote, cle: typeCote(type).libelle, provisoire, prix, slug });
             const impLiee = impDuType(type);
             if (impCotes?.[cote] && impLiee) {
                 const pi = prixImp(impLiee);
                 if (pi != null)
-                    out.push({ genre: "impression_cote", cote, prix: pi });
+                    out.push({ genre: "impression_cote", cote, prix: pi, slug: cleImpression(m, c.taille, impLiee) });
             }
         }
         const dm = c.demiMurs?.[cote] ?? "vide";
@@ -53,18 +56,20 @@ function lignesUneTente(c, prixDe, impCotes) {
             const cleDm = cleDemiMur(m, c.taille, dm);
             const pdm = cleDm ? prixDe(cleDm) : null;
             if (pdm != null)
-                out.push({ genre: "demi_mur", cote, cle: typeCote(dm).libelle, prix: pdm });
+                out.push({ genre: "demi_mur", cote, cle: typeCote(dm).libelle, prix: pdm, slug: cleDm });
             /* Le demi-mur est une toile de plus : habiller ce côté l'imprime aussi. */
             if (impCotes?.[cote] && m.demiMur) {
-                const pi = prixImp(m.demiMur.impression);
+                const impDm = m.demiMur.impression;
+                const pi = prixImp(impDm);
                 if (pi != null)
-                    out.push({ genre: "impression_demi_mur", cote, prix: pi });
+                    out.push({ genre: "impression_demi_mur", cote, prix: pi, slug: cleImpression(m, c.taille, impDm) });
             }
         }
         if (c.auvents[cote]) {
-            const pa = prixDe(cleAuvent(m, c.taille));
+            const cleAuv = cleAuvent(m, c.taille);
+            const pa = prixDe(cleAuv);
             if (pa != null)
-                out.push({ genre: "auvent", cote, prix: pa });
+                out.push({ genre: "auvent", cote, prix: pa, slug: cleAuv });
         }
     }
     const aAuvent = m.cotes.some((cote) => c.auvents[cote]);
@@ -80,12 +85,13 @@ function lignesUneTente(c, prixDe, impCotes) {
                 continue;
             const p = prixImp(k);
             if (p != null)
-                out.push({ genre: "impression", cle: k, prix: p });
+                out.push({ genre: "impression", cle: k, prix: p, slug: cleImpression(m, c.taille, k) });
         }
         else {
-            const p = prixDe(cleAccessoire(m, c.taille, k));
+            const cleAcc = cleAccessoire(m, c.taille, k);
+            const p = prixDe(cleAcc);
             if (p != null)
-                out.push({ genre: "accessoire", cle: k, prix: p });
+                out.push({ genre: "accessoire", cle: k, prix: p, slug: cleAcc });
         }
     }
     return out;
@@ -125,7 +131,10 @@ export function lignesTarifRangee(c, prixDe, n, impCotes) {
             options: i === 0 ? c.options : c.options.filter(estImpression),
         }, prixDe, t.impCote);
         for (const l of lignes) {
-            const cle = [l.genre, l.cote ?? "", l.cle ?? "", l.provisoire ? 1 : 0, l.prix].join("|");
+            /* Le slug entre dans la clé : deux lignes ne fusionnent que si elles
+               désignent la MÊME référence catalogue — sinon une rangée porterait
+               « × 3 » sur un produit qui n'est pas celui de la ligne gardée. */
+            const cle = [l.genre, l.cote ?? "", l.cle ?? "", l.slug, l.provisoire ? 1 : 0, l.prix].join("|");
             const deja = fusion.get(cle);
             if (deja) {
                 deja.quantite = (deja.quantite ?? 1) + 1;

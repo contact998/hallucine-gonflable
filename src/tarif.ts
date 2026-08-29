@@ -46,6 +46,16 @@ export interface LigneTarifTente {
   cle?: string;
   /** Prix de repli (paroi pleine) faute de ligne au tarif : à dire en rouge. */
   provisoire?: boolean;
+  /**
+   * Le `slugSite` du catalogue qui a donné ce prix — celui-là même que
+   * `prixDe` a reçu, et le repli quand c'est lui qui a chiffré.
+   *
+   * Il ne sert pas à l'affichage : il sert à ce qu'une composition puisse
+   * devenir un DEVIS. Sans lui, l'appelant devait refabriquer les clés une
+   * seconde fois pour retrouver ses références — c'est-à-dire recopier
+   * l'arithmétique que ce module existe précisément pour porter.
+   */
+  slug: string;
   /** Combien de fois cette ligne se répète dans une RANGÉE — absent = une fois.
    *  `prix` reste le prix UNITAIRE : le total d'une ligne vaut prix × quantité,
    *  et `totalLignesTarif` est là pour qu'on ne l'oublie pas. */
@@ -87,47 +97,52 @@ function lignesUneTente(
 
   const prixImp = (k: Impression): number | null => prixDe(cleImpression(m, c.taille, k));
   /** Le prix d'un choix de côté, et s'il est PROVISOIRE (repli paroi pleine). */
-  const prixType = (type: string, cote: string): { prix: number | null; provisoire: boolean } => {
+  const prixType = (type: string, cote: string): { prix: number | null; provisoire: boolean; slug: string } => {
     const cle = cleTypeCote(m, c.taille, type, cote);
     const direct = cle ? prixDe(cle) : null;
-    if (direct != null) return { prix: direct, provisoire: false };
-    if (!dessinable(m, cote, type)) return { prix: null, provisoire: false };
+    if (direct != null) return { prix: direct, provisoire: false, slug: cle as string };
+    if (!dessinable(m, cote, type)) return { prix: null, provisoire: false, slug: "" };
     const repli = cleRepliCote(m, c.taille, cote);
     const p = repli ? prixDe(repli) : null;
-    return { prix: p, provisoire: p != null };
+    /* Chiffré par le repli : c'est SA référence qui part au devis, pas celle
+       du type demandé — le tarif ne connaît pas ce dernier. */
+    return { prix: p, provisoire: p != null, slug: (repli ?? "") as string };
   };
   /** L'impression qui chiffre un côté : la plus précise que le tarif connaisse. */
   const impDuType = (type: string): Impression | undefined =>
     impressionsCote(type).find((i) => prixImp(i) != null);
 
-  const pack = prixDe(cleTente(m, c.taille));
-  if (pack != null) out.push({ genre: "base", prix: pack });
+  const clePack = cleTente(m, c.taille);
+  const pack = prixDe(clePack);
+  if (pack != null) out.push({ genre: "base", prix: pack, slug: clePack });
 
   for (const cote of m.cotes as readonly string[]) {
     const type = c.cotes[cote] ?? "vide";
     if (type !== "vide") {
-      const { prix, provisoire } = prixType(type, cote);
-      if (prix != null) out.push({ genre: "cote", cote, cle: typeCote(type).libelle, provisoire, prix });
+      const { prix, provisoire, slug } = prixType(type, cote);
+      if (prix != null) out.push({ genre: "cote", cote, cle: typeCote(type).libelle, provisoire, prix, slug });
       const impLiee = impDuType(type);
       if (impCotes?.[cote] && impLiee) {
         const pi = prixImp(impLiee);
-        if (pi != null) out.push({ genre: "impression_cote", cote, prix: pi });
+        if (pi != null) out.push({ genre: "impression_cote", cote, prix: pi, slug: cleImpression(m, c.taille, impLiee) });
       }
     }
     const dm = c.demiMurs?.[cote] ?? "vide";
     if (dm !== "vide" && demiMurPossible(m, cote, type)) {
       const cleDm = cleDemiMur(m, c.taille, dm);
       const pdm = cleDm ? prixDe(cleDm) : null;
-      if (pdm != null) out.push({ genre: "demi_mur", cote, cle: typeCote(dm).libelle, prix: pdm });
+      if (pdm != null) out.push({ genre: "demi_mur", cote, cle: typeCote(dm).libelle, prix: pdm, slug: cleDm as string });
       /* Le demi-mur est une toile de plus : habiller ce côté l'imprime aussi. */
       if (impCotes?.[cote] && m.demiMur) {
-        const pi = prixImp(m.demiMur.impression as Impression);
-        if (pi != null) out.push({ genre: "impression_demi_mur", cote, prix: pi });
+        const impDm = m.demiMur.impression as Impression;
+        const pi = prixImp(impDm);
+        if (pi != null) out.push({ genre: "impression_demi_mur", cote, prix: pi, slug: cleImpression(m, c.taille, impDm) });
       }
     }
     if (c.auvents[cote]) {
-      const pa = prixDe(cleAuvent(m, c.taille));
-      if (pa != null) out.push({ genre: "auvent", cote, prix: pa });
+      const cleAuv = cleAuvent(m, c.taille);
+      const pa = prixDe(cleAuv);
+      if (pa != null) out.push({ genre: "auvent", cote, prix: pa, slug: cleAuv });
     }
   }
 
@@ -143,10 +158,11 @@ function lignesUneTente(
     if ((IMPRESSIONS as Record<string, string>)[k]) {
       if (!impsVisibles.includes(k as Impression)) continue;
       const p = prixImp(k as Impression);
-      if (p != null) out.push({ genre: "impression", cle: k, prix: p });
+      if (p != null) out.push({ genre: "impression", cle: k, prix: p, slug: cleImpression(m, c.taille, k as Impression) });
     } else {
-      const p = prixDe(cleAccessoire(m, c.taille, k as Accessoire));
-      if (p != null) out.push({ genre: "accessoire", cle: k, prix: p });
+      const cleAcc = cleAccessoire(m, c.taille, k as Accessoire);
+      const p = prixDe(cleAcc);
+      if (p != null) out.push({ genre: "accessoire", cle: k, prix: p, slug: cleAcc });
     }
   }
 
@@ -202,7 +218,10 @@ export function lignesTarifRangee(
       t.impCote,
     );
     for (const l of lignes) {
-      const cle = [l.genre, l.cote ?? "", l.cle ?? "", l.provisoire ? 1 : 0, l.prix].join("|");
+      /* Le slug entre dans la clé : deux lignes ne fusionnent que si elles
+         désignent la MÊME référence catalogue — sinon une rangée porterait
+         « × 3 » sur un produit qui n'est pas celui de la ligne gardée. */
+      const cle = [l.genre, l.cote ?? "", l.cle ?? "", l.slug, l.provisoire ? 1 : 0, l.prix].join("|");
       const deja = fusion.get(cle);
       if (deja) {
         deja.quantite = (deja.quantite ?? 1) + 1;

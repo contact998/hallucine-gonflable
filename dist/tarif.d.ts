@@ -8,6 +8,16 @@ export interface LigneTarifTente {
     cle?: string;
     /** Prix de repli (paroi pleine) faute de ligne au tarif : à dire en rouge. */
     provisoire?: boolean;
+    /**
+     * Le `slugSite` du catalogue qui a donné ce prix — celui-là même que
+     * `prixDe` a reçu, et le repli quand c'est lui qui a chiffré.
+     *
+     * Il ne sert pas à l'affichage : il sert à ce qu'une composition puisse
+     * devenir un DEVIS. Sans lui, l'appelant devait refabriquer les clés une
+     * seconde fois pour retrouver ses références — c'est-à-dire recopier
+     * l'arithmétique que ce module existe précisément pour porter.
+     */
+    slug: string;
     /** Combien de fois cette ligne se répète dans une RANGÉE — absent = une fois.
      *  `prix` reste le prix UNITAIRE : le total d'une ligne vaut prix × quantité,
      *  et `totalLignesTarif` est là pour qu'on ne l'oublie pas. */
