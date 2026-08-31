@@ -76,6 +76,23 @@ export interface Implantation {
     /** Exemplaires non posés faute de place — annoncés, jamais tus. */
     nonPoses: number;
 }
+/**
+ * Trois zones, du nord au sud : les assises devant l'écran, les mange-debout
+ * derrière ; les bars occupent une colonne à part sur le bord est.
+ *
+ * `MobilierItem` ne porte aucun champ de catégorie — le CRM ne le fournit
+ * pas — la classification se fait donc sur le `slugSite`, dont la convention
+ * de nommage (déjà celle du moteur `lounge.ts`) sépare sans ambiguïté les
+ * trois familles du catalogue actuel : `bar-*`, `table-*`, et tout le reste
+ * (canapés, poufs, chaises, tabourets) qui s'assoit face à l'écran.
+ *
+ * La famille d'un meuble se décide dans `mobilier.ts`, une seule fois. Elle
+ * était écrite ici ET là-bas — deux copies du même `startsWith`, remontées côte
+ * à côte dans ce paquet. Ajouter une famille aurait tenu tant qu'on pensait aux
+ * deux. `zoneDe` reste comme nom d'appoint : le moteur raisonne en zones du
+ * plan, l'interface en familles du catalogue, c'est le même découpage vu de
+ * deux métiers.
+ */
 export declare const zoneDe: typeof familleMobilier;
 export declare function implanter(panier: LigneLounge[], catalogue: Record<string, MobilierItem>, surfaceM2?: number, emprise?: {
     largeurM: number;

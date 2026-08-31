@@ -410,8 +410,10 @@ function poserSurAbri(
  *
  * Les cotes sont celles d'un adulte moyen : 1,70 m debout, assis l'assise à
  * 0,42 m et le sommet du crâne vers 1,25 m.
+ *
+ * Le gris uni était rendu par un matériau posé ici ; il n'y en a plus besoin
+ * depuis que les silhouettes sont des GLB qui portent le leur.
  */
-const MAT_SILHOUETTE = new THREE.MeshStandardMaterial({ color: 0x9fb0bd, roughness: 0.85, metalness: 0 });
 
 /**
  * Une silhouette — un modèle CC0 de Quaternius, chargé et cloné comme un meuble.
@@ -811,7 +813,7 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
        assis partagent le même gabarit, comme deux canapés identiques. */
     const gens = implantation.personnes ?? [];
     const silhouettesPromises = Promise.all(
-      gens.map((pose, i) => {
+      gens.map(pose => {
         const modele = pose.modele;
         return chargerGLB(o.loader, urlPersonne(modele.fichier))
           .then((gabarit) => ({ pose, modele, gabarit }))

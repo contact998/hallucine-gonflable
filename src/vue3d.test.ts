@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { MODELES, modele } from "./composition.js";
 import {
-  VUE_3D, vue3d, urlPiece, urlMeuble, urlPersonne, urlEcran, echelle, pieceImprimable, MODELES_SANS_VUE,
+  vue3d, urlPiece, urlMeuble, urlPersonne, urlEcran, echelle, pieceImprimable, MODELES_SANS_VUE,
   angleCote, pieceDeCote, ANGLE_COTE_DEFAUT, estPiece, porteLisere, porteVitre, dessinable,
   pieceDemiMur as pieceDemiMurDe, decalageVoisin, piecesAbri, axeRangee, rangeeAbri,
 } from "./vue3d.js";

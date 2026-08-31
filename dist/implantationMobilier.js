@@ -50,16 +50,29 @@ const RATIO_SOL = 4 / 3;
 /* Le passage entre deux assises qui se regardent : de quoi poser les pieds et
    circuler, sans que la conversation soit à crier. */
 const PASSAGE_ILOT_M = 0.9;
-/* Profondeur au sol d'une personne assise, mesurée sur les modèles livrés
-   (homme 0,65 m, femme 0,63 m) une fois mis à l'échelle. Elle sert à l'adosser
-   sans la faire traverser le dossier. */
-const PROFONDEUR_ASSIS = 0.65;
 /* Un liseré de sol autour du mobilier. Sans lui les meubles touchent le bord
    exact, et de biais la scène donne l'illusion qu'ils débordent — vérifié :
    géométriquement ils étaient dedans, au millimètre. */
 const LISERE_SOL_M = 0.6;
 /** Marge de sécurité anti-frontière flottante entre le calcul du besoin et le placement réel. */
 const MARGE_SECURITE_M = 0.01;
+/**
+ * Trois zones, du nord au sud : les assises devant l'écran, les mange-debout
+ * derrière ; les bars occupent une colonne à part sur le bord est.
+ *
+ * `MobilierItem` ne porte aucun champ de catégorie — le CRM ne le fournit
+ * pas — la classification se fait donc sur le `slugSite`, dont la convention
+ * de nommage (déjà celle du moteur `lounge.ts`) sépare sans ambiguïté les
+ * trois familles du catalogue actuel : `bar-*`, `table-*`, et tout le reste
+ * (canapés, poufs, chaises, tabourets) qui s'assoit face à l'écran.
+ *
+ * La famille d'un meuble se décide dans `mobilier.ts`, une seule fois. Elle
+ * était écrite ici ET là-bas — deux copies du même `startsWith`, remontées côte
+ * à côte dans ce paquet. Ajouter une famille aurait tenu tant qu'on pensait aux
+ * deux. `zoneDe` reste comme nom d'appoint : le moteur raisonne en zones du
+ * plan, l'interface en familles du catalogue, c'est le même découpage vu de
+ * deux métiers.
+ */
 export const zoneDe = familleMobilier;
 /**
  * Aplatit le panier en exemplaires individuels puis les trie par slug, puis
@@ -209,7 +222,7 @@ function blocFaceAFace(a, b, passage, quartDeTour) {
  *  chaise s'y glisse. Le passage d'îlot (0,6 m) est un couloir de circulation —
  *  l'employer ici posait les convives à soixante centimètres de leur assiette. */
 const JEU_TABLE_M = 0.05;
-function blocTablee(table, chaises, passage) {
+function blocTablee(table, chaises, _passage) {
     const wT = table.item.largeurCm / 100, dT = table.item.profondeurCm / 100;
     /* Une chaise glissée sous la table n'occupe que sa profondeur au-delà du
        plateau ; c'est cette profondeur-là qui fait grandir la tablée. */

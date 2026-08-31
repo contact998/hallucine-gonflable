@@ -13,7 +13,7 @@
  * paquet à choisir lequel des deux — et à trahir l'autre.
  */
 import { useState, type ReactNode } from "react";
-import { familleMobilier, type FamilleMobilier, FAMILLES_MOBILIER, habillageMobilier } from "./mobilier.js";
+import { familleMobilier, FAMILLES_MOBILIER, habillageMobilier } from "./mobilier.js";
 import { HabillageMobilier, type ClassesHabillage } from "./HabillageMobilier.js";
 import { importerVisuel } from "./visuel.js";
 import type { VisuelPose } from "./pose.js";

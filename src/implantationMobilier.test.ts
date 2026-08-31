@@ -14,8 +14,7 @@
  */
 import { describe, it, expect } from "vitest";
 import {
-  implanter, personnes, peutAccueillir, modeleSilhouette, ANCRAGES, LACET_MEUBLE,
-  zoneDe, type MeublePose, type MeubleCote, type LigneLounge,
+  implanter, type MeublePose, type MeubleCote, type LigneLounge,
 } from "./implantationMobilier.js";
 
 type MobilierItem = MeubleCote;

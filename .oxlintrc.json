@@ -1,0 +1,31 @@
+{
+  // .oxlintrc.json — le contrôle que `tsc` ne fait pas.
+  //
+  // `pnpm check` prouve que les types s'accordent ; il ne dit rien d'un import
+  // resté après une refonte, d'une constante que plus rien ne lit, d'un type
+  // déclaré pour un chantier abandonné. Ce module est petit — 61 fichiers —
+  // mais il est CONSOMMÉ PAR TAG par le CRM et par le site : ce qui y dort
+  // finit copié dans deux dépôts.
+  //
+  // Même règle de fond que les deux autres dépôts : ZÉRO avertissement, et une
+  // liste FERMÉE de règles éteintes, chacune avec sa raison. Posé le
+  // 31/08/2026 : 16 signalements au départ, ramenés à zéro. Aucun n'était un
+  // défaut de comportement — que du sédiment.
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+
+  "ignorePatterns": ["dist/**", "node_modules/**"],
+
+  "rules": {
+    // Mêmes exceptions que le CRM et le site, pour que les trois dépôts disent
+    // la même chose du même code.
+    "no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_",
+        "ignoreRestSiblings": true
+      }
+    ]
+  }
+}

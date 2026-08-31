@@ -345,8 +345,8 @@ export function rangeeTentes(m: Modele, module: TenteRangee, n: number): TenteRa
   for (let i = 0; i < n; i++) {
     const cotes = { ...module.cotes };
     const auvents = { ...module.auvents };
-    const demiMurs = { ...(module.demiMurs ?? {}) };
-    const impCote = { ...(module.impCote ?? {}) };
+    const demiMurs = { ...module.demiMurs };
+    const impCote = { ...module.impCote };
     if (i > 0) {
       // Ouverte vers la précédente : le mur du bout n'existe qu'au départ.
       cotes[oppose] = "vide";

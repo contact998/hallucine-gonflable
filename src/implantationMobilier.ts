@@ -14,7 +14,7 @@
 /** Une ligne de panier : un meuble, une quantité, et son habillage.
  *  Déclarée ici parce que le moteur en a besoin — le compositeur de lounge, qui
  *  la produit, reste côté site : il relève du commerce, pas de la géométrie. */
-import { familleMobilier, type FamilleMobilier } from "./mobilier.js";
+import { familleMobilier } from "./mobilier.js";
 export interface LigneLounge {
   slug: string;
   qte: number;
@@ -115,10 +115,6 @@ const RATIO_SOL = 4 / 3;
 /* Le passage entre deux assises qui se regardent : de quoi poser les pieds et
    circuler, sans que la conversation soit à crier. */
 const PASSAGE_ILOT_M = 0.9;
-/* Profondeur au sol d'une personne assise, mesurée sur les modèles livrés
-   (homme 0,65 m, femme 0,63 m) une fois mis à l'échelle. Elle sert à l'adosser
-   sans la faire traverser le dossier. */
-const PROFONDEUR_ASSIS = 0.65;
 /* Un liseré de sol autour du mobilier. Sans lui les meubles touchent le bord
    exact, et de biais la scène donne l'illusion qu'ils débordent — vérifié :
    géométriquement ils étaient dedans, au millimètre. */
@@ -136,14 +132,14 @@ const MARGE_SECURITE_M = 0.01;
  * de nommage (déjà celle du moteur `lounge.ts`) sépare sans ambiguïté les
  * trois familles du catalogue actuel : `bar-*`, `table-*`, et tout le reste
  * (canapés, poufs, chaises, tabourets) qui s'assoit face à l'écran.
+ *
+ * La famille d'un meuble se décide dans `mobilier.ts`, une seule fois. Elle
+ * était écrite ici ET là-bas — deux copies du même `startsWith`, remontées côte
+ * à côte dans ce paquet. Ajouter une famille aurait tenu tant qu'on pensait aux
+ * deux. `zoneDe` reste comme nom d'appoint : le moteur raisonne en zones du
+ * plan, l'interface en familles du catalogue, c'est le même découpage vu de
+ * deux métiers.
  */
-/* La famille d'un meuble se décide dans `mobilier.ts`, une seule fois. Elle
-   était écrite ici ET là-bas — deux copies du même `startsWith`, remontées
-   côte à côte dans ce paquet. Ajouter une famille aurait tenu tant qu'on
-   pensait aux deux. `zoneDe` reste comme nom d'appoint : le moteur raisonne en
-   zones du plan, l'interface en familles du catalogue, c'est le même découpage
-   vu de deux métiers. */
-type Zone = FamilleMobilier;
 export const zoneDe = familleMobilier;
 
 interface Unite {
@@ -201,12 +197,6 @@ interface Rect {
   zMin: number;
   zMax: number;
 }
-interface Pose {
-  slug: string;
-  x: number;
-  z: number;
-}
-
 /**
  * Un BLOC est ce que le rangeur manipule : un rectangle, et de quoi le déplier
  * en meubles une fois sa place trouvée.
@@ -342,7 +332,7 @@ function blocFaceAFace(a: Unite, b: Unite, passage: number, quartDeTour: boolean
  *  l'employer ici posait les convives à soixante centimètres de leur assiette. */
 const JEU_TABLE_M = 0.05;
 
-function blocTablee(table: Unite, chaises: Unite[], passage: number): Bloc {
+function blocTablee(table: Unite, chaises: Unite[], _passage: number): Bloc {
   const wT = table.item.largeurCm / 100, dT = table.item.profondeurCm / 100;
   /* Une chaise glissée sous la table n'occupe que sa profondeur au-delà du
      plateau ; c'est cette profondeur-là qui fait grandir la tablée. */
