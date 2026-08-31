@@ -1,0 +1,56 @@
+name: Fuite de secrets
+
+# ⚠️ Ce dépôt est PUBLIC, contrairement au CRM et au site. Un secret poussé ici
+# n'est pas seulement exposé : il est indexable dans la minute, et le retirer au
+# commit suivant ne le retire pas de l'historique. C'est le dépôt des trois où
+# une fuite coûte le plus cher, et c'était le seul sans ce contrôle.
+#
+# GitHub analyse bien les secrets sur les dépôts publics, gratuitement — mais
+# seulement pour les motifs de ses partenaires enregistrés (AWS, Stripe, Slack…).
+# Une clé Railway, un jeton Gandi, une URL MySQL avec son mot de passe n'en font
+# pas partie. Gitleaks couvre ce que ce filtre laisse passer.
+#
+# Le module est installé DEPUIS GITHUB par le CRM et par le site : ce qui entre
+# ici finit recopié dans leurs node_modules. La contamination va dans ce sens-là.
+#
+# Pas de `.gitleaks.toml` : les deux autres dépôts en ont un pour écarter des
+# détections motivées (fixtures de test, docs d'exemple). Ici l'historique
+# complet — 75 commits — passe sans une seule détection, il n'y a donc rien à
+# écarter. Le jour où il en faudrait une, elle s'écrit dans un `.gitleaks.toml`
+# à la racine, avec son motif. Ne jamais faire taire une alerte dans ce fichier.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-depth: 0 — l'historique entier. Un secret retiré au commit
+      # suivant reste récupérable dans le précédent : ne scanner que la pointe
+      # laisserait passer exactement ce qu'on cherche.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Version épinglée, la même que sur le CRM et le site : une montée de
+      # gitleaks change ses règles, donc le verdict. On veut choisir le moment
+      # où ça bouge.
+      - name: Installer gitleaks
+        run: |
+          V=8.30.1
+          curl -sSL --retry 3 -o /tmp/gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${V}/gitleaks_${V}_linux_x64.tar.gz"
+          tar xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          /tmp/gitleaks version
+
+      # --redact est obligatoire : sans lui, un vrai secret trouvé serait
+      # recopié en clair dans le journal du job. Sur un dépôt public, ce journal
+      # se lit sans être connecté — on remplacerait la fuite par une fuite mieux
+      # indexée que l'originale.
+      - name: Chercher des secrets dans tout l'historique
+        run: /tmp/gitleaks git . --redact --verbose --exit-code 1
