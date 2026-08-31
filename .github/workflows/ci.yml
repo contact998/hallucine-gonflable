@@ -1,0 +1,58 @@
+name: CI
+
+# Ce module n'avait aucune CI jusqu'au 31/08/2026 : lint, typage et les
+# 198 tests ne tournaient que si quelqu'un pensait à les lancer. Or il n'est pas
+# une application isolée — il est installé DEPUIS GITHUB par le CRM et par le
+# site, épinglé sur un tag. Ce qui casse ici casse les deux, et rien ne l'aurait
+# dit avant le déploiement suivant.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # `lint` d'abord : il rend la main en une seconde et attrape ce que `tsc`
+      # laisse passer — import resté après une refonte, constante que plus rien
+      # ne lit. Zéro avertissement toléré (voir .oxlintrc.json).
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Type check
+        run: pnpm run check
+
+      # ⚠️ NE PAS ajouter d'étape `pnpm build` AVANT celle-ci, ni à sa place.
+      #
+      # `dist/` est versionné à dessein (voir .gitignore) : le consommateur
+      # installe depuis GitHub et ne doit déclencher aucune compilation. Le
+      # revers, c'est qu'un `dist/` oublié part en production sans rien casser —
+      # le site consommerait une version périmée en silence. `src/dist-a-jour
+      # .test.ts` est le seul garde-fou contre ça : il recompile dans un dossier
+      # temporaire et compare fichier par fichier au `dist/` DU DÉPÔT.
+      #
+      # Un `pnpm build` lancé avant réécrirait `dist/` sur le disque du job. La
+      # comparaison porterait alors sur une sortie fraîche contre une sortie
+      # fraîche : verte à tous les coups, y compris quand le `dist/` commité est
+      # en retard. Le garde-fou deviendrait muet sans que rien ne le signale.
+      #
+      # `build` n'est pas non plus nécessaire à côté : ce test compile déjà avec
+      # `tsconfig.build.json`, donc une erreur de configuration de build le fait
+      # tomber ici.
+      - name: Tests (dont le contrôle que dist/ suit src/)
+        run: pnpm test
