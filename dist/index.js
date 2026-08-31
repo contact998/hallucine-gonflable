@@ -31,6 +31,9 @@ export * from "./ecran.js";
 /* La puissance de projection qu'exige une toile : la même réponse au client sur
    le site et au commercial dans le CRM (voir projection.ts). Aucun prix. */
 export * from "./projection.js";
+/* La géométrie cotée de l'écran : les mêmes cotes au CRM et sur le site, sans
+   aucune donnée d'atelier (voir schemaEcran.ts). */
+export * from "./schemaEcran.js";
 /* Le chargeur de modèles. Exporté parce que le site monte une scène de mobilier
    qui n'est pas celle d'ici : sans lui, elle construirait un `GLTFLoader` nu et
    n'afficherait plus rien depuis que les fichiers de R2 sont repliés. */

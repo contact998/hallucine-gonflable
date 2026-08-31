@@ -7,6 +7,7 @@ export * from "./pose.js";
 export * from "./vue3d.js";
 export * from "./ecran.js";
 export * from "./projection.js";
+export * from "./schemaEcran.js";
 export { chargeurGLB } from "./chargeurGlb.js";
 export { default as TenteViewer } from "./Viewer.js";
 export { ReglagesPose, type ClassesPose } from "./ReglagesPose.js";
