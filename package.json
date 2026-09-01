@@ -36,14 +36,6 @@
     "react": ">=18",
     "three": ">=0.160"
   },
-  "peerDependenciesMeta": {
-    "react": {
-      "optional": true
-    },
-    "three": {
-      "optional": true
-    }
-  },
   "pnpm": {
     "overrides": {
       "vite": "^7.3.2",
