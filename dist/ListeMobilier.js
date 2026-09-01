@@ -16,8 +16,9 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useState } from "react";
 import { familleMobilier, FAMILLES_MOBILIER, habillageMobilier } from "./mobilier.js";
 import { HabillageMobilier } from "./HabillageMobilier.js";
-import { importerVisuel } from "./visuel.js";
-export function ListeMobilier({ meubles, quantites, onQuantite, accepteEncore, habillages, onHabillage, visuels, onVisuel, detail, libelle, classes, }) {
+import { importerVisuel, ErreurVisuel } from "./visuel.js";
+import { poseInitiale } from "./pose.js";
+export function ListeMobilier({ meubles, quantites, onQuantite, accepteEncore, habillages, onHabillage, visuels, onVisuel, onErreur, detail, libelle, classes, }) {
     /* Les familles sont REPLIÉES au départ : la liste s'ouvre sur trois lignes,
        pas sur quinze meubles. Un état React, pas un <details> natif — chaque
        changement de panier re-rend la liste et le navigateur écraserait le
@@ -52,14 +53,21 @@ export function ListeMobilier({ meubles, quantites, onQuantite, accepteEncore, h
                                         }, visuel: visuel, onFichier: async (f) => {
                                             try {
                                                 const url = await importerVisuel(f);
-                                                onVisuel(m.slugSite, { url, mode: "remplir", taille: 1, portee: "pan" });
+                                                onVisuel(m.slugSite, poseInitiale(url));
                                                 /* On REFERME aussi ici : la pastille montre la
                                                    maquette, et huit teintes plus trois modes
                                                    ouverts sous chaque meuble habillé rallongent
                                                    la liste pour un réglage qu'on ne retouche pas. */
                                                 setPalette(null);
                                             }
-                                            catch { /* format, poids ou image illisible : housse nue */ }
+                                            catch (e) {
+                                                /* `importerVisuel` lève une `ErreurVisuel` typée
+                                                   EXPRÈS pour que l'application dise le bon message
+                                                   traduit. L'avaler rejouait le « bouton muet » du
+                                                   23/08/2026 sur le composant partagé site + CRM. */
+                                                if (e instanceof ErreurVisuel)
+                                                    onErreur?.(e.cause_);
+                                            }
                                         }, onPose: (pose) => onVisuel(m.slugSite, pose), libelle: libelle, classes: classes.habillage }))] }, m.slugSite));
                         }) }))] }, famille));
         }) }));

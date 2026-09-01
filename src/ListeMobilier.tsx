@@ -15,8 +15,8 @@
 import { useState, type ReactNode } from "react";
 import { familleMobilier, FAMILLES_MOBILIER, habillageMobilier } from "./mobilier.js";
 import { HabillageMobilier, type ClassesHabillage } from "./HabillageMobilier.js";
-import { importerVisuel } from "./visuel.js";
-import type { VisuelPose } from "./pose.js";
+import { importerVisuel, ErreurVisuel, type EchecVisuel } from "./visuel.js";
+import { poseInitiale, type VisuelPose } from "./pose.js";
 
 /** Ce que la liste a besoin de savoir d'un meuble. Volontairement pauvre : ni
  *  prix, ni référence, ni fournisseur — l'application garde son objet complet
@@ -57,6 +57,11 @@ export interface ListeMobilierProps {
   onHabillage: (slug: string, cle: string) => void;
   visuels: Record<string, VisuelPose>;
   onVisuel: (slug: string, pose: VisuelPose | null) => void;
+  /** L'import du visuel a échoué (format refusé, fichier trop lourd, image
+   *  illisible). L'application affiche le message traduit — `logo_trop_lourd`
+   *  et consorts. Absent, l'échec reste muet : « déposer votre image » repasse
+   *  alors pour un bouton cassé, la panne du 23/08/2026. */
+  onErreur?: (cause: EchecVisuel) => void;
   /** La ligne sous la désignation — places, prix, marge : à l'application. */
   detail?: (meuble: MeubleListe) => ReactNode;
   /** Traduction. Le CRM rend la clé telle quelle ou son libellé français. */
@@ -66,7 +71,7 @@ export interface ListeMobilierProps {
 
 export function ListeMobilier({
   meubles, quantites, onQuantite, accepteEncore,
-  habillages, onHabillage, visuels, onVisuel,
+  habillages, onHabillage, visuels, onVisuel, onErreur,
   detail, libelle, classes,
 }: ListeMobilierProps) {
   /* Les familles sont REPLIÉES au départ : la liste s'ouvre sur trois lignes,
@@ -154,13 +159,19 @@ export function ListeMobilier({
                           onFichier={async (f) => {
                             try {
                               const url = await importerVisuel(f);
-                              onVisuel(m.slugSite, { url, mode: "remplir", taille: 1, portee: "pan" });
+                              onVisuel(m.slugSite, poseInitiale(url));
                               /* On REFERME aussi ici : la pastille montre la
                                  maquette, et huit teintes plus trois modes
                                  ouverts sous chaque meuble habillé rallongent
                                  la liste pour un réglage qu'on ne retouche pas. */
                               setPalette(null);
-                            } catch { /* format, poids ou image illisible : housse nue */ }
+                            } catch (e) {
+                              /* `importerVisuel` lève une `ErreurVisuel` typée
+                                 EXPRÈS pour que l'application dise le bon message
+                                 traduit. L'avaler rejouait le « bouton muet » du
+                                 23/08/2026 sur le composant partagé site + CRM. */
+                              if (e instanceof ErreurVisuel) onErreur?.(e.cause_);
+                            }
                           }}
                           onPose={(pose) => onVisuel(m.slugSite, pose)}
                           libelle={libelle}

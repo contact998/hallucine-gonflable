@@ -26,6 +26,17 @@ describe("plageTaille", () => {
   });
 });
 
+describe("poseInitiale", () => {
+  it("le geste d'un clic : remplir, par panneau — le défaut que ListeMobilier pose", () => {
+    /* ListeMobilier ne fabrique plus la pose à la main (`taille: 1` traînait) :
+       il appelle `poseInitiale`, source unique du réglage de départ. */
+    const p = poseInitiale("data:image/jpeg;base64,zz");
+    expect(p.mode).toBe("remplir");
+    expect(p.portee).toBe("pan");
+    expect(p.url).toBe("data:image/jpeg;base64,zz");
+  });
+});
+
 describe("changerMode", () => {
   it("déplace le réglage dans la plage du nouveau mode", () => {
     // Le réglage ne se transporte pas : les plages ne sont pas les mêmes.

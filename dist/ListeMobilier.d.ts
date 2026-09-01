@@ -1,6 +1,7 @@
 import { type ReactNode } from "react";
 import { type ClassesHabillage } from "./HabillageMobilier.js";
-import type { VisuelPose } from "./pose.js";
+import { type EchecVisuel } from "./visuel.js";
+import { type VisuelPose } from "./pose.js";
 /** Ce que la liste a besoin de savoir d'un meuble. Volontairement pauvre : ni
  *  prix, ni référence, ni fournisseur — l'application garde son objet complet
  *  et ne prête que ces champs. */
@@ -38,11 +39,16 @@ export interface ListeMobilierProps {
     onHabillage: (slug: string, cle: string) => void;
     visuels: Record<string, VisuelPose>;
     onVisuel: (slug: string, pose: VisuelPose | null) => void;
+    /** L'import du visuel a échoué (format refusé, fichier trop lourd, image
+     *  illisible). L'application affiche le message traduit — `logo_trop_lourd`
+     *  et consorts. Absent, l'échec reste muet : « déposer votre image » repasse
+     *  alors pour un bouton cassé, la panne du 23/08/2026. */
+    onErreur?: (cause: EchecVisuel) => void;
     /** La ligne sous la désignation — places, prix, marge : à l'application. */
     detail?: (meuble: MeubleListe) => ReactNode;
     /** Traduction. Le CRM rend la clé telle quelle ou son libellé français. */
     libelle: (cle: string) => string;
     classes: ClassesListe;
 }
-export declare function ListeMobilier({ meubles, quantites, onQuantite, accepteEncore, habillages, onHabillage, visuels, onVisuel, detail, libelle, classes, }: ListeMobilierProps): import("react").JSX.Element;
+export declare function ListeMobilier({ meubles, quantites, onQuantite, accepteEncore, habillages, onHabillage, visuels, onVisuel, onErreur, detail, libelle, classes, }: ListeMobilierProps): import("react").JSX.Element;
 export default ListeMobilier;
