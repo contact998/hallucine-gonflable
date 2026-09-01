@@ -197,7 +197,19 @@ function chargerGLB(loader: GLTFLoader, url: string): Promise<THREE.Group> {
  * fait le viewer tente, et s'en écarter ferait diverger deux vues de la même
  * tente, ce que le module partagé existe pour empêcher.
  */
-async function construireAbri(loader: GLTFLoader, a: Abri): Promise<THREE.Group | null> {
+/**
+ * Combien de pièces d'abri ont manqué leur chargement, toutes tentes de la
+ * rangée confondues. Comptées pour la bannière d'échecs déjà en place : une
+ * paroi tombée (coupure réseau sur `side_wall`) laisse la tente BÉANTE, et le
+ * client la prend pour SA composition — « j'avais pourtant fermé ce côté ». Les
+ * meubles comptent déjà leurs manques ; l'abri était le seul objet dont
+ * l'amputation partielle restait muette. L'échec TOTAL, lui, reste assumé.
+ */
+export function echecsAbri<T>(charges: readonly (T | null)[][]): number {
+  return charges.flat().filter((c) => c === null).length;
+}
+
+async function construireAbri(loader: GLTFLoader, a: Abri): Promise<{ groupe: THREE.Group | null; echecs: number }> {
   try {
     const m = modeleTente(a.modele);
     /* La RANGÉE : n tentes identiques, dérivées par `rangeeAbri` — la même
@@ -216,6 +228,9 @@ async function construireAbri(loader: GLTFLoader, a: Abri): Promise<THREE.Group 
         ),
       ),
     );
+    /* Les pièces manquées, comptées AVANT qu'on jette les nulls : elles nourrissent
+       la bannière d'échecs (voir `echecsAbri`). */
+    const echecs = echecsAbri(charges);
     /* Le pas entre deux tentes : la largeur du toit dans la direction de
        l'axe, mesurée sur la pièce chargée AVANT toute échelle — millimètres du
        modèle de base, l'unité de `decalageVoisin`, exactement la recette du
@@ -291,14 +306,17 @@ async function construireAbri(loader: GLTFLoader, a: Abri): Promise<THREE.Group 
       groupe.add(sous);
     }
     });
-    if (!groupe.children.length) return null;
+    /* Aucune pièce chargée : abri entièrement absent, assumé comme l'échec total
+       (un lounge sans sa tente reste un lounge) — donc SANS bannière. Le compte
+       de pièces manquées ne parle que d'une tente PARTIELLE, celle qui trompe. */
+    if (!groupe.children.length) return { groupe: null, echecs: 0 };
     groupe.scale.setScalar(MM_EN_M * echelle(m, a.taille));
     if (a.visuel) await habillerAbri(groupe, a.visuel, hexDeTeinte(a.teinte ?? TEINTE_NUE));
-    return groupe;
+    return { groupe, echecs };
   } catch {
     /* Modèle ou taille inconnus du module partagé : pas d'abri dessiné, et le
        lounge reste visible. Le devis, lui, ne dépend pas de cette fonction. */
-    return null;
+    return { groupe: null, echecs: 0 };
   }
 }
 
@@ -788,7 +806,7 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
     /* L'abri se charge EN MÊME TEMPS que les meubles, et son échec ne compte
        pas comme un meuble manquant : une tente qui ne se dessine pas n'enlève
        rien au lounge, et son prix est au panier de toute façon. */
-    const abriPromis = abri ? construireAbri(o.loader, abri) : Promise.resolve(null);
+    const abriPromis = abri ? construireAbri(o.loader, abri) : Promise.resolve({ groupe: null, echecs: 0 });
 
     /* L'écran se charge avec le reste, et son échec ne compte pas comme un
        meuble manquant : un lounge sans son écran reste un lounge. Une taille
@@ -831,7 +849,7 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
       abriPromis,
       silhouettesPromises,
       ecranPromis,
-    ]).then(([resultats, groupeAbri, silhouettes, ecranCharge]) => {
+    ]).then(([resultats, abriCharge, silhouettes, ecranCharge]) => {
       const encore = outils.current;
       /* Une réponse en retard (implantation changée entre-temps) ne doit pas
          écraser la dernière composition demandée. */
@@ -840,7 +858,9 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
       const poses = resultats
         .filter((r): r is PromiseFulfilledResult<{ pose: MeublePose; gabarit: THREE.Group }> => r.status === "fulfilled")
         .map((r) => r.value);
-      setEchecs(resultats.length - poses.length);
+      /* Les meubles manqués PLUS les pièces d'abri manquées : la bannière dit
+         tout ce qui manque à la scène, la tente partielle comprise. */
+      setEchecs(resultats.length - poses.length + abriCharge.echecs);
 
       disposerSol(encore.racine.children.find((c) => c instanceof THREE.Mesh) ?? null);
       encore.racine.clear();
@@ -883,6 +903,7 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
          prendre en compte — sinon la caméra serre sur le mobilier et coupe le
          toit. Référencé sur la racine : c'est là que la boucle de rendu vient
          chercher les parois à effacer devant la caméra. */
+      const groupeAbri = abriCharge.groupe;
       if (groupeAbri) encore.racine.add(groupeAbri);
       encore.racine.userData.abri = groupeAbri ?? null;
 

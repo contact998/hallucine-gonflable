@@ -22,6 +22,32 @@ export interface Abri {
 import { type VisuelPose } from "./pose.js";
 import type { GammeEcran3D } from "./ecran.js";
 import { type CompositionAbri } from "./vue3d.js";
+/**
+ * L'abri, tel que `piecesAbri` le décrit : le socle toujours (toit, pieds,
+ * cache-zip), et — quand la composition voyage avec l'abri — les parois,
+ * demi-murs et auvents que le client a construits, tournés par la MÊME formule
+ * que le viewer tente (décision du 23/08/2026 : le réalisme du lounge, c'est la
+ * fidélité au produit construit, pas un décor).
+ *
+ * Une tente fermée cacherait le lounge : chaque pièce de côté est donc montée
+ * dans son propre sous-groupe, marqué de son azimut (`azimutAbri`) et de ses
+ * matières (`matsAbri`) — la boucle de rendu efface en douceur la paroi qui se
+ * trouve entre la caméra et les meubles, et la repose dès qu'on tourne.
+ *
+ * Même convention d'unités que le mobilier : les pièces sont en millimètres, et
+ * l'échelle vaut 0,001 × `echelle(modèle, taille)` — c'est exactement ce que
+ * fait le viewer tente, et s'en écarter ferait diverger deux vues de la même
+ * tente, ce que le module partagé existe pour empêcher.
+ */
+/**
+ * Combien de pièces d'abri ont manqué leur chargement, toutes tentes de la
+ * rangée confondues. Comptées pour la bannière d'échecs déjà en place : une
+ * paroi tombée (coupure réseau sur `side_wall`) laisse la tente BÉANTE, et le
+ * client la prend pour SA composition — « j'avais pourtant fermé ce côté ». Les
+ * meubles comptent déjà leurs manques ; l'abri était le seul objet dont
+ * l'amputation partielle restait muette. L'échec TOTAL, lui, reste assumé.
+ */
+export declare function echecsAbri<T>(charges: readonly (T | null)[][]): number;
 /** L'écran du cinéma, décrit par l'application : le paquet sait le dessiner et
  *  le dimensionner, pas le tarifer. Les deux cotes sortent du catalogue CRM
  *  (`CatalogueSpecs`), jamais d'un nombre écrit dans une page. Gamme ÉTANCHE
