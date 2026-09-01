@@ -47,6 +47,16 @@ export interface PlageTaille {
 export declare function plageTaille(mode: ModePose): PlageTaille | null;
 /** Réglage de départ. « Remplir » par défaut : c'est le geste sans question. */
 export declare function poseInitiale(url: string, mode?: ModePose): VisuelPose;
+/**
+ * La clé d'IDENTITÉ d'une pose pour un cache de texture : ce qui, changé, oblige
+ * à redessiner le canevas. Indexée sur l'URL COMPLÈTE, jamais sa longueur —
+ * deux JPEG du même poids d'octets sont deux images différentes, et une clé sur
+ * la longueur laissait l'ancienne maquette sur la nouvelle housse, capture de
+ * devis comprise. Les deux viewers (tente et lounge) partagent cette recette
+ * pour ne pas diverger sur la même question ; chacun y ajoute ce qui lui est
+ * propre (le fond, le gabarit d'un pan) après ce préfixe commun.
+ */
+export declare const cleVisuelPose: (pose: VisuelPose) => string;
 /** Changer de mode repart du défaut du mode visé plutôt que de traîner un
  *  chiffre qui n'y veut plus rien dire. */
 export declare function changerMode(pose: VisuelPose, mode: ModePose): VisuelPose;

@@ -55,6 +55,7 @@ import { LACET_MEUBLE } from "./implantationMobilier.js";
 import { habillageMobilier as habillage, HABILLAGE_MOBILIER_DEFAUT as HABILLAGE_DEFAUT } from "./mobilier.js";
 import { composerPan } from "./visuel.js";
 import { chargerImage } from "./visuel.js";
+import { cleVisuelPose } from "./pose.js";
 import { chargerEcranGlb, poserTaille } from "./ecranGlb.js";
 import { urlPiece, echelle, piecesAbri, rangeeAbri, axeRangee, decalageVoisin, porteVitre, pieceImprimable, urlMeuble, urlPersonne, FOND_SCENE } from "./vue3d.js";
 import { modele as modeleTente } from "./composition.js";
@@ -97,7 +98,10 @@ const cacheVisuel = new Map();
  * Ratio 1 : l'atlas UV d'un meuble est carré, contrairement à un pan de toit.
  */
 function materiauVisuel(slug, pose) {
-    const cle = `${pose.url.length}|${pose.mode}|${pose.taille}`;
+    /* La clé sur l'URL COMPLÈTE, comme le viewer tente : deux data-URL du même
+       nombre d'octets sont deux images différentes. Sur la longueur, le client
+       changeait de visuel et gardait l'ancien sur la housse. */
+    const cle = cleVisuelPose(pose);
     const deja = cacheVisuel.get(slug);
     if (deja?.cle === cle)
         return deja.mat;

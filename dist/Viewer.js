@@ -32,6 +32,7 @@ import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeome
 import { chargeurGLB } from "./chargeurGlb.js";
 import { ZONES_COULEUR, ZONE_AUVENT, TEINTE_NUE, hexDeTeinte } from "./couleurs.js";
 import { marquerVitre, estVitre } from "./vitre.js";
+import { cleVisuelPose } from "./pose.js";
 import { modele as trouverModele, rangeeTentes } from "./composition.js";
 import { prochainAzimut, viser, viseeNeuve } from "./viseeCote.js";
 import { vue3d, urlPiece, echelle, angleCote, pieceDeCote, pieceDemiMur, porteLisere, porteVitre, decalageVoisin } from "./vue3d.js";
@@ -575,7 +576,7 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
                         /* Un pan par panneau : le même logo ne se pose pas pareil sur un
                            quart de toit que sur une paroi, et une mosaïque n'a pas le
                            même compte de motifs. Le canevas est mis en cache par pan. */
-                        const cle = `${pose.url}|${pose.mode}|${pose.taille}|${fond}|${donnees.ratioGabarit.toFixed(3)}|${cible.x.toFixed(3)},${cible.y.toFixed(3)}`;
+                        const cle = `${cleVisuelPose(pose)}|${fond}|${donnees.ratioGabarit.toFixed(3)}|${cible.x.toFixed(3)},${cible.y.toFixed(3)}`;
                         let tex = pans.current.get(cle);
                         if (!tex) {
                             tex = new THREE.CanvasTexture(composerPan(image, pose, donnees.ratioGabarit, fond, cible));

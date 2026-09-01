@@ -78,6 +78,18 @@ export function poseInitiale(url: string, mode: ModePose = "remplir"): VisuelPos
   return { url, mode, taille: plageTaille(mode)?.defaut ?? 100, portee: "pan" };
 }
 
+/**
+ * La clé d'IDENTITÉ d'une pose pour un cache de texture : ce qui, changé, oblige
+ * à redessiner le canevas. Indexée sur l'URL COMPLÈTE, jamais sa longueur —
+ * deux JPEG du même poids d'octets sont deux images différentes, et une clé sur
+ * la longueur laissait l'ancienne maquette sur la nouvelle housse, capture de
+ * devis comprise. Les deux viewers (tente et lounge) partagent cette recette
+ * pour ne pas diverger sur la même question ; chacun y ajoute ce qui lui est
+ * propre (le fond, le gabarit d'un pan) après ce préfixe commun.
+ */
+export const cleVisuelPose = (pose: VisuelPose): string =>
+  `${pose.url}|${pose.mode}|${pose.taille}`;
+
 /** Changer de mode repart du défaut du mode visé plutôt que de traîner un
  *  chiffre qui n'y veut plus rien dire. */
 export function changerMode(pose: VisuelPose, mode: ModePose): VisuelPose {

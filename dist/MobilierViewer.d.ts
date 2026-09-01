@@ -19,7 +19,7 @@ export interface Abri {
      *  zone chez la tente. Absente ou nue : la toile sort d'usine. */
     teinte?: string | null;
 }
-import type { VisuelPose } from "./pose.js";
+import { type VisuelPose } from "./pose.js";
 import type { GammeEcran3D } from "./ecran.js";
 import { type CompositionAbri } from "./vue3d.js";
 /** L'écran du cinéma, décrit par l'application : le paquet sait le dessiner et

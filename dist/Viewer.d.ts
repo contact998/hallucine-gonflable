@@ -1,4 +1,4 @@
-import type { VisuelPose } from "./pose.js";
+import { type VisuelPose } from "./pose.js";
 export interface TenteViewerProps {
     /** Choix courant de chaque côté (valeurs du configurateur). */
     cotes: Record<string, string>;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { plageTaille, poseInitiale, changerMode, MODES_POSE } from "./pose.js";
+import { plageTaille, poseInitiale, changerMode, cleVisuelPose, MODES_POSE } from "./pose.js";
 
 describe("plageTaille", () => {
   it("« remplir » n'a AUCUNE plage : c'est ce qui lui retire son curseur", () => {
@@ -23,6 +23,25 @@ describe("plageTaille", () => {
       expect(p.defaut).toBeGreaterThanOrEqual(p.min);
       expect(p.defaut).toBeLessThanOrEqual(p.max);
     }
+  });
+});
+
+describe("cleVisuelPose", () => {
+  it("distingue deux images DIFFÉRENTES de même longueur — le bug de la housse", () => {
+    /* Deux data-URL du même nombre de caractères mais au contenu distinct : une
+       clé sur `.length` les confondait, et le client gardait l'ancien visuel. */
+    const a = poseInitiale("data:image/jpeg;base64,AAAA");
+    const b = poseInitiale("data:image/jpeg;base64,BBBB");
+    expect(a.url.length).toBe(b.url.length);
+    expect(cleVisuelPose(a)).not.toBe(cleVisuelPose(b));
+  });
+  it("même image, même clé — le cache garde bien son entrée", () => {
+    expect(cleVisuelPose(poseInitiale("data:,x"))).toBe(cleVisuelPose(poseInitiale("data:,x")));
+  });
+  it("le mode et la taille entrent dans la clé : un réglage change le rendu", () => {
+    const base = poseInitiale("data:,x", "une_fois");
+    expect(cleVisuelPose(base)).not.toBe(cleVisuelPose(changerMode(base, "mosaique")));
+    expect(cleVisuelPose(base)).not.toBe(cleVisuelPose({ ...base, taille: base.taille + 1 }));
   });
 });
 
