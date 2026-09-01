@@ -248,14 +248,20 @@ export function rangeePossible(m, cotes) {
  * côté opposé (la V et ses trois côtés).
  */
 export function rangeeTentes(m, module, n) {
+    /* Le plafond `NB_TENTES_MAX` vit DANS la fonction, pas dans un commentaire :
+       un appelant qui transmet un n brut (état non issu de `decoderConfig`) ne
+       peut plus faire cloner des centaines de socles et parois — l'onglet gelait.
+       `nbTentesRangee` assainit aussi le nombre (entier, ≥ 1), donc tous les
+       appelants présents et futurs sont bornés d'un seul geste. */
+    const nb = nbTentesRangee(n);
     const cotesModele = m.cotes;
     const axes = cotesModele.filter((c) => module.cotes[c] === "jonction");
-    if (n <= 1 || !rangeePossible(m, module.cotes))
+    if (nb <= 1 || !rangeePossible(m, module.cotes))
         return [module];
     const axe = axes[0];
     const oppose = cotesModele[(cotesModele.indexOf(axe) + 2) % 4];
     const tentes = [];
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < nb; i++) {
         const cotes = { ...module.cotes };
         const auvents = { ...module.auvents };
         const demiMurs = { ...module.demiMurs };
@@ -267,7 +273,7 @@ export function rangeeTentes(m, module, n) {
             demiMurs[oppose] = "vide";
             impCote[oppose] = false;
         }
-        if (i === n - 1) {
+        if (i === nb - 1) {
             // Le bout d'arrivée : le miroir du départ, annexes comprises.
             cotes[axe] = module.cotes[oppose] ?? "vide";
             auvents[axe] = module.auvents[oppose] ?? false;

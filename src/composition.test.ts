@@ -287,4 +287,13 @@ describe("la rangée de tentes reliées", () => {
     const v = { cotes: { a: "jonction", b: "paroi", c: "paroi" }, auvents: {}, demiMurs: {}, impCote: {} };
     expect(rangeeTentes(modele("v"), v, 3)).toEqual([v]);
   });
+
+  it("un n brut est BORNÉ dans la fonction — plus jamais des centaines de socles", () => {
+    /* Le plafond `NB_TENTES_MAX` (10) s'applique au DESSIN, pas seulement au
+       chiffrage : un appelant qui passe 500 ne fait pas cloner 500 tentes. */
+    expect(rangeeTentes(SPIDER, module_, 500)).toHaveLength(10);
+    /* Et il assainit le nombre : un n fractionnaire ou négatif ne casse rien. */
+    expect(rangeeTentes(SPIDER, module_, 3.9)).toHaveLength(3);
+    expect(rangeeTentes(SPIDER, module_, -4)).toEqual([module_]);
+  });
 });
