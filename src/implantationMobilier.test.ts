@@ -420,6 +420,39 @@ describe("implanter", () => {
     expect(modeleSilhouette(true, 7)).toEqual(modeleSilhouette(true, 7));
   });
 
+  it("chaque silhouette a son ancrage — un fichier sans entrée lèverait au placement", async () => {
+    /* Le script de mesure des GLB ne vit pas dans ce dépôt (voir le commentaire
+       de ANCRAGES) : à défaut de confronter les cotes aux fichiers, on garantit
+       au moins qu'aucune silhouette produite n'arrive SANS ancrage — sinon
+       `elevationDebout`/`elevationAssis` lèvent, personne muette dans la scène. */
+    const { modeleSilhouette, ANCRAGES } = await import("./implantationMobilier.js");
+    const fichiers = new Set<string>();
+    for (const assis of [false, true]) for (let i = 0; i < 4; i++) fichiers.add(modeleSilhouette(assis, i).fichier);
+    for (const f of fichiers) {
+      expect(ANCRAGES[f], `ancrage manquant pour ${f}`).toBeDefined();
+      expect(typeof ANCRAGES[f].semelleY, `${f} sans semelle`).toBe("number");
+    }
+    /* Les poses assises ont besoin des trois cotes du bas du corps, pas seulement
+       de la semelle : sans elles, l'assis flotte ou traverse le dossier. */
+    for (const f of ["homme-assis", "femme-assise"]) {
+      expect(typeof ANCRAGES[f].fessesY, `${f} sans fesses`).toBe("number");
+      expect(typeof ANCRAGES[f].talonZ, `${f} sans talon`).toBe("number");
+      expect(typeof ANCRAGES[f].dosZ, `${f} sans dos`).toBe("number");
+    }
+  });
+
+  it("le lacet correctif reste un quart de tour — la forme des signes est verrouillée", async () => {
+    /* On ne peut pas re-mesurer les GLB ici ; on verrouille au moins que chaque
+       lacet est bien un ±90° (jamais une valeur bricolée), le garde-fou minimal
+       contre une entrée fautive dans une table maintenue à la main. */
+    const { LACET_MEUBLE } = await import("./implantationMobilier.js");
+    const valeurs = Object.values(LACET_MEUBLE);
+    expect(valeurs.length).toBeGreaterThan(0);
+    for (const v of valeurs) {
+      expect(Math.abs(Math.abs(v) - Math.PI / 2), `${v} n'est pas ±π/2`).toBeLessThan(1e-9);
+    }
+  });
+
   it("fesses sur le coussin, semelles jamais sous le plancher — sur tous les meubles du catalogue", async () => {
     const { personnes, ANCRAGES } = await import("./implantationMobilier.js");
     for (const [slug, item] of Object.entries(CAT)) {

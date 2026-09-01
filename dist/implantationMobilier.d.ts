@@ -145,9 +145,21 @@ export interface Personne {
     duMeuble: number;
 }
 /**
- * Points de contact MESURÉS dans les GLB livrés, en unités du fichier
- * (`scripts/mesurer-personnes.mjs` les recalcule ; un test les confronte aux
- * fichiers, ces nombres ne sont donc pas « en dur » mais dérivés et vérifiés).
+ * Points de contact MESURÉS À LA MAIN dans les GLB livrés, en unités du fichier.
+ *
+ * ⚠️ CE QUI EST VRAI, ici et maintenant : le script de mesure qui a produit ces
+ * nombres (`mesurer-personnes.mjs`) N'EST PAS dans ce dépôt — il est resté dans
+ * le site au déménagement du moteur (22/08/2026), et AUCUN test ici ne confronte
+ * ces cotes aux fichiers GLB (ceux-ci vivent sur R2, hors de portée d'un test
+ * unitaire). Ce que ce dépôt vérifie, c'est la COHÉRENCE du placement qui en
+ * découle — `implantationMobilier.test.ts` contrôle que semelles et fesses
+ * tombent au bon endroit (« fesses sur le coussin… ») et qu'aucune silhouette
+ * de `modeleSilhouette` n'a d'ancrage manquant. Re-dériver ces cotes à partir
+ * des GLB reste à faire : il faudrait rapatrier le script et une fixture ici.
+ *
+ * Toute nouvelle silhouette EXIGE une entrée : `elevationDebout` /
+ * `elevationAssis` lisent `ANCRAGES[fichier]` SANS repli — un fichier absent
+ * lève à la lecture, il ne se pose pas de travers en silence.
  *
  * Deux surprises qui ont coûté trois allers-retours de captures d'écran :
  *  - l'origine des modèles n'est NI au centre du corps NI sous les fesses,
@@ -164,15 +176,23 @@ export declare const ANCRAGES: Record<string, {
     dosZ?: number;
 }>;
 /**
- * Lacet correctif par meuble, MESURÉ dans les GLB (`scripts/mesurer-personnes.mjs`).
+ * Lacet correctif par meuble, MESURÉ À LA MAIN dans les GLB.
  *
  * La scène attend la largeur le long de x et le dossier au fond (+y). Or ces
  * fichiers posent la profondeur sur X : dossier des canapés et de la chaise
  * vers −X, base des banquettes U/N vers +X, tables longues couchées sur Y.
  * Sans ce quart de tour, le canapé 2 places se dessinait EN TRAVERS de
  * l'emprise que le moteur lui réserve : ses assis flottaient à côté, et la
- * banquette U asseyait ses convives hors de sa base. Un test confronte ces
- * signes aux fichiers — comme `ANCRAGES`, mesuré puis verrouillé.
+ * banquette U asseyait ses convives hors de sa base.
+ *
+ * ⚠️ Comme `ANCRAGES`, ces signes viennent d'un script de mesure qui n'est PAS
+ * dans ce dépôt (resté dans le site, 22/08/2026), et aucun test ici ne les
+ * confronte aux GLB. PIRE que les ancrages : le lecteur (`MobilierViewer`,
+ * `LACET_MEUBLE[pose.slug] ?? 0`) retombe SILENCIEUSEMENT sur 0 pour un meuble
+ * absent — il se dessine alors de travers sans un mot, le bug d'origine. Tout
+ * nouveau meuble Bayes suivant la même convention d'axes DOIT recevoir son
+ * entrée ici. Le test « le lacet reste un quart de tour » verrouille au moins
+ * la forme des valeurs, faute de pouvoir les re-mesurer sur les fichiers.
  */
 export declare const LACET_MEUBLE: Record<string, number>;
 export declare function personnes(meubles: MeublePose[], catalogue: Record<string, MobilierItem>, 
