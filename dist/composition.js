@@ -163,8 +163,6 @@ export function cleDemiMur(m, taille, type) {
         return null;
     return `tente-${m.slug}-${taille}-${t.slug}-${d.lettre}`;
 }
-/** Clé catalogue du bandeau — sans lettre de côté : le même se pose sur l'un ou
- *  l'autre pignon, et le tarif n'en porte qu'un. `null` si le modèle n'en a pas. */
 /**
  * Ce qu'un côté peut porter. Un côté porte UN seul type — ils sont exclusifs
  * par construction, ce qui rend inutile toute règle du genre « pas de porte sur
@@ -382,8 +380,16 @@ export function cleTypeCote(m, taille, type, cote) {
 export const cleAuvent = (m, taille) => `tente-${m.slug}-${taille}-auvent`;
 export const cleImpression = (m, taille, imp) => `tente-${m.slug}-${taille}-${IMPRESSIONS[imp]}`;
 /** Les accessoires ne dépendent pas tous de la taille — le lest, si. Et ils ne
- *  dépendent d'aucun modèle : un sac est un sac. */
+ *  dépendent d'aucun modèle : un sac est un sac.
+ *
+ *  Le lest en eau est traité EXPLICITEMENT : c'est le seul dont le slug dépend
+ *  de la taille (il est `null` dans ACCESSOIRES pour cette raison). Toute valeur
+ *  ABSENTE de la table rend `null`, comme `cleTypeCote` — jamais un repli muet
+ *  sur la clé du lest. Sans ce garde-fou, une clé d'option périmée ou fautive
+ *  (une ConfigTente bâtie à la main par un appelant) devenait une ligne « lest
+ *  en eau » chiffrée au prix du lest, sans le moindre signal. */
 export function cleAccessoire(m, taille, acc) {
-    const a = ACCESSOIRES.find((x) => x.valeur === acc);
-    return a?.slug ?? `tente-${m.slug}-${taille}-lest-eau`;
+    if (acc === "acc_lest_eau")
+        return `tente-${m.slug}-${taille}-lest-eau`;
+    return ACCESSOIRES.find((x) => x.valeur === acc)?.slug ?? null;
 }

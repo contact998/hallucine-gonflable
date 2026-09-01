@@ -78,6 +78,13 @@ describe("les clés du catalogue — le contrat avec le CRM", () => {
     expect(cleAccessoire(X, "6x6", "acc_lest_eau")).toBe("tente-x-6x6-lest-eau");
   });
 
+  it("un accessoire inconnu rend null — jamais un repli muet sur le lest", () => {
+    expect(cleAccessoire(X, "4x4", "acc_inconnu")).toBeNull();
+    /* Le lest reste, lui, traité explicitement : c'est le seul dont le slug est
+       null dans la table parce qu'il dépend de la taille. */
+    expect(cleAccessoire(X, "4x4", "acc_lest_eau")).toBe("tente-x-4x4-lest-eau");
+  });
+
   it("toute impression déclenchée par un type de côté existe dans la table", () => {
     for (const t of TYPES_COTE) {
       if (t.impression) expect(Object.keys(IMPRESSIONS)).toContain(t.impression);

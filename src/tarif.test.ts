@@ -178,10 +178,10 @@ describe("les options", () => {
   it("un accessoire coché et au tarif : sa ligne", () => {
     const prixDe = table({
       [cleTente(X, "4x4")]: 3200,
-      [cleAccessoire(X, "4x4", "acc_sac")]: 45,
+      [cleAccessoire(X, "4x4", "acc_sac")!]: 45,
     });
     const lignes = lignesTarifTente(cfg({ options: ["acc_sac"] }), prixDe);
-    expect(lignes).toContainEqual({ genre: "accessoire", cle: "acc_sac", prix: 45, slug: cleAccessoire(X, "4x4", "acc_sac") });
+    expect(lignes).toContainEqual({ genre: "accessoire", cle: "acc_sac", prix: 45, slug: cleAccessoire(X, "4x4", "acc_sac")! });
   });
 });
 
@@ -192,7 +192,7 @@ describe("le total d'une tente composée", () => {
       [cleTypeCote(X, "4x4", "paroi", "avant")!]: 260,
       [cleTypeCote(X, "4x4", "paroi", "gauche")!]: 260,
       [cleAuvent(X, "4x4")]: 180,
-      [cleAccessoire(X, "4x4", "acc_sac")]: 45,
+      [cleAccessoire(X, "4x4", "acc_sac")!]: 45,
     });
     const c = cfg({
       cotes: { avant: "paroi", droit: "vide", arriere: "vide", gauche: "paroi" },
@@ -223,7 +223,7 @@ describe("la rangée de tentes", () => {
     [cleTypeCote(X, "4x4", "jonction", "gauche")!]: 190,
     [cleTypeCote(X, "4x4", "paroi", "droit")!]: 260,
     [cleTypeCote(X, "4x4", "paroi", "gauche")!]: 260,
-    [cleAccessoire(X, "4x4", "acc_sac")]: 45,
+    [cleAccessoire(X, "4x4", "acc_sac")!]: 45,
     [cleImpression(X, "4x4", "imp_jonction")]: 50,
   });
 
@@ -249,7 +249,7 @@ describe("la rangée de tentes", () => {
 
   it("les accessoires ne se comptent qu'une fois : ils sont réglés pour l'ensemble", () => {
     const lignes = lignesTarifTente(rangee(4, { options: ["acc_sac"] }), prixDe);
-    expect(lignes).toContainEqual({ genre: "accessoire", cle: "acc_sac", prix: 45, slug: cleAccessoire(X, "4x4", "acc_sac") });
+    expect(lignes).toContainEqual({ genre: "accessoire", cle: "acc_sac", prix: 45, slug: cleAccessoire(X, "4x4", "acc_sac")! });
   });
 
   it("l'impression de jonction suit les jonctions, pas les tentes", () => {
@@ -281,7 +281,7 @@ describe("l'ordre du détail d'une rangée", () => {
       [cleTypeCote(X, "4x4", "jonction", "gauche")!]: 190,
       [cleTypeCote(X, "4x4", "paroi", "droit")!]: 260,
       [cleTypeCote(X, "4x4", "paroi", "gauche")!]: 260,
-      [cleAccessoire(X, "4x4", "acc_sac")]: 45,
+      [cleAccessoire(X, "4x4", "acc_sac")!]: 45,
     });
     const lignes = lignesTarifTente(
       cfg({

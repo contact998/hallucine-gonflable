@@ -102,8 +102,6 @@ export declare const demiMurPossible: (m: Modele, cote: string, choixCote: strin
 export declare const typesDemiMur: (m: Modele) => readonly string[];
 /** Clé catalogue d'un demi-mur : `tente-n-3x3-paroi-porte-d`. */
 export declare function cleDemiMur(m: Modele, taille: string, type: string): string | null;
-/** Clé catalogue du bandeau — sans lettre de côté : le même se pose sur l'un ou
- *  l'autre pignon, et le tarif n'en porte qu'un. `null` si le modèle n'en a pas. */
 /**
  * Ce qu'un côté peut porter. Un côté porte UN seul type — ils sont exclusifs
  * par construction, ce qui rend inutile toute règle du genre « pas de porte sur
@@ -295,5 +293,12 @@ export declare function cleTypeCote(m: Modele, taille: string, type: string, cot
 export declare const cleAuvent: (m: Modele, taille: string) => string;
 export declare const cleImpression: (m: Modele, taille: string, imp: Impression) => string;
 /** Les accessoires ne dépendent pas tous de la taille — le lest, si. Et ils ne
- *  dépendent d'aucun modèle : un sac est un sac. */
-export declare function cleAccessoire(m: Modele, taille: string, acc: string): string;
+ *  dépendent d'aucun modèle : un sac est un sac.
+ *
+ *  Le lest en eau est traité EXPLICITEMENT : c'est le seul dont le slug dépend
+ *  de la taille (il est `null` dans ACCESSOIRES pour cette raison). Toute valeur
+ *  ABSENTE de la table rend `null`, comme `cleTypeCote` — jamais un repli muet
+ *  sur la clé du lest. Sans ce garde-fou, une clé d'option périmée ou fautive
+ *  (une ConfigTente bâtie à la main par un appelant) devenait une ligne « lest
+ *  en eau » chiffrée au prix du lest, sans le moindre signal. */
+export declare function cleAccessoire(m: Modele, taille: string, acc: string): string | null;

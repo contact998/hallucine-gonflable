@@ -89,6 +89,10 @@ function lignesUneTente(c, prixDe, impCotes) {
         }
         else {
             const cleAcc = cleAccessoire(m, c.taille, k);
+            /* Clé inconnue = pas de ligne, jamais un repli muet sur le lest : le
+               garde-fou vit dans `cleAccessoire`, on le respecte ici. */
+            if (!cleAcc)
+                continue;
             const p = prixDe(cleAcc);
             if (p != null)
                 out.push({ genre: "accessoire", cle: k, prix: p, slug: cleAcc });
