@@ -121,6 +121,48 @@ describe("le demi-mur de la N", () => {
   });
 });
 
+describe("l'impression par côté de la N — le tarif réel n'a que des clés lettrées", () => {
+  /* Le vrai tarif de la N (relevé du 02/09/2026) ne porte AUCUNE clé générique
+     `impression-paroi` : imprimer un long côté vaut `impression-paroi-a`, un
+     pignon `-b`, le demi-mur `-d`. Sans la lettre, ces lignes tombaient du
+     devis — l'impression d'une paroi de N partait gratuite, sans un signal. */
+  it("chaque côté imprimé chiffre par SA clé lettrée, le demi-mur par la sienne", () => {
+    const prixDe = table({
+      [cleTente(N, "3x3")]: 2800,
+      [cleTypeCote(N, "3x3", "courbe", "avant")!]: 300,
+      [cleTypeCote(N, "3x3", "paroi", "gauche")!]: 460,
+      [cleDemiMur(N, "3x3", "porte")!]: 220,
+      "tente-n-3x3-impression-paroi-a": 130,
+      "tente-n-3x3-impression-paroi-courbe": 80,
+      "tente-n-3x3-impression-paroi-d": 130,
+    });
+    const lignes = lignesTarifTente(cfg({
+      modele: "n",
+      taille: "3x3",
+      cotes: { avant: "courbe", droit: "vide", arriere: "vide", gauche: "paroi" },
+      demiMurs: { avant: "porte", droit: "vide", arriere: "vide", gauche: "vide" },
+    }), prixDe, { avant: true, gauche: true });
+    expect(lignes).toContainEqual({ genre: "impression_cote", cote: "avant", prix: 80, slug: "tente-n-3x3-impression-paroi-courbe" });
+    expect(lignes).toContainEqual({ genre: "impression_cote", cote: "gauche", prix: 130, slug: "tente-n-3x3-impression-paroi-a" });
+    expect(lignes).toContainEqual({ genre: "impression_demi_mur", cote: "avant", prix: 130, slug: "tente-n-3x3-impression-paroi-d" });
+  });
+
+  it("la clé lettrée PRIME sur la générique quand les deux existent", () => {
+    const prixDe = table({
+      [cleTente(N, "3x3")]: 2800,
+      [cleTypeCote(N, "3x3", "paroi", "avant")!]: 470,
+      "tente-n-3x3-impression-paroi-b": 150,
+      [cleImpression(N, "3x3", "imp_paroi")]: 999,
+    });
+    const lignes = lignesTarifTente(cfg({
+      modele: "n",
+      taille: "3x3",
+      cotes: { avant: "paroi", droit: "vide", arriere: "vide", gauche: "vide" },
+    }), prixDe, { avant: true });
+    expect(lignes).toContainEqual({ genre: "impression_cote", cote: "avant", prix: 150, slug: "tente-n-3x3-impression-paroi-b" });
+  });
+});
+
 describe("l'impression d'un côté ordinaire", () => {
   it("cochée, elle chiffre avec l'impression la plus précise que le tarif connaisse", () => {
     const prixDe = table({

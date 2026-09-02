@@ -292,6 +292,32 @@ export declare const cleTente: (m: Modele, taille: string) => string;
 export declare function cleTypeCote(m: Modele, taille: string, type: string, cote?: string): string | null;
 export declare const cleAuvent: (m: Modele, taille: string) => string;
 export declare const cleImpression: (m: Modele, taille: string, imp: Impression) => string;
+/**
+ * L'impression d'un côté chez un modèle facturé PAR CÔTÉ : la clé porte la
+ * lettre du côté, comme la paroi qu'elle imprime — `tente-n-3x3-impression-paroi-b`.
+ * `null` quand la lettre n'a pas cours : modèle aux côtés interchangeables,
+ * côté sans lettre, ou impression d'un côté unique (la courbe, que le tarif
+ * porte sans lettre — même exception que sa paroi dans `cleTypeCote`).
+ */
+export declare function cleImpressionCote(m: Modele, taille: string, imp: Impression, cote: string): string | null;
+/**
+ * L'impression qui chiffre CE côté, et la clé qui la porte : de la plus précise
+ * à la plus générale — la variante du type d'abord (la paroi à porte), et pour
+ * chacune la clé lettrée avant la générique. C'est le repli d'`impressionsCote`,
+ * complété de la lettre : écrit ici pour que le récap du site et le devis
+ * tombent sur la même ligne — la N ne tarife l'impression de ses parois que par
+ * côté (`impression-paroi-a` / `-b`), sans clé générique.
+ */
+export declare function impressionDuCote(m: Modele, taille: string, type: string, cote: string, connait: (cle: string) => boolean): {
+    imp: Impression;
+    cle: string;
+} | null;
+/**
+ * La clé qui chiffre l'impression du DEMI-MUR : sa toile a sa propre lettre au
+ * tarif (`d` chez la N, `impression-paroi-d`), repli sur la clé générique du
+ * modèle. `null` sans demi-mur ou sans ligne au tarif.
+ */
+export declare function cleImpressionDemiMur(m: Modele, taille: string, connait: (cle: string) => boolean): string | null;
 /** Les accessoires ne dépendent pas tous de la taille — le lest, si. Et ils ne
  *  dépendent d'aucun modèle : un sac est un sac.
  *

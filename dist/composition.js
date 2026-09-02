@@ -385,6 +385,57 @@ export function cleTypeCote(m, taille, type, cote) {
 }
 export const cleAuvent = (m, taille) => `tente-${m.slug}-${taille}-auvent`;
 export const cleImpression = (m, taille, imp) => `tente-${m.slug}-${taille}-${IMPRESSIONS[imp]}`;
+/**
+ * L'impression d'un côté chez un modèle facturé PAR CÔTÉ : la clé porte la
+ * lettre du côté, comme la paroi qu'elle imprime — `tente-n-3x3-impression-paroi-b`.
+ * `null` quand la lettre n'a pas cours : modèle aux côtés interchangeables,
+ * côté sans lettre, ou impression d'un côté unique (la courbe, que le tarif
+ * porte sans lettre — même exception que sa paroi dans `cleTypeCote`).
+ */
+export function cleImpressionCote(m, taille, imp, cote) {
+    if (!m.cleParCote)
+        return null;
+    if (IMPRESSIONS[imp].startsWith("impression-paroi-courbe"))
+        return null;
+    const lettre = m.lettreCote?.[cote];
+    if (!lettre)
+        return null;
+    return `${cleImpression(m, taille, imp)}-${lettre}`;
+}
+/**
+ * L'impression qui chiffre CE côté, et la clé qui la porte : de la plus précise
+ * à la plus générale — la variante du type d'abord (la paroi à porte), et pour
+ * chacune la clé lettrée avant la générique. C'est le repli d'`impressionsCote`,
+ * complété de la lettre : écrit ici pour que le récap du site et le devis
+ * tombent sur la même ligne — la N ne tarife l'impression de ses parois que par
+ * côté (`impression-paroi-a` / `-b`), sans clé générique.
+ */
+export function impressionDuCote(m, taille, type, cote, connait) {
+    for (const imp of impressionsCote(type)) {
+        const lettree = cleImpressionCote(m, taille, imp, cote);
+        if (lettree && connait(lettree))
+            return { imp, cle: lettree };
+        const generique = cleImpression(m, taille, imp);
+        if (connait(generique))
+            return { imp, cle: generique };
+    }
+    return null;
+}
+/**
+ * La clé qui chiffre l'impression du DEMI-MUR : sa toile a sa propre lettre au
+ * tarif (`d` chez la N, `impression-paroi-d`), repli sur la clé générique du
+ * modèle. `null` sans demi-mur ou sans ligne au tarif.
+ */
+export function cleImpressionDemiMur(m, taille, connait) {
+    const d = m.demiMur;
+    if (!d)
+        return null;
+    const generique = cleImpression(m, taille, d.impression);
+    const lettree = `${generique}-${d.lettre}`;
+    if (connait(lettree))
+        return lettree;
+    return connait(generique) ? generique : null;
+}
 /** Les accessoires ne dépendent pas tous de la taille — le lest, si. Et ils ne
  *  dépendent d'aucun modèle : un sac est un sac.
  *

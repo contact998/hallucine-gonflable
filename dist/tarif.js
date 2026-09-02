@@ -1,4 +1,4 @@
-import { modele as trouverModele, typeCote, demiMurPossible, cleTente, cleTypeCote, cleRepliCote, cleAuvent, cleDemiMur, cleImpression, cleAccessoire, IMPRESSIONS, IMP_SOCLE, IMP_AUVENT, IMP_JONCTION, impressionsCote, rangeeTentes, nbTentesRangee, } from "./composition.js";
+import { modele as trouverModele, typeCote, demiMurPossible, cleTente, cleTypeCote, cleRepliCote, cleAuvent, cleDemiMur, cleImpression, cleAccessoire, cleImpressionDemiMur, impressionDuCote, IMPRESSIONS, IMP_SOCLE, IMP_AUVENT, IMP_JONCTION, rangeeTentes, nbTentesRangee, } from "./composition.js";
 import { dessinable } from "./vue3d.js";
 /** Le total de lignes chiffrées, quantités comprises. */
 export const totalLignesTarif = (lignes) => lignes.reduce((s, l) => s + l.prix * (l.quantite ?? 1), 0);
@@ -32,8 +32,7 @@ function lignesUneTente(c, prixDe, impCotes) {
            du type demandé — le tarif ne connaît pas ce dernier. */
         return { prix: p, provisoire: p != null, slug: (repli ?? "") };
     };
-    /** L'impression qui chiffre un côté : la plus précise que le tarif connaisse. */
-    const impDuType = (type) => impressionsCote(type).find((i) => prixImp(i) != null);
+    const connait = (cle) => prixDe(cle) != null;
     const clePack = cleTente(m, c.taille);
     const pack = prixDe(clePack);
     if (pack != null)
@@ -44,11 +43,13 @@ function lignesUneTente(c, prixDe, impCotes) {
             const { prix, provisoire, slug } = prixType(type, cote);
             if (prix != null)
                 out.push({ genre: "cote", cote, cle: typeCote(type).libelle, provisoire, prix, slug });
-            const impLiee = impDuType(type);
-            if (impCotes?.[cote] && impLiee) {
-                const pi = prixImp(impLiee);
+            /* La clé lettrée du côté d'abord, la générique en repli — la N ne tarife
+               l'impression de ses parois que par côté. */
+            const impC = impressionDuCote(m, c.taille, type, cote, connait);
+            if (impCotes?.[cote] && impC) {
+                const pi = prixDe(impC.cle);
                 if (pi != null)
-                    out.push({ genre: "impression_cote", cote, prix: pi, slug: cleImpression(m, c.taille, impLiee) });
+                    out.push({ genre: "impression_cote", cote, prix: pi, slug: impC.cle });
             }
         }
         const dm = c.demiMurs?.[cote] ?? "vide";
@@ -57,12 +58,13 @@ function lignesUneTente(c, prixDe, impCotes) {
             const pdm = cleDm ? prixDe(cleDm) : null;
             if (pdm != null)
                 out.push({ genre: "demi_mur", cote, cle: typeCote(dm).libelle, prix: pdm, slug: cleDm });
-            /* Le demi-mur est une toile de plus : habiller ce côté l'imprime aussi. */
+            /* Le demi-mur est une toile de plus : habiller ce côté l'imprime aussi —
+               sa clé lettrée (`-d`) d'abord, la générique en repli. */
             if (impCotes?.[cote] && m.demiMur) {
-                const impDm = m.demiMur.impression;
-                const pi = prixImp(impDm);
-                if (pi != null)
-                    out.push({ genre: "impression_demi_mur", cote, prix: pi, slug: cleImpression(m, c.taille, impDm) });
+                const cleImpDm = cleImpressionDemiMur(m, c.taille, connait);
+                const pi = cleImpDm ? prixDe(cleImpDm) : null;
+                if (cleImpDm && pi != null)
+                    out.push({ genre: "impression_demi_mur", cote, prix: pi, slug: cleImpDm });
             }
         }
         if (c.auvents[cote]) {

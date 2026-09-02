@@ -23,7 +23,8 @@ import type { ConfigTente } from "./config.js";
 import {
   modele as trouverModele, typeCote, demiMurPossible,
   cleTente, cleTypeCote, cleRepliCote, cleAuvent, cleDemiMur, cleImpression, cleAccessoire,
-  IMPRESSIONS, IMP_SOCLE, IMP_AUVENT, IMP_JONCTION, impressionsCote,
+  cleImpressionDemiMur, impressionDuCote,
+  IMPRESSIONS, IMP_SOCLE, IMP_AUVENT, IMP_JONCTION,
   rangeeTentes, nbTentesRangee,
   type Impression, type Accessoire,
 } from "./composition.js";
@@ -108,9 +109,7 @@ function lignesUneTente(
        du type demandé — le tarif ne connaît pas ce dernier. */
     return { prix: p, provisoire: p != null, slug: (repli ?? "") as string };
   };
-  /** L'impression qui chiffre un côté : la plus précise que le tarif connaisse. */
-  const impDuType = (type: string): Impression | undefined =>
-    impressionsCote(type).find((i) => prixImp(i) != null);
+  const connait = (cle: string): boolean => prixDe(cle) != null;
 
   const clePack = cleTente(m, c.taille);
   const pack = prixDe(clePack);
@@ -121,10 +120,12 @@ function lignesUneTente(
     if (type !== "vide") {
       const { prix, provisoire, slug } = prixType(type, cote);
       if (prix != null) out.push({ genre: "cote", cote, cle: typeCote(type).libelle, provisoire, prix, slug });
-      const impLiee = impDuType(type);
-      if (impCotes?.[cote] && impLiee) {
-        const pi = prixImp(impLiee);
-        if (pi != null) out.push({ genre: "impression_cote", cote, prix: pi, slug: cleImpression(m, c.taille, impLiee) });
+      /* La clé lettrée du côté d'abord, la générique en repli — la N ne tarife
+         l'impression de ses parois que par côté. */
+      const impC = impressionDuCote(m, c.taille, type, cote, connait);
+      if (impCotes?.[cote] && impC) {
+        const pi = prixDe(impC.cle);
+        if (pi != null) out.push({ genre: "impression_cote", cote, prix: pi, slug: impC.cle });
       }
     }
     const dm = c.demiMurs?.[cote] ?? "vide";
@@ -132,11 +133,12 @@ function lignesUneTente(
       const cleDm = cleDemiMur(m, c.taille, dm);
       const pdm = cleDm ? prixDe(cleDm) : null;
       if (pdm != null) out.push({ genre: "demi_mur", cote, cle: typeCote(dm).libelle, prix: pdm, slug: cleDm as string });
-      /* Le demi-mur est une toile de plus : habiller ce côté l'imprime aussi. */
+      /* Le demi-mur est une toile de plus : habiller ce côté l'imprime aussi —
+         sa clé lettrée (`-d`) d'abord, la générique en repli. */
       if (impCotes?.[cote] && m.demiMur) {
-        const impDm = m.demiMur.impression as Impression;
-        const pi = prixImp(impDm);
-        if (pi != null) out.push({ genre: "impression_demi_mur", cote, prix: pi, slug: cleImpression(m, c.taille, impDm) });
+        const cleImpDm = cleImpressionDemiMur(m, c.taille, connait);
+        const pi = cleImpDm ? prixDe(cleImpDm) : null;
+        if (cleImpDm && pi != null) out.push({ genre: "impression_demi_mur", cote, prix: pi, slug: cleImpDm });
       }
     }
     if (c.auvents[cote]) {

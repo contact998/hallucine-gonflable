@@ -4,6 +4,7 @@ import {
   cleTente, cleTypeCote, cleAuvent, cleImpression, cleAccessoire,
   MODELES, modele, typePossible, demiMurPossible, typesDemiMur, cleDemiMur, cleRepliCote,
   IMPRESSIONS, ACCESSOIRES, impressionsCote, rangeeTentes,
+  cleImpressionCote, cleImpressionDemiMur, impressionDuCote,
 } from "./composition.js";
 
 const X = modele("x");
@@ -179,6 +180,65 @@ describe("la N : quelle lettre du tarif pour quel côté", () => {
   it("un type absent du tarif d'un modèle ne rend pas de clé", () => {
     expect(cleTypeCote(modele("spider"), "6x6", "courbe")).toBeNull();
     expect(cleTypeCote(modele("v"), "5x5", "porte", "a")).toBeNull();
+  });
+});
+
+describe("l'impression lettrée — la N tarife l'impression de ses parois PAR CÔTÉ", () => {
+  const N = modele("n");
+  const X = modele("x");
+  /* Le tarif réel de la N (relevé du 02/09/2026) : `impression-paroi-a` / `-b`
+     / `-d` et `impression-paroi-courbe`, AUCUNE clé générique
+     `impression-paroi`. Sans la lettre, l'impression d'une paroi de N était
+     introuvable — gratuite au devis, muette au récap du site. */
+  const TARIF_N = new Set([
+    "tente-n-3x3-impression-paroi-a",
+    "tente-n-3x3-impression-paroi-b",
+    "tente-n-3x3-impression-paroi-d",
+    "tente-n-3x3-impression-paroi-courbe",
+  ]);
+  const connait = (cle: string) => TARIF_N.has(cle);
+
+  it("cleImpressionCote suit les lettres des parois : pignons en B, longs côtés en A", () => {
+    expect(cleImpressionCote(N, "3x3", "imp_paroi", "avant")).toBe("tente-n-3x3-impression-paroi-b");
+    expect(cleImpressionCote(N, "3x3", "imp_paroi", "gauche")).toBe("tente-n-3x3-impression-paroi-a");
+  });
+
+  it("la courbe garde sa clé sans lettre, comme sa paroi", () => {
+    expect(cleImpressionCote(N, "3x3", "imp_courbe", "avant")).toBeNull();
+  });
+
+  it("hors modèle à lettres, ou côté sans lettre : pas de clé lettrée", () => {
+    expect(cleImpressionCote(X, "4x4", "imp_paroi", "avant")).toBeNull();
+    expect(cleImpressionCote(N, "3x3", "imp_paroi", "nulle-part")).toBeNull();
+  });
+
+  it("impressionDuCote chiffre la paroi d'un côté de N par sa clé lettrée", () => {
+    expect(impressionDuCote(N, "3x3", "paroi", "avant", connait))
+      .toEqual({ imp: "imp_paroi", cle: "tente-n-3x3-impression-paroi-b" });
+    expect(impressionDuCote(N, "3x3", "courbe", "avant", connait))
+      .toEqual({ imp: "imp_courbe", cle: "tente-n-3x3-impression-paroi-courbe" });
+  });
+
+  it("une porte de N retombe sur l'impression de SA paroi lettrée — jamais gratuite", () => {
+    /* Ni `impression-paroi-porte-a` ni la générique n'existent chez la N : le
+       repli d'`impressionsCote` continue jusqu'à `impression-paroi-a`. */
+    expect(impressionDuCote(N, "3x3", "porte", "gauche", connait))
+      .toEqual({ imp: "imp_paroi", cle: "tente-n-3x3-impression-paroi-a" });
+  });
+
+  it("chez la X, la résolution retombe sur la clé générique — rien ne change", () => {
+    const generique = new Set(["tente-x-4x4-impression-paroi"]);
+    expect(impressionDuCote(X, "4x4", "paroi", "avant", (c) => generique.has(c)))
+      .toEqual({ imp: "imp_paroi", cle: "tente-x-4x4-impression-paroi" });
+    expect(impressionDuCote(X, "4x4", "vide", "avant", (c) => generique.has(c))).toBeNull();
+  });
+
+  it("l'impression du demi-mur porte SA lettre (`d`), repli sur la générique", () => {
+    expect(cleImpressionDemiMur(N, "3x3", connait)).toBe("tente-n-3x3-impression-paroi-d");
+    const generiqueSeule = new Set(["tente-n-3x3-impression-paroi"]);
+    expect(cleImpressionDemiMur(N, "3x3", (c) => generiqueSeule.has(c))).toBe("tente-n-3x3-impression-paroi");
+    expect(cleImpressionDemiMur(N, "3x3", () => false)).toBeNull();
+    expect(cleImpressionDemiMur(X, "4x4", connait)).toBeNull();
   });
 });
 
