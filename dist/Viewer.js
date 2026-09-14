@@ -50,6 +50,7 @@ const MM_EN_M = 0.001;
    lire une couture. Largeur en pixels d'écran ; la résolution est renseignée
    par le viewer à chaque redimensionnement. */
 const LISERE_MAT = new LineMaterial({ color: 0x2f353d, linewidth: 2.5, worldUnits: false });
+const LISERE_X_MAT = new LineMaterial({ color: 0x2f353d, linewidth: 1.1, worldUnits: false });
 /* Vitre : détection et matière dans `vitre.ts`, partagées avec l'abri du
    lounge — une seule heuristique pour les deux scènes. */
 /**
@@ -172,10 +173,22 @@ function charger(loader, m, nom) {
             g.scene.traverse((o) => {
                 const maille = o;
                 const mat = maille.material;
-                if (mat)
-                    mat.side = THREE.DoubleSide;
                 if (!maille.isMesh)
                     return;
+                if (mat)
+                    mat.side = THREE.DoubleSide;
+                if (mat && m.slug === "x") {
+                    const tissu = new THREE.MeshPhysicalMaterial();
+                    THREE.MeshStandardMaterial.prototype.copy.call(tissu, mat);
+                    tissu.side = THREE.DoubleSide;
+                    tissu.metalness = 0;
+                    tissu.roughness = nom === "LEG" ? 0.57 : 0.78;
+                    tissu.clearcoat = nom === "LEG" ? 0.12 : 0.035;
+                    tissu.clearcoatRoughness = 0.65;
+                    maille.material = tissu;
+                }
+                maille.castShadow = m.slug === "x";
+                maille.receiveShadow = m.slug === "x";
                 if (porteLisere(nom)) {
                     /* Seulement les grands pans de toile — pas la quincaillerie des pieds
                        d'auvent, dont les arêtes feraient du bruit. */
@@ -185,7 +198,7 @@ function charger(loader, m, nom) {
                         const aretes = new THREE.EdgesGeometry(maille.geometry, 38);
                         const geo = new LineSegmentsGeometry().setPositions(Array.from(aretes.attributes.position.array));
                         aretes.dispose();
-                        lignes.push([maille, new LineSegments2(geo, LISERE_MAT)]);
+                        lignes.push([maille, new LineSegments2(geo, m.slug === "x" ? LISERE_X_MAT : LISERE_MAT)]);
                     }
                 }
             });
@@ -251,16 +264,36 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
         const rendu = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         rendu.setPixelRatio(Math.min(devicePixelRatio, 2));
         rendu.outputColorSpace = THREE.SRGBColorSpace;
+        rendu.shadowMap.enabled = M.slug === "x";
+        rendu.shadowMap.type = THREE.PCFSoftShadowMap;
         el.appendChild(rendu.domElement);
         rendu.domElement.style.cssText = "width:100%;height:100%;display:block;touch-action:none";
-        /* Éclairage simple et FIDÈLE : ciel + soleil, rien d'autre. Les essais du
-           06/08 sont REJETÉS par Daniel, ne pas y revenir : environnement simulé +
-           tone mapping cinéma (teintaient la toile de jaune-gris), ombre portée au
-           sol (tache qui « s'arrête à la tente »). */
-        sc.add(new THREE.HemisphereLight(0xdfe9f2, 0x20262e, 2.1));
-        const soleil = new THREE.DirectionalLight(0xffffff, 1.7);
-        soleil.position.set(4, -5, 8);
-        sc.add(soleil);
+        /* La tente X garde un blanc neutre, sans environnement teinté ni tone
+           mapping. Le rendu approuvé le 15/09/2026 reste limité à ce modèle. */
+        const studio = M.slug === "x";
+        sc.add(studio
+            ? new THREE.HemisphereLight(0xffffff, 0x8f969e, 1.65)
+            : new THREE.HemisphereLight(0xdfe9f2, 0x20262e, 2.1));
+        const soleil = new THREE.DirectionalLight(0xffffff, studio ? 2.1 : 1.7);
+        soleil.position.set(studio ? -3 : 4, -5, studio ? 9 : 8);
+        soleil.castShadow = studio;
+        // Une seule ombre ; résolution contenue sur les appareils tactiles.
+        const pixelsOmbre = matchMedia("(pointer: coarse)").matches ? 1024 : 2048;
+        soleil.shadow.mapSize.set(pixelsOmbre, pixelsOmbre);
+        soleil.shadow.normalBias = 0.018;
+        soleil.shadow.bias = -0.0001;
+        soleil.shadow.radius = 4;
+        sc.add(soleil, soleil.target);
+        const solGeo = new THREE.PlaneGeometry(200, 200);
+        const solMat = new THREE.ShadowMaterial({ opacity: 0.12 });
+        const sol = new THREE.Mesh(solGeo, solMat);
+        sol.position.z = -0.012;
+        sol.receiveShadow = true;
+        if (studio) {
+            const fill = new THREE.DirectionalLight(0xffffff, 0.7);
+            fill.position.set(5, 3, 5);
+            sc.add(fill, sol);
+        }
         const orbite = new OrbitControls(cam, rendu.domElement);
         orbite.enableDamping = true;
         orbite.enablePan = false;
@@ -298,6 +331,17 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
             /* Rayon de la sphère englobante (demi-diagonale) : vue en plongée, c'est
                elle qui borne l'encombrement à l'écran, pas le plus grand côté seul. */
             const rayon = taille.length() / 2;
+            if (studio) {
+                // Suivre la tente ET sa rangée : une zone fixe coupait les grandes ombres.
+                const rayonOmbre = Math.max(2, rayon * 1.5);
+                soleil.target.position.copy(centre);
+                soleil.position.copy(centre).add(new THREE.Vector3(-3, -5, 9).normalize().multiplyScalar(rayonOmbre * 2));
+                Object.assign(soleil.shadow.camera, {
+                    left: -rayonOmbre, right: rayonOmbre, top: rayonOmbre, bottom: -rayonOmbre,
+                    near: 0.1, far: rayonOmbre * 4,
+                });
+                soleil.shadow.camera.updateProjectionMatrix();
+            }
             const vFov = (cam.fov * Math.PI) / 180;
             const hFov = 2 * Math.atan(Math.tan(vFov / 2) * cam.aspect);
             const recul = (rayon / Math.sin(Math.min(vFov, hFov) / 2)) * 1.12;
@@ -409,7 +453,7 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
             cam.aspect = w / h;
             cam.updateProjectionMatrix();
             rendu.setSize(w, h, false);
-            LISERE_MAT.resolution.set(w, h);
+            (studio ? LISERE_X_MAT : LISERE_MAT).resolution.set(w, h);
             /* Toujours recadrer : le passage en plein écran change radicalement le
                format, et cadrer() préserve l'angle de vue du visiteur — seuls la
                distance et la cible bougent. */
@@ -425,6 +469,9 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
             cancelAnimationFrame(raf);
             ro.disconnect();
             orbite.dispose();
+            solGeo.dispose();
+            solMat.dispose();
+            soleil.shadow.dispose();
             rendu.dispose();
             el.removeChild(rendu.domElement);
         };
