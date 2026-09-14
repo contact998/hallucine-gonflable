@@ -1,3 +1,4 @@
+import { eclairerStudio, reculPourBoite, matiereTente } from "./renduStudio.js";
 /*
  * Visualiseur 3D du lounge — plusieurs meubles gonflables dans un même sol.
  *
@@ -274,7 +275,7 @@ async function construireAbri(loader: GLTFLoader, a: Abri): Promise<{ groupe: TH
            identiques n'en ont qu'une, et la seconde écraserait les UV de la
            première. On sépare donc la géométrie, seulement quand il le faut. */
         if (a.visuel && mail.isMesh) mail.geometry = mail.geometry.clone();
-        mail.material = mat.clone();
+        mail.material = estVitre(mail) ? mat.clone() : matiereTente(mat, piece.nom === "LEG");
         const m2 = mail.material as THREE.MeshStandardMaterial;
         m2.side = THREE.DoubleSide;
         if (!estVitre(mail)) m2.color = toile;
@@ -306,17 +307,15 @@ async function construireAbri(loader: GLTFLoader, a: Abri): Promise<{ groupe: TH
       groupe.add(sous);
     }
     });
-    /* Aucune pièce chargée : abri entièrement absent, assumé comme l'échec total
-       (un lounge sans sa tente reste un lounge) — donc SANS bannière. Le compte
-       de pièces manquées ne parle que d'une tente PARTIELLE, celle qui trompe. */
-    if (!groupe.children.length) return { groupe: null, echecs: 0 };
+    /* Un abri entièrement absent doit lui aussi être signalé. */
+    if (!groupe.children.length) return { groupe: null, echecs: Math.max(1, echecs) };
     groupe.scale.setScalar(MM_EN_M * echelle(m, a.taille));
     if (a.visuel) await habillerAbri(groupe, a.visuel, hexDeTeinte(a.teinte ?? TEINTE_NUE));
     return { groupe, echecs };
   } catch {
     /* Modèle ou taille inconnus du module partagé : pas d'abri dessiné, et le
        lounge reste visible. Le devis, lui, ne dépend pas de cette fonction. */
-    return { groupe: null, echecs: 0 };
+    return { groupe: null, echecs: 1 };
   }
 }
 
@@ -560,7 +559,7 @@ type Props = {
   effacerParois?: boolean;
 };
 
-export default function MobilierViewer({ implantation, labelChargement, labelEchec, captureRef, abri, coteActif, ecran, habillages, visuels, libellesOutils, effacerParois }: Props) {
+export default function MobilierViewer({ implantation, labelChargement, labelEchec = (n: number) => `${n} élément(s) de la scène n’ont pas pu être chargés.`, captureRef, abri, coteActif, ecran, habillages, visuels, libellesOutils, effacerParois }: Props) {
   const hote = useRef<HTMLDivElement>(null);
   /* Lu par la boucle de rendu, montée une seule fois : un ref, pas une
      dépendance d'effet — changer d'avis ne remonte pas la scène. */
@@ -611,10 +610,7 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
     el.appendChild(rendu.domElement);
     rendu.domElement.style.cssText = "width:100%;height:100%;display:block;touch-action:none";
 
-    sc.add(new THREE.HemisphereLight(0xdfe9f2, 0x20262e, 2.1));
-    const soleil = new THREE.DirectionalLight(0xffffff, 1.7);
-    soleil.position.set(4, -5, 8);
-    sc.add(soleil);
+    eclairerStudio(sc);
 
     const orbite = new OrbitControls(cam, rendu.domElement);
     orbite.enableDamping = true;
@@ -635,18 +631,13 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
     const cadrer = () => {
       const boite = new THREE.Box3().setFromObject(racine);
       if (boite.isEmpty()) return;
-      const taille = boite.getSize(new THREE.Vector3());
       const centre = boite.getCenter(new THREE.Vector3());
-      const rayon = taille.length() / 2;
-      const vFov = cam.fov * RAD;
-      const hFov = 2 * Math.atan(Math.tan(vFov / 2) * cam.aspect);
-      const recul = (rayon / Math.sin(Math.min(vFov, hFov) / 2)) * 1.15;
       const off = cam.position.clone().sub(orbite.target);
       const az = off.x || off.y ? Math.atan2(off.y, off.x) : -0.9;
+      const direction = new THREE.Vector3(Math.cos(az) * 0.92, Math.sin(az) * 0.92, elevationRef.current).normalize();
+      const recul = reculPourBoite(boite, direction, cam.fov, cam.aspect);
       orbite.target.copy(centre);
-      cam.position.copy(centre).add(
-        new THREE.Vector3(Math.cos(az) * 0.92, Math.sin(az) * 0.92, elevationRef.current).multiplyScalar(recul),
-      );
+      cam.position.copy(centre).addScaledVector(direction, recul);
       orbite.minDistance = recul * 0.5;
       orbite.maxDistance = recul * 2.4;
       orbite.update();
@@ -803,14 +794,9 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
        devant un écran de chargement éternel — sol et cinquante-neuf autres
        meubles compris — sans le moindre message. On pose ce qui est arrivé, et
        on compte ce qui manque. */
-    /* L'abri se charge EN MÊME TEMPS que les meubles, et son échec ne compte
-       pas comme un meuble manquant : une tente qui ne se dessine pas n'enlève
-       rien au lounge, et son prix est au panier de toute façon. */
+    /* Les éléments manquants restent annoncés, même si le reste est visible. */
     const abriPromis = abri ? construireAbri(o.loader, abri) : Promise.resolve({ groupe: null, echecs: 0 });
 
-    /* L'écran se charge avec le reste, et son échec ne compte pas comme un
-       meuble manquant : un lounge sans son écran reste un lounge. Une taille
-       que la géométrie ne sait pas rendre le laisse absent, jamais faux. */
     const ecranPromis: Promise<EcranCharge | null> = ecran
       ? chargerEcranGlb(o.loader, ecran.gamme)
           .then((e) => {
@@ -860,7 +846,7 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
         .map((r) => r.value);
       /* Les meubles manqués PLUS les pièces d'abri manquées : la bannière dit
          tout ce qui manque à la scène, la tente partielle comprise. */
-      setEchecs(resultats.length - poses.length + abriCharge.echecs);
+      setEchecs(resultats.length - poses.length + abriCharge.echecs + (ecran && !ecranCharge ? 1 : 0));
 
       disposerSol(encore.racine.children.find((c) => c instanceof THREE.Mesh) ?? null);
       encore.racine.clear();
