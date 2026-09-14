@@ -525,6 +525,8 @@ const RECUL_ECRAN_M = 3;
 
 type Props = {
   implantation: Implantation;
+  /** Les fiches produit cadrent le meuble seul, sans surface de sol. */
+  afficherSol?: boolean;
   labelChargement?: string;
   /** Message quand des modèles n'ont pas pu être chargés — reçoit leur nombre. */
   labelEchec?: (n: number) => string;
@@ -559,7 +561,7 @@ type Props = {
   effacerParois?: boolean;
 };
 
-export default function MobilierViewer({ implantation, labelChargement, labelEchec = (n: number) => `${n} élément(s) de la scène n’ont pas pu être chargés.`, captureRef, abri, coteActif, ecran, habillages, visuels, libellesOutils, effacerParois }: Props) {
+export default function MobilierViewer({ implantation, afficherSol = true, labelChargement, labelEchec = (n: number) => `${n} élément(s) de la scène n’ont pas pu être chargés.`, captureRef, abri, coteActif, ecran, habillages, visuels, libellesOutils, effacerParois }: Props) {
   const hote = useRef<HTMLDivElement>(null);
   /* Lu par la boucle de rendu, montée une seule fois : un ref, pas une
      dépendance d'effet — changer d'avis ne remonte pas la scène. */
@@ -850,7 +852,7 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
 
       disposerSol(encore.racine.children.find((c) => c instanceof THREE.Mesh) ?? null);
       encore.racine.clear();
-      encore.racine.add(construireSol(implantation.sol));
+      if (afficherSol) encore.racine.add(construireSol(implantation.sol));
 
       for (const { pose, gabarit } of poses) {
         // Support en mètres (position/rotation de la pose), le gabarit
@@ -918,7 +920,7 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
       encore.reveiller();
       setPret(true);
     });
-  }, [implantation, abri, ecran, habillages, visuels]);
+  }, [implantation, abri, ecran, habillages, visuels, afficherSol]);
 
   /* ── Choisir un côté = l'abri le présente de face ────────────────────── */
   useEffect(() => {

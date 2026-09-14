@@ -480,7 +480,7 @@ function construireSol(sol) {
    La règle de projection dit la première rangée à une largeur d'écran au
    moins ; c'est celle-ci, et elle se voit dans la scène. */
 const RECUL_ECRAN_M = 3;
-export default function MobilierViewer({ implantation, labelChargement, labelEchec = (n) => `${n} élément(s) de la scène n’ont pas pu être chargés.`, captureRef, abri, coteActif, ecran, habillages, visuels, libellesOutils, effacerParois }) {
+export default function MobilierViewer({ implantation, afficherSol = true, labelChargement, labelEchec = (n) => `${n} élément(s) de la scène n’ont pas pu être chargés.`, captureRef, abri, coteActif, ecran, habillages, visuels, libellesOutils, effacerParois }) {
     const hote = useRef(null);
     /* Lu par la boucle de rendu, montée une seule fois : un ref, pas une
        dépendance d'effet — changer d'avis ne remonte pas la scène. */
@@ -739,7 +739,8 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
             setEchecs(resultats.length - poses.length + abriCharge.echecs + (ecran && !ecranCharge ? 1 : 0));
             disposerSol(encore.racine.children.find((c) => c instanceof THREE.Mesh) ?? null);
             encore.racine.clear();
-            encore.racine.add(construireSol(implantation.sol));
+            if (afficherSol)
+                encore.racine.add(construireSol(implantation.sol));
             for (const { pose, gabarit } of poses) {
                 // Support en mètres (position/rotation de la pose), le gabarit
                 // cloné reste en millimètres : la mise à l'échelle 0,001 vit sur ce
@@ -805,7 +806,7 @@ export default function MobilierViewer({ implantation, labelChargement, labelEch
             encore.reveiller();
             setPret(true);
         });
-    }, [implantation, abri, ecran, habillages, visuels]);
+    }, [implantation, abri, ecran, habillages, visuels, afficherSol]);
     /* ── Choisir un côté = l'abri le présente de face ────────────────────── */
     useEffect(() => {
         if (!pret || !abri || !coteActif)
