@@ -1,3 +1,4 @@
+import { eclairerStudio, matiereTente } from "./renduStudio.js";
 /*
  * Visualiseur 3D de la tente X — montre la composition réelle des 4 côtés.
  *
@@ -54,8 +55,7 @@ const MM_EN_M = 0.001;
 /* Lignes « grasses » : WebGL plafonne les lignes natives à 1 px — trop fin pour
    lire une couture. Largeur en pixels d'écran ; la résolution est renseignée
    par le viewer à chaque redimensionnement. */
-const LISERE_MAT = new LineMaterial({ color: 0x2f353d, linewidth: 2.5, worldUnits: false });
-const LISERE_X_MAT = new LineMaterial({ color: 0x2f353d, linewidth: 1.1, worldUnits: false });
+const LISERE_MAT = new LineMaterial({ color: 0x2f353d, linewidth: 1.1, worldUnits: false });
 
 /* Vitre : détection et matière dans `vitre.ts`, partagées avec l'abri du
    lounge — une seule heuristique pour les deux scènes. */
@@ -180,18 +180,11 @@ function charger(loader: GLTFLoader, m: ReturnType<typeof trouverModele>, nom: s
         const mat = maille.material as THREE.MeshStandardMaterial | undefined;
         if (!maille.isMesh) return;
         if (mat) mat.side = THREE.DoubleSide;
-        if (mat && m.slug === "x") {
-          const tissu = new THREE.MeshPhysicalMaterial();
-          THREE.MeshStandardMaterial.prototype.copy.call(tissu, mat);
-          tissu.side = THREE.DoubleSide;
-          tissu.metalness = 0;
-          tissu.roughness = nom === "LEG" ? 0.57 : 0.78;
-          tissu.clearcoat = nom === "LEG" ? 0.12 : 0.035;
-          tissu.clearcoatRoughness = 0.65;
-          maille.material = tissu;
+        if (mat) {
+          maille.material = matiereTente(mat, nom === "LEG");
         }
-        maille.castShadow = m.slug === "x";
-        maille.receiveShadow = m.slug === "x";
+        maille.castShadow = false;
+        maille.receiveShadow = false;
         if (porteLisere(nom)) {
           /* Seulement les grands pans de toile — pas la quincaillerie des pieds
              d'auvent, dont les arêtes feraient du bruit. */
@@ -203,7 +196,7 @@ function charger(loader: GLTFLoader, m: ReturnType<typeof trouverModele>, nom: s
               Array.from(aretes.attributes.position.array as Float32Array),
             );
             aretes.dispose();
-            lignes.push([maille, new LineSegments2(geo, m.slug === "x" ? LISERE_X_MAT : LISERE_MAT)]);
+            lignes.push([maille, new LineSegments2(geo, LISERE_MAT)]);
           }
         }
       });
@@ -214,7 +207,7 @@ function charger(loader: GLTFLoader, m: ReturnType<typeof trouverModele>, nom: s
         for (const cote of parCote.cotes) marquerFace(g.scene, angleCote(m, cote), cote);
       }
       return g.scene;
-    });
+    }).catch((erreur) => { cache.delete(url); throw erreur; });
     cache.set(url, p);
   }
   return p.then((s) => s.clone(true));
@@ -256,11 +249,13 @@ export interface TenteViewerProps {
 
   /** Texte de remplacement pendant le chargement. */
   labelChargement: string;
+  labelEchec?: string;
+  labelReessayer?: string;
   /** Reçoit la fonction de capture (JPEG data-URL) — jointe à la demande de devis. */
   captureRef?: React.MutableRefObject<(() => string | null) | null>;
 }
 
-export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, captureRef, tentesReliees, libellesOutils }: TenteViewerProps) {
+export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, labelEchec = "Vue 3D incomplète : un élément n’a pas pu être chargé.", labelReessayer = "Réessayer", captureRef, tentesReliees, libellesOutils }: TenteViewerProps) {
   const M = trouverModele(modele);
   const VUE = vue3d(M);
 
@@ -294,11 +289,17 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
   /* Azimut caméra visé (rad) — la boucle de rendu s'en rapproche en douceur. */
   const azimut = useRef(viseeNeuve(-1.0));
   const [pret, setPret] = useState(false);
+  const [echec, setEchec] = useState(false);
+  const [essai, setEssai] = useState(0);
 
   /* ── Mise en place : une seule fois ─────────────────────────────────── */
   useEffect(() => {
     const el = hote.current;
     if (!el) return;
+    setPret(false);
+    setEchec(false);
+    piecesSocle.current = {};
+    piecesAffichees.current = [];
 
     const sc = new THREE.Scene();
 
@@ -312,37 +313,11 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
     const rendu = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     rendu.setPixelRatio(Math.min(devicePixelRatio, 2));
     rendu.outputColorSpace = THREE.SRGBColorSpace;
-    rendu.shadowMap.enabled = M.slug === "x";
-    rendu.shadowMap.type = THREE.PCFSoftShadowMap;
+    rendu.shadowMap.enabled = false;
     el.appendChild(rendu.domElement);
     rendu.domElement.style.cssText = "width:100%;height:100%;display:block;touch-action:none";
 
-    /* La tente X garde un blanc neutre, sans environnement teinté ni tone
-       mapping. Le rendu approuvé le 15/09/2026 reste limité à ce modèle. */
-    const studio = M.slug === "x";
-    sc.add(studio
-      ? new THREE.HemisphereLight(0xffffff, 0x8f969e, 1.65)
-      : new THREE.HemisphereLight(0xdfe9f2, 0x20262e, 2.1));
-    const soleil = new THREE.DirectionalLight(0xffffff, studio ? 2.1 : 1.7);
-    soleil.position.set(studio ? -3 : 4, -5, studio ? 9 : 8);
-    soleil.castShadow = studio;
-    // Une seule ombre ; résolution contenue sur les appareils tactiles.
-    const pixelsOmbre = matchMedia("(pointer: coarse)").matches ? 1024 : 2048;
-    soleil.shadow.mapSize.set(pixelsOmbre, pixelsOmbre);
-    soleil.shadow.normalBias = 0.018;
-    soleil.shadow.bias = -0.0001;
-    soleil.shadow.radius = 4;
-    sc.add(soleil, soleil.target);
-    const solGeo = new THREE.PlaneGeometry(200, 200);
-    const solMat = new THREE.ShadowMaterial({ opacity: 0.12 });
-    const sol = new THREE.Mesh(solGeo, solMat);
-    sol.position.z = -0.012;
-    sol.receiveShadow = true;
-    if (studio) {
-      const fill = new THREE.DirectionalLight(0xffffff, 0.7);
-      fill.position.set(5, 3, 5);
-      sc.add(fill, sol);
-    }
+    eclairerStudio(sc);
 
     const orbite = new OrbitControls(cam, rendu.domElement);
     orbite.enableDamping = true;
@@ -382,17 +357,6 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
       /* Rayon de la sphère englobante (demi-diagonale) : vue en plongée, c'est
          elle qui borne l'encombrement à l'écran, pas le plus grand côté seul. */
       const rayon = taille.length() / 2;
-      if (studio) {
-        // Suivre la tente ET sa rangée : une zone fixe coupait les grandes ombres.
-        const rayonOmbre = Math.max(2, rayon * 1.5);
-        soleil.target.position.copy(centre);
-        soleil.position.copy(centre).add(new THREE.Vector3(-3, -5, 9).normalize().multiplyScalar(rayonOmbre * 2));
-        Object.assign(soleil.shadow.camera, {
-          left: -rayonOmbre, right: rayonOmbre, top: rayonOmbre, bottom: -rayonOmbre,
-          near: 0.1, far: rayonOmbre * 4,
-        });
-        soleil.shadow.camera.updateProjectionMatrix();
-      }
       const vFov = (cam.fov * Math.PI) / 180;
       const hFov = 2 * Math.atan(Math.tan(vFov / 2) * cam.aspect);
       const recul = (rayon / Math.sin(Math.min(vFov, hFov) / 2)) * 1.12;
@@ -429,7 +393,7 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
       });
       cadrer();
       setPret(true);
-    });
+    }).catch(() => { if (vivant) setEchec(true); });
 
     let raf = 0;
     const Z_SOL = 0.2; // la caméra ne descend jamais sous 20 cm du sol
@@ -509,7 +473,7 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
       cam.aspect = w / h;
       cam.updateProjectionMatrix();
       rendu.setSize(w, h, false);
-      (studio ? LISERE_X_MAT : LISERE_MAT).resolution.set(w, h);
+      LISERE_MAT.resolution.set(w, h);
       /* Toujours recadrer : le passage en plein écran change radicalement le
          format, et cadrer() préserve l'angle de vue du visiteur — seuls la
          distance et la cible bougent. */
@@ -525,14 +489,11 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
       cancelAnimationFrame(raf);
       ro.disconnect();
       orbite.dispose();
-      solGeo.dispose();
-      solMat.dispose();
-      soleil.shadow.dispose();
       rendu.dispose();
       el.removeChild(rendu.domElement);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [essai]);
 
   /* ── Le visuel du client, une image par zone ────────────────────────── */
   /* Chaque zone porte SON image, qui remplace sa teinte et recouvre tout son
@@ -808,7 +769,7 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
         dans.add(g);
         piecesAffichees.current.push({ nom, groupe: g, cote: cotePeinture, voisin });
         appliquerVisuels.current();
-      });
+      }).catch(() => { if (vivant) setEchec(true); });
     };
 
     murs.clear();
@@ -880,7 +841,7 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
             murs.add(fantome);
           }
           cadrerRef.current();
-        });
+        }).catch(() => { if (vivant) setEchec(true); });
       }
     }
 
@@ -910,7 +871,13 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
       {/* Agrandir et imprimer : dans le visualiseur, donc partout où une tente
           s'affiche — le site comme le CRM. */}
       <OutilsVue hote={hote} capture={() => captureInterne.current?.() ?? null} libelles={libellesOutils} />
-      {!pret && (
+      {echec && (
+        <div role="alert" className="absolute bottom-12 inset-x-3 rounded bg-white/95 p-3 text-sm text-slate-800">
+          <p>{labelEchec}</p>
+          <button type="button" onClick={() => setEssai((n) => n + 1)} className="underline mt-2">{labelReessayer}</button>
+        </div>
+      )}
+      {!pret && !echec && (
         <div className="absolute inset-0 grid place-items-center pointer-events-none">
           <p className="text-[#2E4A5E]/60 text-sm">{labelChargement}</p>
         </div>

@@ -1,4 +1,5 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { eclairerStudio, reculPourBoite } from "./renduStudio.js";
 /*
  * La scène 3D de l'écran gonflable — étanche ou soufflerie.
  *
@@ -42,12 +43,10 @@ export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, s
         setEchec(false);
         const sc = new THREE.Scene();
         sc.background = new THREE.Color(FOND_SCENE);
-        sc.add(new THREE.HemisphereLight(0xdfe9f2, 0x20262e, 2.1));
-        const soleil = new THREE.DirectionalLight(0xffffff, 1.7);
-        soleil.position.set(4, -5, 8);
+        eclairerStudio(sc);
         const appoint = new THREE.DirectionalLight(0xffffff, 0.85);
         appoint.position.set(0, -8, 2);
-        sc.add(soleil, appoint);
+        sc.add(appoint);
         const rendu = new THREE.WebGLRenderer({ antialias: true });
         rendu.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         /* Le canevas prend sa taille du CSS, pas de ses pixels : `setSize` plus bas
@@ -72,14 +71,16 @@ export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, s
         orbite.dampingFactor = 0.08;
         // Jamais sous le plancher : on regarde un écran, pas ses sangles par en dessous.
         orbite.maxPolarAngle = Math.PI * 0.495;
+        let dimensions = null;
         const cadrer = (hauteurM, largeurM) => {
-            /* Rayon sur la demi-diagonale, en vue de trois-quarts : le plus grand
-               côté seul colle l'écran au bord dès qu'on tourne. La silhouette compte
-               dans la largeur — sinon elle sort du cadre sur les petites tailles. */
-            const rayon = Math.hypot(largeurM + 2.5, hauteurM) * 1.1;
+            dimensions = { hauteurM, largeurM };
             const cible = new THREE.Vector3(0, 0, hauteurM * 0.5);
             const a = THREE.MathUtils.degToRad(-26);
             const p = THREE.MathUtils.degToRad(76);
+            const direction = new THREE.Vector3(Math.sin(p) * Math.sin(a), -Math.sin(p) * Math.cos(a), Math.cos(p));
+            const demiLargeur = (largeurM + 2.5) / 2;
+            const boite = new THREE.Box3(new THREE.Vector3(-demiLargeur, -1, 0), new THREE.Vector3(demiLargeur, 1, hauteurM));
+            const rayon = reculPourBoite(boite, direction, cam.fov, cam.aspect);
             cam.position.set(cible.x + rayon * Math.sin(p) * Math.sin(a), cible.y - rayon * Math.sin(p) * Math.cos(a), cible.z + rayon * Math.cos(p));
             cam.lookAt(cible);
             orbite.target.copy(cible);
@@ -93,6 +94,8 @@ export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, s
             rendu.setSize(l, h, false);
             cam.aspect = l / h;
             cam.updateProjectionMatrix();
+            if (dimensions)
+                cadrer(dimensions.hauteurM, dimensions.largeurM);
         };
         redimensionner();
         const ro = new ResizeObserver(redimensionner);
