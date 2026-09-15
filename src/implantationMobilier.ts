@@ -720,12 +720,13 @@ export function peutAccueillir(
   surfaceM2?: number,
   emprise?: { largeurM: number; profondeurM: number },
   disposition: Disposition = "ilots",
+  groupement?: Groupement,
 ): boolean {
   const essai = panier.filter((l) => l.qte > 0).map((l) => ({ ...l }));
   const ligne = essai.find((l) => l.slug === slug);
   if (ligne) ligne.qte += 1;
   else essai.push({ slug, qte: 1 });
-  return implanter(essai, catalogue, surfaceM2, emprise, disposition).nonPoses === 0;
+  return implanter(essai, catalogue, surfaceM2, emprise, disposition, undefined, groupement).nonPoses === 0;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────

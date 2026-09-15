@@ -554,14 +554,14 @@ groupement) {
  * Sans surface ni abri, le sol est inventé à la demande : tout tient, par
  * construction — le bouton reste donc toujours actif, et c'est voulu.
  */
-export function peutAccueillir(panier, catalogue, slug, surfaceM2, emprise, disposition = "ilots") {
+export function peutAccueillir(panier, catalogue, slug, surfaceM2, emprise, disposition = "ilots", groupement) {
     const essai = panier.filter((l) => l.qte > 0).map((l) => ({ ...l }));
     const ligne = essai.find((l) => l.slug === slug);
     if (ligne)
         ligne.qte += 1;
     else
         essai.push({ slug, qte: 1 });
-    return implanter(essai, catalogue, surfaceM2, emprise, disposition).nonPoses === 0;
+    return implanter(essai, catalogue, surfaceM2, emprise, disposition, undefined, groupement).nonPoses === 0;
 }
 /**
  * Points de contact MESURÉS À LA MAIN dans les GLB livrés, en unités du fichier.
