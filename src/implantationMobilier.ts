@@ -275,10 +275,12 @@ function blocSimple(u: Unite): Bloc {
  * regarde. La seconde pivote d'un demi-tour — d'où deux orientations dans la
  * scène là où il n'y en avait qu'une.
  */
-function blocFaceAFace(a: Unite, b: Unite, passage: number, quartDeTour: boolean): Bloc {
+function blocFaceAFace(a: Unite, b: Unite, passage: number, quartDeTour: boolean, table?: Unite): Bloc {
   const wA = a.item.largeurCm / 100, dA = a.item.profondeurCm / 100;
   const wB = b.item.largeurCm / 100, dB = b.item.profondeurCm / 100;
-  const largeurIlot = Math.max(wA, wB);
+  const largeurIlot = Math.max(wA, wB, (table?.item.largeurCm ?? 0) / 100);
+  // Le plateau garde 20 cm de dégagement de chaque côté, devant les assises.
+  passage = Math.max(passage, table ? table.item.profondeurCm / 100 + 0.4 : 0);
   const profondeurIlot = dA + passage + dB;
 
   /* Un quart de tour fait pivoter TOUT l'îlot : les deux assises se regardent
@@ -290,7 +292,7 @@ function blocFaceAFace(a: Unite, b: Unite, passage: number, quartDeTour: boolean
   return {
     wM: quartDeTour ? profondeurIlot : largeurIlot,
     dM: quartDeTour ? largeurIlot : profondeurIlot,
-    unites: [a, b],
+    unites: table ? [a, b, table] : [a, b],
     deplier: (x, z) => {
       const ecartA = -profondeurIlot / 2 + dA / 2;
       const ecartB = profondeurIlot / 2 - dB / 2;
@@ -298,11 +300,13 @@ function blocFaceAFace(a: Unite, b: Unite, passage: number, quartDeTour: boolean
         return [
           { slug: a.slug, x, z: z + ecartA, rotation: 0 },
           { slug: b.slug, x, z: z + ecartB, rotation: Math.PI },
+          ...(table ? [{ slug: table.slug, x, z: z + (dA - dB) / 2, rotation: 0 }] : []),
         ];
       }
       return [
         { slug: a.slug, x: x + ecartA, z, rotation: Math.PI / 2 },
         { slug: b.slug, x: x + ecartB, z, rotation: -Math.PI / 2 },
+        ...(table ? [{ slug: table.slug, x: x + (dA - dB) / 2, z, rotation: Math.PI / 2 }] : []),
       ];
     },
   };
@@ -418,15 +422,19 @@ function enBlocs(
     for (const restante of chaises.slice(pris)) blocs.push(blocSimple(restante));
     return blocs;
   }
+  const tables = groupement ? unites.filter(u => u.slug === groupement.centre) : [];
+  const assises = groupement ? unites.filter(u => u.slug !== groupement.centre) : unites;
   const blocs: Bloc[] = [];
-  for (let i = 0; i < unites.length; i += 2) {
-    const a = unites[i], b = unites[i + 1];
+  let tableIndex = 0;
+  for (let i = 0; i < assises.length; i += 2) {
+    const a = assises[i], b = assises[i + 1];
     /* Un îlot sur deux pivote d'un quart de tour. Alterner, plutôt que tirer au
        sort : la scène doit se rejouer à l'identique depuis un lien de devis des
        mois plus tard, et un `Math.random` le rendrait impossible. */
     const quartDeTour = (i / 2) % 2 === 1;
-    blocs.push(b ? blocFaceAFace(a, b, passage, quartDeTour) : blocSimple(a));
+    blocs.push(b ? blocFaceAFace(a, b, passage, quartDeTour, tables[tableIndex++]) : blocSimple(a));
   }
+  for (const table of tables.slice(tableIndex)) blocs.push(blocSimple(table));
   return blocs;
 }
 interface ResultatPack {

@@ -726,3 +726,19 @@ describe("tablées — les chaises tiennent autour de leur table", () => {
     expect(meubles.filter((m) => m.slug === CHAISE)).toHaveLength(11);
   });
 });
+
+it("place les tables basses entre les assises en îlots, y compris les îlots pivotés", () => {
+  const catalogue = { ...CAT, "table-basse": { ...CAT["table-bistro"], slugSite: "table-basse", largeurCm: 100, profondeurCm: 50, hauteurCm: 40 } };
+  const r = implanter([{ slug: "canape-double", qte: 4 }, { slug: "table-basse", qte: 2 }], catalogue, undefined,
+    { largeurM: 8, profondeurM: 8 }, "ilots", undefined, { centre: "table-basse", autour: 2 });
+  expect(r.nonPoses).toBe(0);
+  expect(r.meubles).toHaveLength(6);
+  const tables = r.meubles.filter(m => m.slug === "table-basse");
+  expect(tables.map(m => m.rotation)).toEqual([0, Math.PI / 2]);
+  for (const table of tables) {
+    const voisins = r.meubles.filter(m => m.slug === "canape-double" && Math.hypot(m.x - table.x, m.z - table.z) < 1);
+    expect(voisins).toHaveLength(2);
+    expect((voisins[0].x + voisins[1].x) / 2).toBeCloseTo(table.x);
+    expect((voisins[0].z + voisins[1].z) / 2).toBeCloseTo(table.z);
+  }
+});
