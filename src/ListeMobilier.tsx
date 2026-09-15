@@ -64,6 +64,12 @@ export interface ListeMobilierProps {
   onErreur?: (cause: EchecVisuel) => void;
   /** La ligne sous la désignation — places, prix, marge : à l'application. */
   detail?: (meuble: MeubleListe) => ReactNode;
+  /** `false` : ce meuble ne s'habille pas — ni pastille, ni palette. Absent =
+   *  tout s'habille. Le décor d'une scène (tables de traiteur, chaises
+   *  ordinaires, non vendus) passait par la même palette que les meubles
+   *  Hallucine et promettait « l'impression comprise dans le prix » sur une
+   *  table qu'on ne fournit pas (15/09/2026). */
+  habillable?: (meuble: MeubleListe) => boolean;
   /** Traduction. Le CRM rend la clé telle quelle ou son libellé français. */
   libelle: (cle: string) => string;
   classes: ClassesListe;
@@ -72,7 +78,7 @@ export interface ListeMobilierProps {
 export function ListeMobilier({
   meubles, quantites, onQuantite, accepteEncore,
   habillages, onHabillage, visuels, onVisuel, onErreur,
-  detail, libelle, classes,
+  detail, habillable, libelle, classes,
 }: ListeMobilierProps) {
   /* Les familles sont REPLIÉES au départ : la liste s'ouvre sur trois lignes,
      pas sur quinze meubles. Un état React, pas un <details> natif — chaque
@@ -110,6 +116,7 @@ export function ListeMobilier({
                   const hab = habillageMobilier(cle);
                   const visuel = visuels[m.slugSite] ?? null;
                   const peutAjouter = accepteEncore?.[m.slugSite] ?? true;
+                  const seHabille = habillable?.(m) ?? true;
                   return (
                     <li key={m.slugSite} className={classes.ligne}>
                       <div className="flex items-center gap-3">
@@ -121,7 +128,7 @@ export function ListeMobilier({
                           {/* L'habillage n'apparaît QUE sur un meuble pris :
                               quinze nuanciers sur des lignes à zéro noient ceux
                               qui comptent. */}
-                          {qte > 0 && (
+                          {qte > 0 && seHabille && (
                             <button type="button"
                               aria-label={libelle("habillage_titre")}
                               aria-expanded={palette === m.slugSite}
@@ -146,7 +153,7 @@ export function ListeMobilier({
                             className={peutAjouter ? classes.bouton : classes.boutonDesactive}>+</button>
                         </div>
                       </div>
-                      {qte > 0 && palette === m.slugSite && (
+                      {qte > 0 && seHabille && palette === m.slugSite && (
                         <HabillageMobilier
                           cle={cle}
                           onCle={(c) => {
