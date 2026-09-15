@@ -116,7 +116,7 @@ export declare function peutAccueillir(panier: {
 }[], catalogue: Record<string, MobilierItem>, slug: string, surfaceM2?: number, emprise?: {
     largeurM: number;
     profondeurM: number;
-}, disposition?: Disposition): boolean;
+}, disposition?: Disposition, groupement?: Groupement): boolean;
 /**
  * Où poser des gens dans la scène — assis sur les assises, debout autour des
  * mange-debout.
