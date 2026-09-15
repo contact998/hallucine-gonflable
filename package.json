@@ -33,7 +33,7 @@
     "react-dom": "^19.2.8",
     "three": "^0.180.0",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.7"
+    "vitest": "^4.1.11"
   },
   "peerDependencies": {
     "react": ">=18",
