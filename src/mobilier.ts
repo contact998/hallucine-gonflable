@@ -107,7 +107,7 @@ export type FamilleMobilier = (typeof FAMILLES_MOBILIER)[number];
 
 export function familleMobilier(slugSite: string): FamilleMobilier {
   if (slugSite.startsWith("bar-")) return "bars";
-  if (slugSite.startsWith("table-")) return "mangeDebout";
+  if (slugSite.startsWith("table-") || slugSite.startsWith("banquet-table-") || slugSite.startsWith("banquet-ronde-")) return "mangeDebout";
   return "assises";
 }
 

@@ -84,7 +84,7 @@ export const FAMILLES_MOBILIER = ["assises", "mangeDebout", "bars"];
 export function familleMobilier(slugSite) {
     if (slugSite.startsWith("bar-"))
         return "bars";
-    if (slugSite.startsWith("table-"))
+    if (slugSite.startsWith("table-") || slugSite.startsWith("banquet-table-") || slugSite.startsWith("banquet-ronde-"))
         return "mangeDebout";
     return "assises";
 }
