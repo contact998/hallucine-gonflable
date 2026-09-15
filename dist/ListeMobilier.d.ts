@@ -46,9 +46,15 @@ export interface ListeMobilierProps {
     onErreur?: (cause: EchecVisuel) => void;
     /** La ligne sous la désignation — places, prix, marge : à l'application. */
     detail?: (meuble: MeubleListe) => ReactNode;
+    /** `false` : ce meuble ne s'habille pas — ni pastille, ni palette. Absent =
+     *  tout s'habille. Le décor d'une scène (tables de traiteur, chaises
+     *  ordinaires, non vendus) passait par la même palette que les meubles
+     *  Hallucine et promettait « l'impression comprise dans le prix » sur une
+     *  table qu'on ne fournit pas (15/09/2026). */
+    habillable?: (meuble: MeubleListe) => boolean;
     /** Traduction. Le CRM rend la clé telle quelle ou son libellé français. */
     libelle: (cle: string) => string;
     classes: ClassesListe;
 }
-export declare function ListeMobilier({ meubles, quantites, onQuantite, accepteEncore, habillages, onHabillage, visuels, onVisuel, onErreur, detail, libelle, classes, }: ListeMobilierProps): import("react").JSX.Element;
+export declare function ListeMobilier({ meubles, quantites, onQuantite, accepteEncore, habillages, onHabillage, visuels, onVisuel, onErreur, detail, habillable, libelle, classes, }: ListeMobilierProps): import("react").JSX.Element;
 export default ListeMobilier;

@@ -18,7 +18,7 @@ import { familleMobilier, FAMILLES_MOBILIER, habillageMobilier } from "./mobilie
 import { HabillageMobilier } from "./HabillageMobilier.js";
 import { importerVisuel, ErreurVisuel } from "./visuel.js";
 import { poseInitiale } from "./pose.js";
-export function ListeMobilier({ meubles, quantites, onQuantite, accepteEncore, habillages, onHabillage, visuels, onVisuel, onErreur, detail, libelle, classes, }) {
+export function ListeMobilier({ meubles, quantites, onQuantite, accepteEncore, habillages, onHabillage, visuels, onVisuel, onErreur, detail, habillable, libelle, classes, }) {
     /* Les familles sont REPLIÉES au départ : la liste s'ouvre sur trois lignes,
        pas sur quinze meubles. Un état React, pas un <details> natif — chaque
        changement de panier re-rend la liste et le navigateur écraserait le
@@ -40,11 +40,12 @@ export function ListeMobilier({ meubles, quantites, onQuantite, accepteEncore, h
                             const hab = habillageMobilier(cle);
                             const visuel = visuels[m.slugSite] ?? null;
                             const peutAjouter = accepteEncore?.[m.slugSite] ?? true;
-                            return (_jsxs("li", { className: classes.ligne, children: [_jsxs("div", { className: "flex items-center gap-3", children: [_jsxs("div", { className: "min-w-0 flex-1", children: [_jsx("p", { className: classes.designation, children: m.designation }), _jsx("p", { className: classes.detail, children: detail?.(m) })] }), _jsxs("div", { className: "flex items-center gap-2", children: [qte > 0 && (_jsx("button", { type: "button", "aria-label": libelle("habillage_titre"), "aria-expanded": palette === m.slugSite, onClick: () => setPalette((s) => (s === m.slugSite ? null : m.slugSite)), className: palette === m.slugSite ? classes.puceHabillageActive : classes.puceHabillage, style: {
+                            const seHabille = habillable?.(m) ?? true;
+                            return (_jsxs("li", { className: classes.ligne, children: [_jsxs("div", { className: "flex items-center gap-3", children: [_jsxs("div", { className: "min-w-0 flex-1", children: [_jsx("p", { className: classes.designation, children: m.designation }), _jsx("p", { className: classes.detail, children: detail?.(m) })] }), _jsxs("div", { className: "flex items-center gap-2", children: [qte > 0 && seHabille && (_jsx("button", { type: "button", "aria-label": libelle("habillage_titre"), "aria-expanded": palette === m.slugSite, onClick: () => setPalette((s) => (s === m.slugSite ? null : m.slugSite)), className: palette === m.slugSite ? classes.puceHabillageActive : classes.puceHabillage, style: {
                                                             backgroundColor: hab.hex ?? undefined,
                                                             backgroundImage: visuel ? `url(${visuel.url})` : undefined,
                                                             backgroundSize: "cover",
-                                                        } })), _jsx("button", { type: "button", "aria-label": "-", onClick: () => onQuantite(m.slugSite, -1), disabled: qte === 0, className: qte === 0 ? classes.boutonDesactive : classes.bouton, children: "\u2212" }), _jsx("span", { className: classes.compte, children: qte }), _jsx("button", { type: "button", "aria-label": "+", onClick: () => onQuantite(m.slugSite, 1), disabled: !peutAjouter, title: peutAjouter ? undefined : libelle("piece_plein"), className: peutAjouter ? classes.bouton : classes.boutonDesactive, children: "+" })] })] }), qte > 0 && palette === m.slugSite && (_jsx(HabillageMobilier, { cle: cle, onCle: (c) => {
+                                                        } })), _jsx("button", { type: "button", "aria-label": "-", onClick: () => onQuantite(m.slugSite, -1), disabled: qte === 0, className: qte === 0 ? classes.boutonDesactive : classes.bouton, children: "\u2212" }), _jsx("span", { className: classes.compte, children: qte }), _jsx("button", { type: "button", "aria-label": "+", onClick: () => onQuantite(m.slugSite, 1), disabled: !peutAjouter, title: peutAjouter ? undefined : libelle("piece_plein"), className: peutAjouter ? classes.bouton : classes.boutonDesactive, children: "+" })] })] }), qte > 0 && seHabille && palette === m.slugSite && (_jsx(HabillageMobilier, { cle: cle, onCle: (c) => {
                                             onHabillage(m.slugSite, c);
                                             /* Une teinte choisie referme — on a vu la couleur.
                                                « Mon visuel » ouvre un dépôt : on reste. */
