@@ -36,6 +36,18 @@ export async function chargerArcheGlb(loader, forme) {
     if (!(taille.x > 0) || !(taille.y > 0) || !(taille.z > 0)) {
         throw new Error("modèle d'arche sans géométrie mesurable");
     }
+    /* Le fichier livré par Bayes porte son origine EN HAUT de l'arche (pieds à
+       z ≈ −2,6 m, sommet à z ≈ 0) — mesuré sur le premier modèle (droite, 4 m,
+       16/09/2026), pas une convention supposée. Sans ce recentrage, l'arche se
+       pose la tête au sol et les pieds dessous : entièrement invisible, la
+       scène ne montre rien et ne le dit pas (`Promise.allSettled` la compte
+       comme réussie, elle EST chargée — juste hors champ). Centrée en X/Y,
+       posée pieds au sol en Z : ce qui vaut pour l'arche droite doit valoir
+       pour toute nouvelle forme livrée, quelle que soit SA convention à elle. */
+    const centre = boite.getCenter(new THREE.Vector3());
+    gltf.scene.position.x -= centre.x;
+    gltf.scene.position.y -= centre.y;
+    gltf.scene.position.z -= boite.min.z;
     return {
         groupe,
         mesures: { largeurMM: taille.x, profondeurMM: taille.y, hauteurMM: taille.z },
