@@ -958,6 +958,23 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
         const bordSud = boiteAvant.isEmpty() ? 0 : boiteAvant.max.y;
         archeCharge.groupe.position.set(0, bordSud + RECUL_ARCHE_M, 0);
         encore.racine.add(archeCharge.groupe);
+        // eslint-disable-next-line no-console
+        console.log("[diag-arche]", {
+          boiteAvantEmpty: boiteAvant.isEmpty(),
+          boiteAvantMin: boiteAvant.min.toArray(),
+          boiteAvantMax: boiteAvant.max.toArray(),
+          bordSud,
+          groupePosition: archeCharge.groupe.position.toArray(),
+          groupeScale: archeCharge.groupe.scale.toArray(),
+          mesures: archeCharge.mesures,
+        });
+        const boiteApres = new THREE.Box3().setFromObject(archeCharge.groupe);
+        // eslint-disable-next-line no-console
+        console.log("[diag-arche] boite du groupe apres ajout", {
+          min: boiteApres.min.toArray(),
+          max: boiteApres.max.toArray(),
+          isEmpty: boiteApres.isEmpty(),
+        });
       }
 
       if (ecranCharge && !ecranOriente.current) {
