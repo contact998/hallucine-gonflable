@@ -28,6 +28,7 @@ export * from "./mobilier.js";
 export * from "./pose.js";
 export * from "./vue3d.js";
 export * from "./ecran.js";
+export * from "./arche.js";
 /* La puissance de projection qu'exige une toile : la même réponse au client sur
    le site et au commercial dans le CRM (voir projection.ts). Aucun prix. */
 export * from "./projection.js";
@@ -51,7 +52,7 @@ export { HabillageMobilier, type ClassesHabillage } from "./HabillageMobilier.js
    site, ce qui privait le CRM de toute vue 3D — le commercial composait une
    liste pendant que le client voyait son lounge. Même remède que la tente. */
 export * from "./implantationMobilier.js";
-export { default as MobilierViewer, type EcranLounge } from "./MobilierViewer.js";
+export { default as MobilierViewer, type EcranLounge, type ArcheLounge } from "./MobilierViewer.js";
 /* La visée d'un côté : une seule mécanique, celle que montent les deux scènes. */
 export { azimutPourCote, prochainAzimut, viser, viseeNeuve, type Visee } from "./viseeCote.js";
 

@@ -16,6 +16,7 @@
  */
 import { MODELES, demiMurPossible, rangeeTentes, type Modele } from "./composition.js";
 import type { GammeEcran3D } from "./ecran.js";
+import type { GammeArche3D } from "./arche.js";
 
 /** Un modèle 3D par tente, servi depuis R2 : le site et le CRM lisent la même
  *  adresse, personne ne transporte les fichiers en double.
@@ -47,6 +48,9 @@ export const urlPersonne = (fichier: string) => `${BASE_R2}/personnes/${fichier}
    se prête au premier ajout venu. L'ancien fichier reste sur R2 — les versions
    du site déjà en ligne le demandent encore. */
 export const urlEcran = (gamme: GammeEcran3D) => `${BASE_R2}/ecran/ecran-${gamme}.glb`;
+/* Un fichier par forme, comme l'écran : une arche ronde ne se dessine pas
+   depuis le modèle de la droite. */
+export const urlArche = (forme: GammeArche3D) => `${BASE_R2}/arche/arche-${forme}.glb`;
 
 export interface Vue3D {
   /** Dossier R2. Il ne suit pas le slug du modèle : la tente X a été déposée

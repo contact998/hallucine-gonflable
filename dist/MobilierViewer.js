@@ -58,6 +58,7 @@ import { composerPan } from "./visuel.js";
 import { chargerImage } from "./visuel.js";
 import { cleVisuelPose } from "./pose.js";
 import { chargerEcranGlb, poserTaille } from "./ecranGlb.js";
+import { chargerArcheGlb, poserTailleArche } from "./archeGlb.js";
 import { urlPiece, echelle, piecesAbri, rangeeAbri, axeRangee, decalageVoisin, porteVitre, pieceImprimable, urlMeuble, urlPersonne, FOND_SCENE } from "./vue3d.js";
 import { modele as modeleTente } from "./composition.js";
 import { prochainAzimut, viser, viseeNeuve } from "./viseeCote.js";
@@ -480,7 +481,11 @@ function construireSol(sol) {
    La règle de projection dit la première rangée à une largeur d'écran au
    moins ; c'est celle-ci, et elle se voit dans la scène. */
 const RECUL_ECRAN_M = 3;
-export default function MobilierViewer({ implantation, afficherSol = true, labelChargement, labelEchec = (n) => `${n} élément(s) de la scène n’ont pas pu être chargés.`, captureRef, abri, coteActif, ecran, habillages, visuels, libellesOutils, effacerParois }) {
+/* Beaucoup plus petit que celui de l'écran : l'arche est un cadre fin (quelques
+   dizaines de centimètres de profondeur), pas un plan qui a besoin de recul
+   pour se regarder — juste assez pour qu'on marche À TRAVERS, pas dedans. */
+const RECUL_ARCHE_M = 0.5;
+export default function MobilierViewer({ implantation, afficherSol = true, labelChargement, labelEchec = (n) => `${n} élément(s) de la scène n’ont pas pu être chargés.`, captureRef, abri, coteActif, ecran, arche, habillages, visuels, libellesOutils, effacerParois }) {
     const hote = useRef(null);
     /* Lu par la boucle de rendu, montée une seule fois : un ref, pas une
        dépendance d'effet — changer d'avis ne remonte pas la scène. */
@@ -711,6 +716,21 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
             })
                 .catch(() => null)
             : Promise.resolve(null);
+        const archePromis = arche
+            ? chargerArcheGlb(o.loader, arche.forme)
+                .then((a) => {
+                poserTailleArche(a, arche);
+                /* AU SUD du sol (y positif) — à l'opposé de l'écran : l'entrée par
+                   laquelle on arrive, avant de s'asseoir face à l'écran au nord.
+                   Hors du rectangle de sol, comme l'écran : une arche n'est pas un
+                   meuble, elle ne mange pas la place des canapés. Aucune rotation
+                   — le cadre est symétrique avant/arrière, on le traverse dans les
+                   deux sens. */
+                a.groupe.position.set(0, implantation.sol.profondeurM / 2 + RECUL_ARCHE_M, 0);
+                return a;
+            })
+                .catch(() => null)
+            : Promise.resolve(null);
         /* Les gens : un chargement par FICHIER, pas par personne — deux hommes
            assis partagent le même gabarit, comme deux canapés identiques. */
         const gens = implantation.personnes ?? [];
@@ -725,7 +745,8 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
             abriPromis,
             silhouettesPromises,
             ecranPromis,
-        ]).then(([resultats, abriCharge, silhouettes, ecranCharge]) => {
+            archePromis,
+        ]).then(([resultats, abriCharge, silhouettes, ecranCharge, archeCharge]) => {
             const encore = outils.current;
             /* Une réponse en retard (implantation changée entre-temps) ne doit pas
                écraser la dernière composition demandée. */
@@ -736,7 +757,7 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
                 .map((r) => r.value);
             /* Les meubles manqués PLUS les pièces d'abri manquées : la bannière dit
                tout ce qui manque à la scène, la tente partielle comprise. */
-            setEchecs(resultats.length - poses.length + abriCharge.echecs + (ecran && !ecranCharge ? 1 : 0));
+            setEchecs(resultats.length - poses.length + abriCharge.echecs + (ecran && !ecranCharge ? 1 : 0) + (arche && !archeCharge ? 1 : 0));
             disposerSol(encore.racine.children.find((c) => c instanceof THREE.Mesh) ?? null);
             encore.racine.clear();
             if (afficherSol)
@@ -796,6 +817,10 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
                 appoint.position.set(0, 12, 6);
                 encore.racine.add(appoint, appoint.target);
             }
+            /* L'arche DANS la racine, même raison que l'écran : le cadrage doit
+               l'embrasser, sinon la caméra serre sur les meubles et la coupe. */
+            if (archeCharge)
+                encore.racine.add(archeCharge.groupe);
             if (ecranCharge && !ecranOriente.current) {
                 ecranOriente.current = true;
                 encore.regarderDepuisLesAssises();
@@ -806,7 +831,7 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
             encore.reveiller();
             setPret(true);
         });
-    }, [implantation, abri, ecran, habillages, visuels, afficherSol]);
+    }, [implantation, abri, ecran, arche, habillages, visuels, afficherSol]);
     /* ── Choisir un côté = l'abri le présente de face ────────────────────── */
     useEffect(() => {
         if (!pret || !abri || !coteActif)

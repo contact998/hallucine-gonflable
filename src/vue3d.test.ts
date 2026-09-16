@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { MODELES, modele } from "./composition.js";
 import {
-  vue3d, urlPiece, urlMeuble, urlPersonne, urlEcran, echelle, pieceImprimable, MODELES_SANS_VUE,
+  vue3d, urlPiece, urlMeuble, urlPersonne, urlEcran, urlArche, echelle, pieceImprimable, MODELES_SANS_VUE,
   angleCote, pieceDeCote, ANGLE_COTE_DEFAUT, estPiece, porteLisere, porteVitre, dessinable,
   pieceDemiMur as pieceDemiMurDe, decalageVoisin, piecesAbri, axeRangee, rangeeAbri,
 } from "./vue3d.js";
@@ -28,9 +28,15 @@ describe("la vue 3D de chaque modèle", () => {
       urlPersonne("femme-debout"),
       urlEcran("etanche"),
       urlEcran("soufflerie"),
+      urlArche("droite"),
       ...MODELES.map((m) => urlPiece(m, "roof")),
     ];
     for (const a of adresses) expect(a, a).toContain("/models/meshopt/");
+  });
+
+  it("l'adresse de l'arche se range à côté de l'écran, un fichier par forme", () => {
+    expect(urlArche("droite")).toMatch(/\/models\/meshopt\/arche\/arche-droite\.glb$/);
+    expect(urlArche("ronde")).toMatch(/\/models\/meshopt\/arche\/arche-ronde\.glb$/);
   });
 
   it("toute pièce proposée au choix a son azimut mesuré", () => {

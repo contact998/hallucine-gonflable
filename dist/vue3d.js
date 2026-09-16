@@ -43,6 +43,9 @@ export const urlPersonne = (fichier) => `${BASE_R2}/personnes/${fichier}.glb`;
    se prête au premier ajout venu. L'ancien fichier reste sur R2 — les versions
    du site déjà en ligne le demandent encore. */
 export const urlEcran = (gamme) => `${BASE_R2}/ecran/ecran-${gamme}.glb`;
+/* Un fichier par forme, comme l'écran : une arche ronde ne se dessine pas
+   depuis le modèle de la droite. */
+export const urlArche = (forme) => `${BASE_R2}/arche/arche-${forme}.glb`;
 const SOCLE_COMMUN = ["roof", "LEG", "zipper_cover"];
 export const VUE_3D = {
     x: {

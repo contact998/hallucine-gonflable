@@ -21,6 +21,7 @@ export interface Abri {
 }
 import { type VisuelPose } from "./pose.js";
 import type { GammeEcran3D } from "./ecran.js";
+import type { GammeArche3D } from "./arche.js";
 import { type CompositionAbri } from "./vue3d.js";
 /**
  * L'abri, tel que `piecesAbri` le décrit : le socle toujours (toit, pieds,
@@ -61,6 +62,17 @@ export interface EcranLounge {
      *  laissée telle quelle, sans jupe retouchée. */
     baseImageM?: number | null;
 }
+/** L'arche gonflable à l'entrée du lounge, ou rien. Une forme qu'aucun modèle
+ *  ne sait dessiner encore laisse la scène SANS arche plutôt qu'avec un
+ *  dessin faux. */
+export interface ArcheLounge {
+    /** Quelle forme poser (`droite`, `ronde`, …) — celle du catalogue CRM. */
+    forme: GammeArche3D;
+    /** Les trois cotes du catalogue, en mètres — `ArcheItem.largeurCm/hauteurCm/profondeurCm`. */
+    largeurM: number;
+    hauteurM: number;
+    profondeurM: number;
+}
 type Props = {
     implantation: Implantation;
     /** Les fiches produit cadrent le meuble seul, sans surface de sol. */
@@ -96,11 +108,14 @@ type Props = {
      *  ce que la géométrie sait rendre laisse la scène SANS écran plutôt qu'avec
      *  un dessin faux — le lounge ne s'en trouve pas amputé. */
     ecran?: EcranLounge | null;
+    /** L'arche gonflable à l'entrée, ou rien. Une forme que la géométrie ne sait
+     *  pas dessiner laisse la scène SANS arche plutôt qu'avec un dessin faux. */
+    arche?: ArcheLounge | null;
     /** Effacer la paroi entre la caméra et les meubles quand on tourne (défaut,
      *  le comportement historique). `false` : les parois restent pleines quel que
      *  soit l'angle — demandé par Daniel le 23/08/2026 pour les scènes prêtes du
      *  site, où la tente doit se montrer telle qu'elle sera construite. */
     effacerParois?: boolean;
 };
-export default function MobilierViewer({ implantation, afficherSol, labelChargement, labelEchec, captureRef, abri, coteActif, ecran, habillages, visuels, libellesOutils, effacerParois }: Props): import("react").JSX.Element;
+export default function MobilierViewer({ implantation, afficherSol, labelChargement, labelEchec, captureRef, abri, coteActif, ecran, arche, habillages, visuels, libellesOutils, effacerParois }: Props): import("react").JSX.Element;
 export {};
