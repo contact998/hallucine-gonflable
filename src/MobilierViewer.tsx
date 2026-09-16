@@ -604,12 +604,15 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
   /* L'écran n'oriente la caméra qu'à son ARRIVÉE : changer sa taille ensuite
      ne doit pas ramener de force le visiteur à l'angle par défaut. */
   const ecranOriente = useRef(false);
+  /* Même règle que l'écran : l'arche n'oriente la caméra qu'à son ARRIVÉE. */
+  const archeOriente = useRef(false);
   const outils = useRef<{
     loader: GLTFLoader;
     racine: THREE.Group;
     cadrer: () => void;
     reveiller: () => void;
     regarderDepuisLesAssises: () => void;
+    regarderVersLArche: () => void;
   } | null>(null);
   const generation = useRef(0);
 
@@ -777,10 +780,9 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
        canapés de face — donc, un écran posé, on n'en aurait vu que le dos.
        Posée une seule fois, à l'apparition de l'écran : ensuite l'angle
        appartient à celui qui tourne la scène. */
-    const regarderDepuisLesAssises = () => {
+    const regarderDepuisAzimut = (az: number) => {
       const d = cam.position.clone().sub(orbite.target);
       const rayon = Math.hypot(d.x, d.y) || 1;
-      const az = Math.PI * 0.42;
       cam.position.set(
         orbite.target.x + Math.cos(az) * rayon,
         orbite.target.y + Math.sin(az) * rayon,
@@ -788,8 +790,13 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
       );
       orbite.update();
     };
+    const regarderDepuisLesAssises = () => regarderDepuisAzimut(Math.PI * 0.42);
+    /* L'arche est au SUD (y positif, voir sa pose plus bas) : le visiteur qui
+       arrive la voit de FACE, depuis le nord — l'azimut opposé à celui des
+       assises, qui elles regardent l'écran au nord. */
+    const regarderVersLArche = () => regarderDepuisAzimut(Math.PI * 0.42 - Math.PI);
 
-    outils.current = { loader: chargeurGLB(), racine, cadrer, reveiller, regarderDepuisLesAssises };
+    outils.current = { loader: chargeurGLB(), racine, cadrer, reveiller, regarderDepuisLesAssises, regarderVersLArche };
 
     return () => {
       cancelAnimationFrame(raf);
@@ -963,8 +970,15 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
       if (ecranCharge && !ecranOriente.current) {
         ecranOriente.current = true;
         encore.regarderDepuisLesAssises();
+      } else if (!ecranCharge && archeCharge && !archeOriente.current) {
+        /* Priorité à l'écran s'il y en a un — c'est lui qu'on regarde, l'arche
+           n'est qu'une entrée. Sans écran (l'arrivée de course), l'arche EST
+           le sujet : le visiteur qui ouvre le scénario la voit de face. */
+        archeOriente.current = true;
+        encore.regarderVersLArche();
       }
       if (!ecran) ecranOriente.current = false;
+      if (!arche) archeOriente.current = false;
 
       encore.cadrer();
       encore.reveiller();
