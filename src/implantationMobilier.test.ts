@@ -254,6 +254,21 @@ describe("implanter", () => {
       );
       expect(oppose).toBe(true);
     }
+    /* Ce qui précède ne suffit pas : deux assises d'un même îlot ont TOUJOURS
+       des rotations opposées de π, qu'elles se regardent ou se tournent le dos
+       symétriquement — un bug a longtemps posé la première assise face à
+       l'écran et la seconde face à l'extérieur, dos à dos, sans que ce test le
+       voie. On vérifie donc que chaque assise REGARDE VERS sa partenaire : le
+       vecteur qui la sépare d'elle, projeté sur la direction qu'elle regarde,
+       est positif. */
+    const regarde = (m: MeublePose) => [Math.sin(m.rotation), -Math.cos(m.rotation)];
+    for (let i = 0; i < res.meubles.length; i += 2) {
+      const [a, b] = [res.meubles[i], res.meubles[i + 1]];
+      const [fax, faz] = regarde(a);
+      const [fbx, fbz] = regarde(b);
+      expect(fax * (b.x - a.x) + faz * (b.z - a.z)).toBeGreaterThan(0);
+      expect(fbx * (a.x - b.x) + fbz * (a.z - b.z)).toBeGreaterThan(0);
+    }
   });
 
   it("EN RANGS, tout le monde regarde l'écran — c'est un cinéma", () => {

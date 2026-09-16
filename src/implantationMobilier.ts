@@ -297,9 +297,13 @@ function blocFaceAFace(a: Unite, b: Unite, passage: number, quartDeTour: boolean
       const ecartA = -profondeurIlot / 2 + dA / 2;
       const ecartB = profondeurIlot / 2 - dB / 2;
       if (!quartDeTour) {
+        /* `a` est au nord (vers l'écran), `b` au sud : pour se regarder, `a`
+           doit tourner le dos à l'écran (π) et `b` lui faire face (0) — pas
+           l'inverse, qui les assied dos à dos, chacun face à son propre bout
+           de l'îlot. */
         return [
-          { slug: a.slug, x, z: z + ecartA, rotation: 0 },
-          { slug: b.slug, x, z: z + ecartB, rotation: Math.PI },
+          { slug: a.slug, x, z: z + ecartA, rotation: Math.PI },
+          { slug: b.slug, x, z: z + ecartB, rotation: 0 },
           ...(table ? [{ slug: table.slug, x, z: z + (dA - dB) / 2, rotation: 0 }] : []),
         ];
       }
