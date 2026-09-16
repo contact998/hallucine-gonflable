@@ -827,8 +827,38 @@ export const LACET_MEUBLE: Record<string, number> = {
 };
 
 /** Semelles posées sur le sol, jamais dessous. */
-function elevationDebout(m: ModeleSilhouette): number {
+export function elevationDebout(m: ModeleSilhouette): number {
   return -ANCRAGES[m.fichier].semelleY * m.echelle;
+}
+
+/** Foulée entre deux coureurs, en mètres : un peloton d'arrivée, pas une file. */
+const PAS_COUREUR_M = 1.2;
+
+/**
+ * Les COUREURS de l'arche (Daniel, 16/09/2026 : « des personnes près de
+ * l'arche ») — une ligne qui la traverse en courant, pas un attroupement.
+ * Positions RELATIVES à l'arche : `x` le long de la ligne de course (0 = sous
+ * l'arche, négatif = avant, positif = passé), `z` sur la ligne elle-même. Le
+ * visualiseur les décale à l'endroit où il a posé l'arche. Ils regardent
+ * +x, dans le sens de la course. `duMeuble` à −1 : ils n'appartiennent à
+ * aucun meuble, et c'est le seul cas.
+ *
+ * Alternance homme/femme par index, comme `modeleSilhouette` : une scène
+ * rejouée depuis un devis montre les mêmes coureurs des mois plus tard.
+ */
+export function coureursArche(nombre = 5): Personne[] {
+  return Array.from({ length: nombre }, (_, i) => {
+    const modele = modeleSilhouette(false, i);
+    return {
+      x: (i - (nombre - 2)) * PAS_COUREUR_M,
+      z: 0,
+      rotation: Math.PI / 2,
+      assis: false,
+      elevationM: elevationDebout(modele),
+      modele,
+      duMeuble: -1,
+    };
+  });
 }
 
 /**

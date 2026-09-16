@@ -53,6 +53,7 @@ import type { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { chargeurGLB } from "./chargeurGlb.js";
 import type { Implantation, MeublePose, Personne, ModeleSilhouette } from "./implantationMobilier.js";
+import { coureursArche } from "./implantationMobilier.js";
 import { LACET_MEUBLE } from "./implantationMobilier.js";
 /** L'abri au-dessus du lounge, décrit par l'application : le paquet sait le
  *  dessiner, pas le tarifer. `config` = la composition reçue du configurateur
@@ -791,10 +792,10 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
       orbite.update();
     };
     const regarderDepuisLesAssises = () => regarderDepuisAzimut(Math.PI * 0.42);
-    /* L'arche est au SUD (y positif, voir sa pose plus bas) : le visiteur qui
-       arrive la voit de FACE, depuis le nord — l'azimut opposé à celui des
-       assises, qui elles regardent l'écran au nord. */
-    const regarderVersLArche = () => regarderDepuisAzimut(Math.PI * 0.42 - Math.PI);
+    /* L'arche est DEVANT la tente, au nord (voir sa pose plus bas) — du même
+       côté que l'écran : on la regarde donc du même endroit, depuis les
+       assises. Un nom à part pour que l'intention se lise à l'appel. */
+    const regarderVersLArche = () => regarderDepuisAzimut(Math.PI * 0.42);
 
     outils.current = { loader: chargeurGLB(), racine, cadrer, reveiller, regarderDepuisLesAssises, regarderVersLArche };
 
@@ -870,6 +871,17 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
       }),
     ).then((r) => r.filter((x): x is NonNullable<typeof x> => x !== null));
 
+    /* Les COUREURS de l'arche : mêmes gabarits que les silhouettes, mais leur
+       place ne se connaît qu'une fois l'arche posée — ils se chargent ici,
+       se posent plus bas. Sans arche, personne ne court. */
+    const coureursPromises = Promise.all(
+      (arche ? coureursArche() : []).map((pose) =>
+        chargerGLB(o.loader, urlPersonne(pose.modele.fichier))
+          .then((gabarit) => ({ pose, modele: pose.modele, gabarit }))
+          .catch(() => null),
+      ),
+    ).then((r) => r.filter((x): x is NonNullable<typeof x> => x !== null));
+
     Promise.all([
       Promise.allSettled(
         meubles.map((pose) => chargerGLB(o.loader, urlMeuble(pose.slug)).then((gabarit) => ({ pose, gabarit }))),
@@ -878,7 +890,8 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
       silhouettesPromises,
       ecranPromis,
       archePromis,
-    ]).then(([resultats, abriCharge, silhouettes, ecranCharge, archeCharge]) => {
+      coureursPromises,
+    ]).then(([resultats, abriCharge, silhouettes, ecranCharge, archeCharge, coureurs]) => {
       const encore = outils.current;
       /* Une réponse en retard (implantation changée entre-temps) ne doit pas
          écraser la dernière composition demandée. */
@@ -958,13 +971,32 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
          représente que la zone de pose des meubles. Une tente déborde
          largement de cette zone (auvent, structure) ; poser l'arche à
          `sol.profondeurM / 2` la plaçait SOUS la tente, invisible (constaté en
-         prod le 16/09/2026). Elle se pose donc juste au sud de tout ce qui est
-         déjà là, quelle que soit sa taille. */
+         prod le 16/09/2026).
+         DEVANT, SUR LE CÔTÉ, PAS DE FACE (Daniel, 16/09/2026). Devant = au
+         NORD (y négatif) : c'est là que la tente s'ouvre — le même côté que
+         l'écran, « face aux assises ». La poser au sud la mettait DERRIÈRE la
+         tente, contre la paroi fermée. Sur le côté = au bout droit du front,
+         pas en travers de l'entrée. Tournée d'un quart de tour : on la
+         traverse en courant LE LONG du front de la tente, comme une ligne
+         d'arrivée passe devant un stand de ravitaillement — de face, elle
+         barrait l'entrée. */
       if (archeCharge) {
         const boiteAvant = new THREE.Box3().setFromObject(encore.racine);
-        const bordSud = boiteAvant.isEmpty() ? 0 : boiteAvant.max.y;
-        archeCharge.groupe.position.set(0, bordSud + RECUL_ARCHE_M, 0);
+        const boiteArche = new THREE.Box3().setFromObject(archeCharge.groupe);
+        const largeurArche = boiteArche.max.x - boiteArche.min.x;
+        const bordNord = boiteAvant.isEmpty() ? 0 : boiteAvant.min.y;
+        const bordDroit = boiteAvant.isEmpty() ? 0 : boiteAvant.max.x;
+        const yArche = bordNord - RECUL_ARCHE_M - largeurArche / 2;
+        archeCharge.groupe.rotation.z = Math.PI / 2;
+        archeCharge.groupe.position.set(bordDroit, yArche, 0);
         encore.racine.add(archeCharge.groupe);
+        /* Les coureurs traversent l'arche LE LONG du front de la tente : leur
+           `x` relatif court sur la ligne d'arrivée (l'axe x monde, l'arche
+           étant tournée d'un quart de tour), leur `z` relatif sur la ligne
+           elle-même — décalés à l'endroit exact où l'arche vient d'être posée. */
+        for (const { pose, modele, gabarit } of coureurs) {
+          encore.racine.add(poserSilhouette(gabarit, { ...pose, x: bordDroit + pose.x, z: yArche + pose.z }, modele));
+        }
       }
 
       if (ecranCharge && !ecranOriente.current) {

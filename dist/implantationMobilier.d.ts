@@ -195,6 +195,21 @@ export declare const ANCRAGES: Record<string, {
  * la forme des valeurs, faute de pouvoir les re-mesurer sur les fichiers.
  */
 export declare const LACET_MEUBLE: Record<string, number>;
+/** Semelles posées sur le sol, jamais dessous. */
+export declare function elevationDebout(m: ModeleSilhouette): number;
+/**
+ * Les COUREURS de l'arche (Daniel, 16/09/2026 : « des personnes près de
+ * l'arche ») — une ligne qui la traverse en courant, pas un attroupement.
+ * Positions RELATIVES à l'arche : `x` le long de la ligne de course (0 = sous
+ * l'arche, négatif = avant, positif = passé), `z` sur la ligne elle-même. Le
+ * visualiseur les décale à l'endroit où il a posé l'arche. Ils regardent
+ * +x, dans le sens de la course. `duMeuble` à −1 : ils n'appartiennent à
+ * aucun meuble, et c'est le seul cas.
+ *
+ * Alternance homme/femme par index, comme `modeleSilhouette` : une scène
+ * rejouée depuis un devis montre les mêmes coureurs des mois plus tard.
+ */
+export declare function coureursArche(nombre?: number): Personne[];
 export declare function personnes(meubles: MeublePose[], catalogue: Record<string, MobilierItem>, 
 /** Nombre d'INVITÉS à dessiner. Absent : une silhouette par place, comme
     toujours. Présent, il COMMANDE : on assoit d'abord (jusqu'aux places),

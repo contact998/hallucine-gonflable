@@ -20,16 +20,30 @@ const MM_EN_M = 0.001;
  */
 export async function chargerArcheGlb(loader, forme) {
     const gltf = await loader.loadAsync(urlArche(forme));
+    /* L'export STEP livre le modèle TÊTE EN BAS (constaté en prod le
+       16/09/2026, signalé par Daniel — « l'arche est renversée ») : le demi-tour
+       se fait par ROTATION, jamais par une échelle négative, qui inverserait
+       aussi le sens des normales et casserait le culling malgré le DoubleSide
+       posé plus bas. Autour de X : la profondeur (Y) se retourne avec la
+       hauteur (Z), la largeur (X) — symétrique — n'en souffre pas. */
+    gltf.scene.rotation.x = Math.PI;
     const groupe = new THREE.Group();
     groupe.add(gltf.scene);
     groupe.traverse((o) => {
         const maille = o;
         if (!maille.isMesh)
             return;
-        const mat = maille.material;
+        /* Le fichier STEP ne porte AUCUNE matière (contrôlé sur l'export : 0
+           matériau dans le glTF) — le chargeur pose alors son défaut, un métal
+           gris (metalness 1) qui rend NOIR sans environnement à réfléchir : la
+           scène du lounge n'en simule aucun, par choix (voir l'en-tête de
+           MobilierViewer.tsx). Constaté en prod le 16/09/2026 — l'arche
+           apparaissait comme une forme noire difforme. Un tissu mat blanc,
+           comme la housse nue d'une tente, remplace ce métal fantôme. */
+        maille.material = new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.85, metalness: 0 });
         // Les deux faces : la CAO tourne certaines normales vers l'intérieur du
         // tube, sans quoi des pans entiers disparaissent selon l'angle de vue.
-        mat.side = THREE.DoubleSide;
+        maille.material.side = THREE.DoubleSide;
     });
     const boite = new THREE.Box3().setFromObject(groupe);
     const taille = boite.getSize(new THREE.Vector3());
