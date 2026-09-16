@@ -17,6 +17,17 @@
 /** Dossier du modèle sur R2, à côté de `ecran` et `tente-x`. */
 export const DOSSIER_ARCHE = "arche";
 /**
+ * Les formes qui ont VRAIMENT un fichier sur R2 aujourd'hui — pas les cinq de
+ * `GammeArche3D`, qui ne fait que lister ce que le catalogue vend. Une seule
+ * livraison Bayes à ce jour (droite, 16/09/2026) : les quatre autres
+ * tenteraient un GET qui échoue à coup sûr. Même mécanique que
+ * `gammeEcran3D`/`ecranModelise`, qui figent aussi les gammes livrées plutôt
+ * que de deviner — à élargir d'une ligne à chaque nouvelle livraison.
+ */
+export const ARCHE_FORMES_MODELISEES = ["droite"];
+/** Vrai quand un modèle 3D sait dessiner cette forme. */
+export const archeModelisee = (forme) => ARCHE_FORMES_MODELISEES.includes(forme);
+/**
  * Le facteur d'échelle par axe pour une taille donnée.
  *
  * Lance quand une mesure ou une cible est inutilisable : mieux vaut ne pas

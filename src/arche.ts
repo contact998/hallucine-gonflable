@@ -28,6 +28,19 @@ export const DOSSIER_ARCHE = "arche";
 export type GammeArche3D = "droite" | "pieds" | "ronde" | "demi" | "soufflerie";
 
 /**
+ * Les formes qui ont VRAIMENT un fichier sur R2 aujourd'hui — pas les cinq de
+ * `GammeArche3D`, qui ne fait que lister ce que le catalogue vend. Une seule
+ * livraison Bayes à ce jour (droite, 16/09/2026) : les quatre autres
+ * tenteraient un GET qui échoue à coup sûr. Même mécanique que
+ * `gammeEcran3D`/`ecranModelise`, qui figent aussi les gammes livrées plutôt
+ * que de deviner — à élargir d'une ligne à chaque nouvelle livraison.
+ */
+export const ARCHE_FORMES_MODELISEES: readonly GammeArche3D[] = ["droite"];
+
+/** Vrai quand un modèle 3D sait dessiner cette forme. */
+export const archeModelisee = (forme: GammeArche3D): boolean => ARCHE_FORMES_MODELISEES.includes(forme);
+
+/**
  * Ce qu'on mesure sur le GLB au chargement, en millimètres du modèle.
  * Mesuré plutôt qu'écrit : une nouvelle livraison Bayes ne doit pas obliger à
  * retoucher des nombres à la main — c'est ce qui avait fait dériver la tente N.

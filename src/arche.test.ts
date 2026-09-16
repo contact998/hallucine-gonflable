@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calerArche, type MesuresArche } from "./arche.js";
+import { calerArche, archeModelisee, ARCHE_FORMES_MODELISEES, type MesuresArche } from "./arche.js";
 
 /* Les mesures RÉELLES du modèle livré par Bayes le 16/09/2026 (arche droite,
    4 m — `4X2.6X0.45.stp`, converti en GLB puis mesuré sur le maillage). Si une
@@ -50,5 +50,18 @@ describe("calerArche", () => {
     expect(() => calerArche({ ...BAYES_DROITE_4M, hauteurMM: -1 }, { largeurM: 6, hauteurM: 3.8, profondeurM: 0.6 })).toThrow();
     expect(() => calerArche(BAYES_DROITE_4M, { largeurM: 0, hauteurM: 3.8, profondeurM: 0.6 })).toThrow();
     expect(() => calerArche(BAYES_DROITE_4M, { largeurM: 6, hauteurM: -3.8, profondeurM: 0.6 })).toThrow();
+  });
+});
+
+describe("archeModelisee", () => {
+  it("ne reconnaît QUE la droite — seule forme livrée par Bayes au 16/09/2026", () => {
+    expect(archeModelisee("droite")).toBe(true);
+    for (const forme of ["pieds", "ronde", "demi", "soufflerie"] as const) {
+      expect(archeModelisee(forme), forme).toBe(false);
+    }
+  });
+
+  it("la liste ne contient que des formes réellement livrées — pas les cinq du catalogue", () => {
+    expect(ARCHE_FORMES_MODELISEES.length).toBeLessThan(5);
   });
 });
