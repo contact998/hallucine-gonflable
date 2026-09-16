@@ -850,24 +850,23 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
                NORD (y négatif) : c'est là que la tente s'ouvre — le même côté que
                l'écran, « face aux assises ». La poser au sud la mettait DERRIÈRE la
                tente, contre la paroi fermée. Sur le côté = au bout droit du front,
-               pas en travers de l'entrée. Tournée d'un quart de tour : on la
-               traverse en courant LE LONG du front de la tente, comme une ligne
-               d'arrivée passe devant un stand de ravitaillement — de face, elle
-               barrait l'entrée. */
+               pas en travers de l'entrée. PARALLÈLE au front de la tente (le quart
+               de tour du 16/09/2026 la montrait de profil depuis les assises : un
+               simple tube, illisible — retiré le même jour) : vue de face depuis
+               les assises, on la traverse en courant VERS la tente. */
             if (archeCharge) {
                 const boiteAvant = new THREE.Box3().setFromObject(encore.racine);
                 const boiteArche = new THREE.Box3().setFromObject(archeCharge.groupe);
-                const largeurArche = boiteArche.max.x - boiteArche.min.x;
+                const profondeurArche = boiteArche.max.y - boiteArche.min.y;
                 const bordNord = boiteAvant.isEmpty() ? 0 : boiteAvant.min.y;
                 const bordDroit = boiteAvant.isEmpty() ? 0 : boiteAvant.max.x;
-                const yArche = bordNord - RECUL_ARCHE_M - largeurArche / 2;
-                archeCharge.groupe.rotation.z = Math.PI / 2;
+                const yArche = bordNord - RECUL_ARCHE_M - profondeurArche / 2;
                 archeCharge.groupe.position.set(bordDroit, yArche, 0);
                 encore.racine.add(archeCharge.groupe);
-                /* Les coureurs traversent l'arche LE LONG du front de la tente : leur
-                   `x` relatif court sur la ligne d'arrivée (l'axe x monde, l'arche
-                   étant tournée d'un quart de tour), leur `z` relatif sur la ligne
-                   elle-même — décalés à l'endroit exact où l'arche vient d'être posée. */
+                /* Les coureurs traversent l'arche vers la tente : leur `z` relatif
+                   court sur la ligne d'arrivée (l'axe y monde), leur `x` relatif
+                   reste au milieu de l'ouverture — décalés à l'endroit exact où
+                   l'arche vient d'être posée. */
                 for (const { pose, modele, gabarit } of coureurs) {
                     encore.racine.add(poserSilhouette(gabarit, { ...pose, x: bordDroit + pose.x, z: yArche + pose.z }, modele));
                 }
