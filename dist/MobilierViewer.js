@@ -673,10 +673,21 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
             orbite.update();
         };
         const regarderDepuisLesAssises = () => regarderDepuisAzimut(Math.PI * 0.42);
-        /* L'arche est DEVANT la tente, au nord (voir sa pose plus bas) — du même
-           côté que l'écran : on la regarde donc du même endroit, depuis les
-           assises. Un nom à part pour que l'intention se lise à l'appel. */
-        const regarderVersLArche = () => regarderDepuisAzimut(Math.PI * 0.42);
+        /* L'arche est DEVANT la tente, du côté de la caméra (voir sa pose plus
+           bas). Même azimut que depuis les assises — mais `cadrer()` vise le
+           CENTRE de la boîte et pose la caméra à un rayon de la diagonale : avec
+           l'arche au bord le plus proche, la caméra atterrissait dessous — un
+           pied géant au premier plan, le linteau hors champ (constaté en prod le
+           16/09/2026). On recule donc d'un facteur, APRÈS le cadrage, pour que
+           l'arche tienne entre la caméra et la tente. Sous le `maxDistance` de
+           l'orbite (2,4 × le rayon), sinon l'orbite la ramènerait. */
+        const RECUL_ARCHE = 1.8;
+        const regarderVersLArche = () => {
+            regarderDepuisAzimut(Math.PI * 0.42);
+            const off = cam.position.clone().sub(orbite.target).multiplyScalar(RECUL_ARCHE);
+            cam.position.copy(orbite.target).add(off);
+            orbite.update();
+        };
         outils.current = { loader: chargeurGLB(), racine, cadrer, reveiller, regarderDepuisLesAssises, regarderVersLArche };
         return () => {
             cancelAnimationFrame(raf);
@@ -861,6 +872,11 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
                     encore.racine.add(poserSilhouette(gabarit, { ...pose, x: bordDroit + pose.x, z: yArche + pose.z }, modele));
                 }
             }
+            /* Le cadrage AVANT l'orientation : `cadrer()` fixe la distance depuis la
+               boîte, l'orientation ne fait que tourner autour — et, pour l'arche,
+               reculer. Dans l'autre ordre, le cadrage effaçait ce recul. Pour
+               l'écran rien ne change : le cadrage garde l'azimut. */
+            encore.cadrer();
             if (ecranCharge && !ecranOriente.current) {
                 ecranOriente.current = true;
                 encore.regarderDepuisLesAssises();
@@ -876,7 +892,6 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
                 ecranOriente.current = false;
             if (!arche)
                 archeOriente.current = false;
-            encore.cadrer();
             encore.reveiller();
             setPret(true);
         });
