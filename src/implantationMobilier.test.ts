@@ -759,15 +759,15 @@ it("place les tables basses entre les assises en îlots, y compris les îlots pi
 });
 
 describe("coureursArche — la ligne d'arrivée qui traverse l'arche", () => {
-  it("court à travers l'ouverture (axe z), un sous l'arche, les autres avant et après, tous debout et sans meuble", () => {
+  it("court le long de la ligne, un sous l'arche, les autres avant et après, tous debout et sans meuble", () => {
     const c = coureursArche();
     expect(c).toHaveLength(5);
-    expect(c.map((p) => p.z)).toEqual([-3.6, -2.4, -1.2, 0, 1.2].map((v) => expect.closeTo(v, 9)));
+    expect(c.map((p) => p.x)).toEqual([-3.6, -2.4, -1.2, 0, 1.2].map((v) => expect.closeTo(v, 9)));
     for (const p of c) {
-      expect(p.x).toBe(0);
+      expect(p.z).toBe(0);
       expect(p.assis).toBe(false);
       expect(p.duMeuble).toBe(-1);
-      expect(p.rotation).toBe(0);
+      expect(p.rotation).toBeCloseTo(Math.PI / 2, 9);
       expect(p.modele.fichier).toMatch(/-debout$/);
       /* Semelles au sol : l'élévation compense l'ancrage mesuré, jamais négative. */
       expect(p.elevationM).toBeGreaterThanOrEqual(0);
@@ -776,6 +776,6 @@ describe("coureursArche — la ligne d'arrivée qui traverse l'arche", () => {
 
   it("est déterministe — un devis rejoué montre les mêmes coureurs", () => {
     expect(coureursArche()).toEqual(coureursArche());
-    expect(coureursArche(3).map((p) => p.z)).toEqual([-1.2, 0, 1.2].map((v) => expect.closeTo(v, 9)));
+    expect(coureursArche(3).map((p) => p.x)).toEqual([-1.2, 0, 1.2].map((v) => expect.closeTo(v, 9)));
   });
 });

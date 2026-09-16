@@ -837,12 +837,11 @@ const PAS_COUREUR_M = 1.2;
 /**
  * Les COUREURS de l'arche (Daniel, 16/09/2026 : « des personnes près de
  * l'arche ») — une ligne qui la traverse en courant, pas un attroupement.
- * Positions RELATIVES à l'arche : `z` le long de la ligne de course, à
- * travers l'ouverture (0 = sous l'arche, négatif = avant, positif = passé),
- * `x` = 0, au milieu de l'ouverture. Le visualiseur les décale à l'endroit
- * où il a posé l'arche. Rotation 0 : ils courent dans le sens de la ligne
- * (l'arche est parallèle au front de la tente depuis le 16/09/2026).
- * `duMeuble` à −1 : ils n'appartiennent à aucun meuble, et c'est le seul cas.
+ * Positions RELATIVES à l'arche : `x` le long de la ligne de course (0 = sous
+ * l'arche, négatif = avant, positif = passé), `z` sur la ligne elle-même. Le
+ * visualiseur les décale à l'endroit où il a posé l'arche. Ils regardent
+ * +x, dans le sens de la course. `duMeuble` à −1 : ils n'appartiennent à
+ * aucun meuble, et c'est le seul cas.
  *
  * Alternance homme/femme par index, comme `modeleSilhouette` : une scène
  * rejouée depuis un devis montre les mêmes coureurs des mois plus tard.
@@ -851,9 +850,9 @@ export function coureursArche(nombre = 5): Personne[] {
   return Array.from({ length: nombre }, (_, i) => {
     const modele = modeleSilhouette(false, i);
     return {
-      x: 0,
-      z: (i - (nombre - 2)) * PAS_COUREUR_M,
-      rotation: 0,
+      x: (i - (nombre - 2)) * PAS_COUREUR_M,
+      z: 0,
+      rotation: Math.PI / 2,
       assis: false,
       elevationM: elevationDebout(modele),
       modele,
