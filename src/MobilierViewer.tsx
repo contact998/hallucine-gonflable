@@ -799,8 +799,11 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
        pied géant au premier plan, le linteau hors champ (constaté en prod le
        16/09/2026). On recule donc d'un facteur, APRÈS le cadrage, pour que
        l'arche tienne entre la caméra et la tente. Sous le `maxDistance` de
-       l'orbite (2,4 × le rayon), sinon l'orbite la ramènerait. */
-    const RECUL_ARCHE = 1.8;
+       l'orbite (2,4 × le rayon), sinon l'orbite la ramènerait. 1,8 rendait
+       la scène minuscule (capture prod du 16/09/2026, arche parallèle) :
+       « rapproche la caméra » — ramené à 1,15, juste la marge qui garde le
+       linteau dans le cadre. */
+    const RECUL_ARCHE = 1.15;
     const regarderVersLArche = () => {
       regarderDepuisAzimut(Math.PI * 0.42);
       const off = cam.position.clone().sub(orbite.target).multiplyScalar(RECUL_ARCHE);
