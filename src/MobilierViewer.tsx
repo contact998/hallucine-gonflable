@@ -843,13 +843,9 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
       ? chargerArcheGlb(o.loader, arche.forme)
           .then((a) => {
             poserTailleArche(a, arche);
-            /* AU SUD du sol (y positif) — à l'opposé de l'écran : l'entrée par
-               laquelle on arrive, avant de s'asseoir face à l'écran au nord.
-               Hors du rectangle de sol, comme l'écran : une arche n'est pas un
-               meuble, elle ne mange pas la place des canapés. Aucune rotation
-               — le cadre est symétrique avant/arrière, on le traverse dans les
-               deux sens. */
-            a.groupe.position.set(0, implantation.sol.profondeurM / 2 + RECUL_ARCHE_M, 0);
+            /* La POSITION se pose plus bas, une fois le reste de la scène
+               construit — voir le commentaire à l'endroit où elle s'applique.
+               Ici on ne fait que charger et mettre à l'échelle. */
             return a;
           })
           .catch(() => null)
@@ -949,8 +945,20 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
       }
 
       /* L'arche DANS la racine, même raison que l'écran : le cadrage doit
-         l'embrasser, sinon la caméra serre sur les meubles et la coupe. */
-      if (archeCharge) encore.racine.add(archeCharge.groupe);
+         l'embrasser, sinon la caméra serre sur les meubles et la coupe.
+         ⚠️ La position se MESURE sur ce que la scène a VRAIMENT construit
+         jusqu'ici (sol, meubles, abri, écran) — pas sur `sol` seul, qui ne
+         représente que la zone de pose des meubles. Une tente déborde
+         largement de cette zone (auvent, structure) ; poser l'arche à
+         `sol.profondeurM / 2` la plaçait SOUS la tente, invisible (constaté en
+         prod le 16/09/2026). Elle se pose donc juste au sud de tout ce qui est
+         déjà là, quelle que soit sa taille. */
+      if (archeCharge) {
+        const boiteAvant = new THREE.Box3().setFromObject(encore.racine);
+        const bordSud = boiteAvant.isEmpty() ? 0 : boiteAvant.max.y;
+        archeCharge.groupe.position.set(0, bordSud + RECUL_ARCHE_M, 0);
+        encore.racine.add(archeCharge.groupe);
+      }
 
       if (ecranCharge && !ecranOriente.current) {
         ecranOriente.current = true;
