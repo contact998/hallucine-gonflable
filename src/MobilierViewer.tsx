@@ -610,7 +610,7 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
   const outils = useRef<{
     loader: GLTFLoader;
     racine: THREE.Group;
-    cadrer: () => void;
+    cadrer: (azimut?: number) => void;
     reveiller: () => void;
     regarderDepuisLesAssises: () => void;
     regarderVersLArche: () => void;
@@ -655,12 +655,16 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
        PAR-DESSUS les toits de tente, sinon la rangée le masque entièrement :
        c'est ce qu'on a vu en prod le 25/08/2026, l'écran réduit à un timbre
        entre deux tentes. */
-    const cadrer = () => {
+    /* `azimut` : cadrer DEPUIS cet angle au lieu de garder l'angle courant. Le
+       recul dépend de la direction — une scène longue et étroite demande bien
+       plus de champ vue de biais que vue dans l'axe. Cadrer d'abord puis
+       tourner gardait le recul de l'ANCIEN angle : trop loin, ou dedans. */
+    const cadrer = (azimut?: number) => {
       const boite = new THREE.Box3().setFromObject(racine);
       if (boite.isEmpty()) return;
       const centre = boite.getCenter(new THREE.Vector3());
       const off = cam.position.clone().sub(orbite.target);
-      const az = off.x || off.y ? Math.atan2(off.y, off.x) : -0.9;
+      const az = azimut ?? (off.x || off.y ? Math.atan2(off.y, off.x) : -0.9);
       const direction = new THREE.Vector3(Math.cos(az) * 0.92, Math.sin(az) * 0.92, elevationRef.current).normalize();
       const recul = reculPourBoite(boite, direction, cam.fov, cam.aspect);
       orbite.target.copy(centre);
@@ -793,24 +797,16 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
     };
     const regarderDepuisLesAssises = () => regarderDepuisAzimut(Math.PI * 0.42);
     /* L'arche est DEVANT la tente, du côté de la caméra (voir sa pose plus
-       bas). Même azimut que depuis les assises — mais `cadrer()` vise le
-       CENTRE de la boîte et pose la caméra à un rayon de la diagonale : avec
-       l'arche au bord le plus proche, la caméra atterrissait dessous — un
-       pied géant au premier plan, le linteau hors champ (constaté en prod le
-       16/09/2026). On recule donc d'un facteur, APRÈS le cadrage, pour que
-       l'arche tienne entre la caméra et la tente. Sous le `maxDistance` de
-       l'orbite (2,4 × le rayon), sinon l'orbite la ramènerait. 1,8 rendait
-       la scène minuscule (« rapproche la caméra », 16/09/2026) ; 1,15 allait
-       avec une arche parallèle au front, essai rejeté le 17/09 (« c'était
-       mieux avant, arche sur le côté »). 1,4 : plus près qu'avant, avec la
-       marge qu'exige l'arche en travers, au bord le plus proche. */
-    const RECUL_ARCHE = 1.4;
-    const regarderVersLArche = () => {
-      regarderDepuisAzimut(Math.PI * 0.42);
-      const off = cam.position.clone().sub(orbite.target).multiplyScalar(RECUL_ARCHE);
-      cam.position.copy(orbite.target).add(off);
-      orbite.update();
-    };
+       bas). Même azimut que depuis les assises, mais CADRÉ depuis cet azimut.
+       L'ancien geste — cadrer, puis tourner en gardant le rayon — gardait le
+       recul de l'angle d'avant : la caméra atterrissait sous l'arche (pied
+       géant, linteau hors champ, prod du 16/09/2026). On avait compensé par un
+       facteur de recul (1,8 puis 1,15 puis 1,4) : la scène devenait minuscule
+       (« resserre le cadre », 17/09/2026). Le recul juste est celui que
+       `reculPourBoite` calcule POUR cette direction : il compte la demi-
+       profondeur de la boîte, donc la caméra reste devant l'arche, et la
+       scène remplit le cadre. Plus aucun facteur. */
+    const regarderVersLArche = () => cadrer(Math.PI * 0.42);
 
     outils.current = { loader: chargeurGLB(), racine, cadrer, reveiller, regarderDepuisLesAssises, regarderVersLArche };
 
@@ -1016,9 +1012,9 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
       }
 
       /* Le cadrage AVANT l'orientation : `cadrer()` fixe la distance depuis la
-         boîte, l'orientation ne fait que tourner autour — et, pour l'arche,
-         reculer. Dans l'autre ordre, le cadrage effaçait ce recul. Pour
-         l'écran rien ne change : le cadrage garde l'azimut. */
+         boîte à l'angle courant ; pour l'écran, l'orientation tourne autour ;
+         pour l'arche, elle RECADRE depuis son propre azimut (voir
+         `regarderVersLArche`). */
       encore.cadrer();
       if (ecranCharge && !ecranOriente.current) {
         ecranOriente.current = true;
