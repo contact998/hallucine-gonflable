@@ -225,7 +225,11 @@ export function geometrieArche(a: CotesArche): GeometrieArche | null {
       attaches: [[x0, h + ecart, x0, yL + 0.5 * police], [x0 + lp, h + ecart, x0 + lp, yL + 0.5 * police]],
       texte: { x: x0 + lp / 2, y: yL + 1.1 * police, ancre: "middle", vertical: false },
     });
-    droiteDessin = x0 + lp;
+    /* Le texte de cette cote (« tubes de pied 1,4 m ») est plus large que le
+       tube lui-même sous une petite arche : le cadre s'élargit pour lui, sinon
+       le navigateur le coupe au bord (vu à 375 px le 18/09/2026). ~0,55 police
+       par caractère, vingt caractères au plus dans les six langues. */
+    droiteDessin = Math.max(x0 + lp, x0 + lp / 2 + 6 * police);
   }
   if (!colonne && profil == null) {
     /* Le texte du diamètre déborde à droite de son montant : il ne doit pas

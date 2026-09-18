@@ -131,6 +131,14 @@ describe("geometrieArche — le dessin", () => {
     }
   });
 
+  it("le texte des tubes de pied tient dans le cadre, même sous une petite arche", () => {
+    const g = geo(PIEDS);
+    const pieds = g.cotes.find((c) => c.cle === "pieds")!;
+    /* Vingt caractères à ~0,55 police, centrés : la moitié de chaque côté. */
+    const demiTexte = (20 * 0.55 * g.police) / 2;
+    expect(pieds.texte.x + demiTexte).toBeLessThanOrEqual(g.viewBox.x + g.viewBox.largeur);
+  });
+
   it("la vue de côté ne fait pas fondre le texte : même part du cadre avec ou sans profil", () => {
     const sans = geo({ ...PIEDS, hauteurPiedsCm: null });
     const avec = geo(PIEDS);
