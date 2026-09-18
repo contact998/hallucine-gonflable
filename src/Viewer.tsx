@@ -24,7 +24,8 @@ import { eclairerStudio, matiereTente } from "./renduStudio.js";
  */
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import { OutilsVue } from "./OutilsVue.js";
+import { OutilsVue, type LibellesOutils } from "./OutilsVue.js";
+import { VUES, poseVue, dureeTransition, TransitionVue, type Vue } from "./vuesCamera.js";
 import type { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
@@ -35,7 +36,7 @@ import { ZONES_COULEUR, ZONE_AUVENT, TEINTE_NUE, hexDeTeinte } from "./couleurs.
 import { marquerVitre, estVitre } from "./vitre.js";
 import { cleVisuelPose, type VisuelPose } from "./pose.js";
 import { modele as trouverModele, rangeeTentes } from "./composition.js";
-import { prochainAzimut, viser, viseeNeuve } from "./viseeCote.js";
+import { azimutPourCote, prochainAzimut, viser, viseeNeuve } from "./viseeCote.js";
 import { vue3d, urlPiece, echelle, angleCote, pieceDeCote, pieceDemiMur, porteLisere, porteVitre, decalageVoisin } from "./vue3d.js";
 import { composerPan, chargerImage } from "./visuel.js";
 import { enroulerAutourDeLaTente } from "./enrouler.js";
@@ -242,10 +243,13 @@ export interface TenteViewerProps {
    *  rangée dérivée par `rangeeTentes`. Absent ou 1 = la tente seule, avec la
    *  voisine fantôme (socle nu) si un côté est en jonction. */
   tentesReliees?: number;
-  /** Les mots des outils de vue (agrandir, imprimer). Le site les traduit en
-   *  six langues, le CRM n'en parle qu'une — d'où des mots injectés, pas écrits
-   *  ici. Absents : le français par défaut. */
-  libellesOutils?: { pleinEcran?: string; quitter?: string; imprimer?: string };
+  /** Les mots des outils de vue (agrandir, imprimer, télécharger, les vues
+   *  toutes prêtes). Le site les traduit en six langues, le CRM n'en parle
+   *  qu'une — d'où des mots injectés, pas écrits ici. Absents : le français
+   *  par défaut. */
+  libellesOutils?: LibellesOutils;
+  /** Le nom du fichier que télécharge le bouton image. */
+  nomFichierImage?: string;
 
   /** Texte de remplacement pendant le chargement. */
   labelChargement: string;
@@ -255,14 +259,20 @@ export interface TenteViewerProps {
   captureRef?: React.MutableRefObject<(() => string | null) | null>;
 }
 
-export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, labelEchec = "Vue 3D incomplète : un élément n’a pas pu être chargé.", labelReessayer = "Réessayer", captureRef, tentesReliees, libellesOutils }: TenteViewerProps) {
+export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, labelEchec = "Vue 3D incomplète : un élément n’a pas pu être chargé.", labelReessayer = "Réessayer", captureRef, tentesReliees, libellesOutils, nomFichierImage }: TenteViewerProps) {
   const M = trouverModele(modele);
   const VUE = vue3d(M);
 
   const hote = useRef<HTMLDivElement>(null);
   /* La capture, gardée par le composant : les outils de vue impriment la
      MÊME image que celle jointe au devis. */
-  const captureInterne = useRef<(() => string | null) | null>(null);
+  const captureInterne = useRef<((format?: "image/jpeg" | "image/png") => string | null) | null>(null);
+  /* Les vues toutes prêtes : le trajet en cours, la vue choisie — qui survit
+     au plein écran et aux recadrages tant que le visiteur ne reprend pas la
+     main — et le geste qui y mène, posé par la mise en place. */
+  const transition = useRef(new TransitionVue());
+  const vueFixee = useRef<Vue | null>(null);
+  const allerVue = useRef<(vue: Vue, anime: boolean) => void>(() => {});
   const racineRef = useRef<THREE.Group | null>(null);
   const parois = useRef<THREE.Group | null>(null);
   const cadrerRef = useRef<() => void>(() => {});
@@ -360,6 +370,11 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
       const vFov = (cam.fov * Math.PI) / 180;
       const hFov = 2 * Math.atan(Math.tan(vFov / 2) * cam.aspect);
       const recul = (rayon / Math.sin(Math.min(vFov, hFov) / 2)) * 1.12;
+      orbite.minDistance = recul * 0.55;
+      orbite.maxDistance = recul * 2.2;
+      /* Une vue toute prête choisie reste choisie : le plein écran, un
+         changement de taille ou de paroi la recadrent, ils ne la perdent pas. */
+      if (vueFixee.current) { appliquerVue(vueFixee.current, false); return; }
       /* On garde l'angle de vue en cours (côté présenté, geste du visiteur) :
          seul le recul et la cible changent. */
       const off = cam.position.clone().sub(orbite.target);
@@ -368,11 +383,36 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
       cam.position.copy(centre).add(
         new THREE.Vector3(Math.cos(az) * 0.937, Math.sin(az) * 0.937, 0.35).multiplyScalar(recul),
       );
-      orbite.minDistance = recul * 0.55;
-      orbite.maxDistance = recul * 2.2;
       orbite.update();
     };
     cadrerRef.current = cadrer;
+
+    /* Une vue toute prête : cadrée sur la boîte de la tente RÉELLEMENT montée
+       (rangée et voisines comprises), la face étant le premier côté du modèle
+       — l'avant, ou le côté A de la V. */
+    const appliquerVue = (vue: Vue, anime: boolean) => {
+      const boite = new THREE.Box3().setFromObject(racine);
+      if (boite.isEmpty()) return;
+      const face = azimutPourCote(M, (M.cotes as readonly string[])[0]);
+      const pose = poseVue(vue, boite, { azimutFace: face, fov: cam.fov, aspect: cam.aspect });
+      /* Les butées d'orbite ne doivent pas ramener la caméra ailleurs que là
+         où la vue la pose. */
+      orbite.minDistance = Math.min(orbite.minDistance, pose.distance * 0.9);
+      orbite.maxDistance = Math.max(orbite.maxDistance, pose.distance * 1.1);
+      vueFixee.current = vue;
+      azimut.current.anime = false;
+      derniereAction = performance.now();
+      const duree = anime ? dureeTransition() : 0;
+      if (duree > 0) {
+        transition.current.lancer({ position: cam.position.clone(), cible: orbite.target.clone() }, pose, performance.now(), duree);
+      } else {
+        transition.current.annuler();
+        cam.position.copy(pose.position);
+        orbite.target.copy(pose.cible);
+        orbite.update();
+      }
+    };
+    allerVue.current = appliquerVue;
 
     const loader = chargeurGLB();
     let vivant = true;
@@ -421,15 +461,21 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
       const a = azimut.current;
       const off = cam.position.clone().sub(orbite.target);
       const cur = Math.atan2(off.y, off.x);
-      const suite = prochainAzimut(a, cur);
-      if (suite !== null) {
+      /* Un trajet vers une vue toute prête passe avant tout le reste. */
+      const vue = transition.current.avancer(performance.now());
+      const suite = vue ? null : prochainAzimut(a, cur);
+      if (vue) {
+        cam.position.copy(vue.position);
+        orbite.target.copy(vue.cible);
+      } else if (suite !== null) {
         tournerCamera(suite);
       } else if (a.anime) {
         /* `prochainAzimut` vient d'éteindre l'animation : on est arrivé, et la
            vitrine ne doit pas repartir dans la seconde. */
         derniereAction = performance.now();
-      } else if (performance.now() - derniereAction > REPOS_MS) {
-        /* Vitrine : au repos, la tente tourne lentement toute seule. */
+      } else if (!vueFixee.current && performance.now() - derniereAction > REPOS_MS) {
+        /* Vitrine : au repos, la tente tourne lentement toute seule — sauf sur
+           une vue choisie, qu'on veut garder pour l'imprimer. */
         tournerCamera(cur + 0.0012);
       }
       orbite.update();
@@ -441,7 +487,7 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
        clair (le tampon WebGL n'est pas conservé entre deux images, et le JPEG
        ne connaît pas la transparence). */
     {
-      const prendre = () => {
+      const prendre = (format: "image/jpeg" | "image/png" = "image/jpeg") => {
         rendu.render(sc, cam);
         const c = document.createElement("canvas");
         c.width = rendu.domElement.width;
@@ -451,7 +497,7 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
         ctx.fillStyle = "#F5F8FA";
         ctx.fillRect(0, 0, c.width, c.height);
         ctx.drawImage(rendu.domElement, 0, 0);
-        return c.toDataURL("image/jpeg", 0.72);
+        return format === "image/png" ? c.toDataURL("image/png") : c.toDataURL("image/jpeg", 0.72);
       };
       /* La MÊME capture sert au devis et à l'impression : deux fonctions de
          rendu auraient fini par diverger sur le fond ou la qualité. */
@@ -461,6 +507,9 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
 
     orbite.addEventListener("start", () => {
       azimut.current.anime = false;
+      /* Le visiteur reprend la main : la vue choisie s'efface. */
+      transition.current.annuler();
+      vueFixee.current = null;
       derniereAction = performance.now();
     });
     orbite.addEventListener("end", () => {
@@ -714,6 +763,9 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
     /* La mécanique vit dans `viseeCote` : le lounge présente ses côtés avec
        exactement la même, amorti et chemin court compris. */
     if (!(M.cotes as readonly string[]).includes(actif)) return;
+    /* Cliquer un côté, c'est demander ce côté : la vue toute prête s'efface. */
+    transition.current.annuler();
+    vueFixee.current = null;
     viser(azimut.current, M, actif);
   }, [actif, pret]);
 
@@ -870,7 +922,8 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
     <div ref={hote} className="relative w-full h-full min-h-[300px]">
       {/* Agrandir et imprimer : dans le visualiseur, donc partout où une tente
           s'affiche — le site comme le CRM. */}
-      <OutilsVue hote={hote} capture={() => captureInterne.current?.() ?? null} libelles={libellesOutils} />
+      <OutilsVue hote={hote} capture={(format) => captureInterne.current?.(format) ?? null} libelles={libellesOutils}
+        vues={VUES.map((cle) => ({ cle, aller: () => allerVue.current(cle, true) }))} nomFichier={nomFichierImage} />
       {echec && (
         <div role="alert" className="absolute bottom-12 inset-x-3 rounded bg-white/95 p-3 text-sm text-slate-800">
           <p>{labelEchec}</p>

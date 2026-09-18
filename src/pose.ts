@@ -53,6 +53,10 @@ export interface VisuelPose {
   taille: number;
   /** Par panneau, ou sur toute la zone. Voir `PORTEES`. */
   portee: Portee;
+  /** Le logo passé d'une seule couleur — une clé de teinte (`couleurs.ts`).
+   *  N'a de sens que sur une image transparente : c'est la forme du logo qui
+   *  se recolore, pas un rectangle. Absent = les couleurs de la maquette. */
+  recolor?: string;
 }
 
 export interface PlageTaille {
@@ -88,7 +92,12 @@ export function poseInitiale(url: string, mode: ModePose = "remplir"): VisuelPos
  * propre (le fond, le gabarit d'un pan) après ce préfixe commun.
  */
 export const cleVisuelPose = (pose: VisuelPose): string =>
-  `${pose.url}|${pose.mode}|${pose.taille}`;
+  `${pose.url}|${pose.mode}|${pose.taille}|${pose.recolor ?? ""}`;
+
+/** L'image garde-t-elle de la transparence ? Les visuels transparents sortent
+ *  de `importerVisuel` en PNG, les autres en JPEG : le format le dit. */
+export const visuelTransparent = (url: string | null | undefined): boolean =>
+  !!url && (url.startsWith("data:image/png") || /\.png(?:[?#]|$)/i.test(url));
 
 /** Changer de mode repart du défaut du mode visé plutôt que de traîner un
  *  chiffre qui n'y veut plus rien dire. */

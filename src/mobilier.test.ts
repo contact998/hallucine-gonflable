@@ -23,14 +23,25 @@ describe("habillage du mobilier", () => {
 
   it("la toile nue ne s'écrit pas sur un devis, les autres si", () => {
     expect(habillageMobilier(TEINTE_NUE).libelleFr).toBeNull();
-    expect(habillageMobilier("rouge").libelleFr).toBe("Rouge");
+    /* La référence Pantone part avec le nom : c'est elle que l'atelier lit. */
+    expect(habillageMobilier("rouge").libelleFr).toBe("Rouge (Pantone 199 C)");
     expect(habillageMobilier(HABILLAGE_MOBILIER_PERSO).libelleFr).toBe("impression du visuel client");
   });
 
   it("porte les deux libellés : clé i18n pour le site, français pour le CRM", () => {
     const rouge = habillageMobilier("rouge");
     expect(rouge.label).toBe("teinte_rouge");
-    expect(rouge.libelleFr).toBe("Rouge");
+    expect(rouge.libelleFr).toBe("Rouge (Pantone 199 C)");
+  });
+
+  it("accepte la teinte sur mesure du client et écrit sa référence pour l'atelier", () => {
+    const marque = habillageMobilier("#C8102E|186 C");
+    expect(marque.hex).toBe("#C8102E");
+    expect(marque.perso).toBe(false);
+    expect(marque.libelleFr).toBe("Pantone 186 C");
+    /* Sans référence, la couleur se dit quand même : le commercial demandera
+       le Pantone, il ne doit pas croire la housse blanche. */
+    expect(habillageMobilier("#00AA55").libelleFr).toBe("teinte sur mesure #00AA55");
   });
 
   it("une clé inconnue, vide ou absente retombe sur la toile nue", () => {

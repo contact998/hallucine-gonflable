@@ -17,7 +17,8 @@
  *    connaître les thèmes de ses consommateurs, et un `variant: "clair"` aurait
  *    fini par en énumérer quatre.
  */
-import { type VisuelPose } from "./pose.js";
+import { type Portee, type VisuelPose } from "./pose.js";
+import { type ClassesNuancier } from "./Nuancier.js";
 /** Les classes que l'application fournit. Toutes optionnelles : sans elles le
  *  composant reste lisible, juste sans identité visuelle. */
 export interface ClassesPose {
@@ -29,13 +30,19 @@ export interface ClassesPose {
     /** Les textes discrets : « Taille », le pourcentage. */
     discret?: string;
     curseur?: string;
+    /** Le nuancier du logo recoloré. */
+    nuancier?: ClassesNuancier;
 }
-export declare function ReglagesPose({ pose, onPose, zone, libelle, classes, }: {
+export declare function ReglagesPose({ pose, onPose, zone, portees: porteesImposees, libelle, classes, }: {
     pose: VisuelPose;
     onPose: (pose: VisuelPose) => void;
     /** Clé de zone — le toit propose un mode de plus : une image sur ses quatre
      *  pans. Absente pour une paroi, qui est d'un seul tenant. */
     zone?: string;
+    /** Les portées proposées, quand la zone ne suffit pas à les dire. Une arche
+     *  n'a qu'une face à la fois — ni pans ni tente autour de laquelle enrouler :
+     *  `["pan"]` y éteint la ligne des portées. Absent : `porteesPour(zone)`. */
+    portees?: readonly Portee[];
     /** Traduit `pose_remplir`, `portee_pan`, `pose_taille`… */
     libelle: (cle: string) => string;
     classes?: ClassesPose;

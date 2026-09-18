@@ -6,15 +6,38 @@
  * dizaines de mégaoctets en mémoire et la capture 3D jointe au devis deviendrait
  * intransportable.
  *
- * Deux règles, décidées le 07/08/2026 :
- *   1. 720p au grand côté (1 280 px). C'est un APERÇU — le fichier d'impression
- *      arrive plus tard par email, à la résolution de l'atelier. Inutile de
- *      promener du 4000 px dans un navigateur pour dessiner une toile de 3 m.
- *   2. Aplati sur blanc, encodé en JPEG. Le visuel recouvre tout le panneau ;
- *      la transparence n'a nulle part où se poser, et le blanc est justement la
- *      couleur de la toile nue.
+ * Les règles :
+ *   1. 720p au grand côté (1 280 px, 07/08/2026). C'est un APERÇU — le fichier
+ *      d'impression arrive plus tard par email, à la résolution de l'atelier.
+ *   2. LA TRANSPARENCE EST GARDÉE (18/09/2026). L'image était aplatie sur blanc,
+ *      au motif qu'elle recouvrait tout le panneau. Faux depuis les modes « une
+ *      fois » et « mosaïque » : le logo se pose SUR la teinte de la zone, et un
+ *      PNG aplati dessinait un rectangle blanc au milieu d'une toile rouge.
+ *      Une image transparente sort donc en PNG (1 024 px au plus, pour le
+ *      poids), les autres en JPEG sur blanc, comme avant.
+ *   3. LE FOND UNI D'UN LOGO EST RETIRÉ tout seul (`detourage.ts`) — c'est ce
+ *      que fait l'outil de devis de l'atelier. Le client peut revenir au
+ *      fichier d'origine : `importerVisuelDetaille(f, { detourer: false })`.
+ *   4. Un logo transparent peut passer d'une seule couleur (`VisuelPose.recolor`)
+ *      — la forme se recolore, pas un rectangle.
  */
 import { plageTaille } from "./pose.js";
+import { hexDeTeinte } from "./couleurs.js";
+import { detourerFondUni, aDeLaTransparence } from "./detourage.js";
+/** Le logo peint d'une seule couleur : sa forme (le canal alpha) remplie de la
+ *  teinte. Sur une image opaque, cela donnerait un aplat — l'appelant ne le
+ *  propose que sur un visuel transparent. */
+function recolorer(image, hex) {
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, image.width);
+    c.height = Math.max(1, image.height);
+    const ctx = c.getContext("2d");
+    ctx.drawImage(image, 0, 0, c.width, c.height);
+    ctx.globalCompositeOperation = "source-in";
+    ctx.fillStyle = hex;
+    ctx.fillRect(0, 0, c.width, c.height);
+    return c;
+}
 /** Côté le plus long du canevas de composition. Au-delà, on paie de la mémoire
  *  pour un détail que la toile 3D ne montre pas. */
 const CANEVAS_MAX = 1024;
@@ -27,7 +50,7 @@ const CANEVAS_MAX = 1024;
  * décrire comment tromper le moteur. La mosaïque et le logo centré n'auraient
  * pas de traduction honnête en répétitions d'UV.
  */
-export function composerPan(image, pose, ratioPan, fond, 
+export function composerPan(source, pose, ratioPan, fond, 
 /** Où poser un visuel unique, en part du gabarit — le barycentre du TISSU,
  *  pas le centre du carré : celui d'un quart de toit est un trou. */
 centre = { x: 0.5, y: 0.5 }) {
@@ -39,6 +62,7 @@ centre = { x: 0.5, y: 0.5 }) {
     const ctx = toile.getContext("2d");
     ctx.fillStyle = fond;
     ctx.fillRect(0, 0, toile.width, toile.height);
+    const image = pose.recolor ? recolorer(source, hexDeTeinte(pose.recolor)) : source;
     const ratioImage = image.width / image.height;
     const plage = plageTaille(pose.mode);
     if (!plage) {
@@ -87,33 +111,86 @@ export class ErreurVisuel extends Error {
         this.cause_ = cause_;
     }
 }
+/** Côté maximal d'un visuel TRANSPARENT : le PNG pèse bien plus lourd que le
+ *  JPEG, et un logo n'a pas besoin de 1 280 px pour se lire sur une toile. */
+export const COTE_MAX_TRANSPARENT = 1024;
+/** Au-delà, un PNG est réduit encore : la demande de devis emporte tous les
+ *  visuels, et le serveur refuse une image de plus de 500 ko. */
+const POIDS_PNG_MAX = 450_000;
+function toileDe(image, facteur) {
+    const toile = document.createElement("canvas");
+    toile.width = Math.max(1, Math.round(image.width * facteur));
+    toile.height = Math.max(1, Math.round(image.height * facteur));
+    return toile;
+}
+/** Le PNG le plus grand qui tienne sous `POIDS_PNG_MAX`, en réduisant par
+ *  paliers. Un logo passe du premier coup ; une photo détourée peut demander
+ *  deux réductions. */
+function pngSousPoids(toile) {
+    let source = toile;
+    let url = source.toDataURL("image/png");
+    while (url.length * 0.75 > POIDS_PNG_MAX && Math.max(source.width, source.height) > 256) {
+        const plus = toileDe(source, 0.75);
+        plus.getContext("2d").drawImage(source, 0, 0, plus.width, plus.height);
+        source = plus;
+        url = source.toDataURL("image/png");
+    }
+    return url;
+}
 /**
- * Lit le fichier choisi, le réduit à 720p et le rend en data URL prête à servir
- * de texture. Rejette avec une `ErreurVisuel` dont la cause nomme le problème,
- * pour que l'appelant affiche le bon message traduit.
+ * Lit le fichier choisi, le réduit, retire le fond uni d'un logo, et rend une
+ * data-URL prête à servir de texture — avec ce qui a été fait, pour que
+ * l'appelant puisse le dire (« fond retiré — garder le fond »). Rejette avec
+ * une `ErreurVisuel` dont la cause nomme le problème.
  */
-export async function importerVisuel(fichier) {
+export async function importerVisuelDetaille(fichier, { detourer = true } = {}) {
     if (!FORMATS.test(fichier.type))
         throw new ErreurVisuel("format");
     if (fichier.size > POIDS_MAX)
         throw new ErreurVisuel("poids");
     const source = await lireDataUrl(fichier);
     const image = await chargerImage(source);
-    const facteur = Math.min(1, COTE_MAX / Math.max(image.width, image.height));
-    const largeur = Math.max(1, Math.round(image.width * facteur));
-    const hauteur = Math.max(1, Math.round(image.height * facteur));
-    const toile = document.createElement("canvas");
-    toile.width = largeur;
-    toile.height = hauteur;
+    const toile = toileDe(image, Math.min(1, COTE_MAX / Math.max(image.width, image.height)));
     const ctx = toile.getContext("2d");
     if (!ctx)
         throw new ErreurVisuel("illisible");
+    ctx.drawImage(image, 0, 0, toile.width, toile.height);
+    let transparent = false;
+    let detoure = false;
+    try {
+        const donnees = ctx.getImageData(0, 0, toile.width, toile.height);
+        transparent = aDeLaTransparence(donnees.data);
+        if (!transparent && detourer && detourerFondUni(donnees.data, toile.width, toile.height).detoure) {
+            ctx.putImageData(donnees, 0, 0);
+            transparent = detoure = true;
+        }
+    }
+    catch {
+        /* Canevas illisible (image « contaminée » par une origine étrangère) : on
+           ne sait pas lire ses pixels, on la traite en opaque comme avant. */
+    }
+    if (transparent) {
+        const facteur = Math.min(1, COTE_MAX_TRANSPARENT / Math.max(toile.width, toile.height));
+        let finale = toile;
+        if (facteur < 1) {
+            finale = toileDe(toile, facteur);
+            finale.getContext("2d").drawImage(toile, 0, 0, finale.width, finale.height);
+        }
+        return { url: pngSousPoids(finale), transparent: true, detoure };
+    }
     // Le blanc d'abord : un PNG transparent aplati sur du noir donnerait une
     // toile noire là où le client attend de la toile nue.
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, largeur, hauteur);
-    ctx.drawImage(image, 0, 0, largeur, hauteur);
-    return toile.toDataURL("image/jpeg", 0.9);
+    const plat = toileDe(toile, 1);
+    const pctx = plat.getContext("2d");
+    pctx.fillStyle = "#ffffff";
+    pctx.fillRect(0, 0, plat.width, plat.height);
+    pctx.drawImage(toile, 0, 0);
+    return { url: plat.toDataURL("image/jpeg", 0.9), transparent: false, detoure: false };
+}
+/** La même chose, sans le compte rendu — la signature historique, que le CRM
+ *  et `ListeMobilier` appellent. */
+export async function importerVisuel(fichier, options) {
+    return (await importerVisuelDetaille(fichier, options)).url;
 }
 function lireDataUrl(fichier) {
     return new Promise((resoudre, rejeter) => {

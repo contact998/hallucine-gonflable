@@ -17,7 +17,13 @@
  *    connaître les thèmes de ses consommateurs, et un `variant: "clair"` aurait
  *    fini par en énumérer quatre.
  */
-import { MODES_POSE, changerMode, plageTaille, porteesPour, type VisuelPose } from "./pose.js";
+import { MODES_POSE, changerMode, plageTaille, porteesPour, visuelTransparent, type Portee, type VisuelPose } from "./pose.js";
+import { Nuancier, type ClassesNuancier } from "./Nuancier.js";
+
+const DEFAUTS: Record<string, string> = {
+  pose_couleur_logo: "Couleur du logo",
+  pose_couleur_origine: "Couleurs d'origine",
+};
 
 /** Les classes que l'application fournit. Toutes optionnelles : sans elles le
  *  composant reste lisible, juste sans identité visuelle. */
@@ -30,12 +36,15 @@ export interface ClassesPose {
   /** Les textes discrets : « Taille », le pourcentage. */
   discret?: string;
   curseur?: string;
+  /** Le nuancier du logo recoloré. */
+  nuancier?: ClassesNuancier;
 }
 
 export function ReglagesPose({
   pose,
   onPose,
   zone,
+  portees: porteesImposees,
   libelle,
   classes = {},
 }: {
@@ -44,13 +53,24 @@ export function ReglagesPose({
   /** Clé de zone — le toit propose un mode de plus : une image sur ses quatre
    *  pans. Absente pour une paroi, qui est d'un seul tenant. */
   zone?: string;
+  /** Les portées proposées, quand la zone ne suffit pas à les dire. Une arche
+   *  n'a qu'une face à la fois — ni pans ni tente autour de laquelle enrouler :
+   *  `["pan"]` y éteint la ligne des portées. Absent : `porteesPour(zone)`. */
+  portees?: readonly Portee[];
   /** Traduit `pose_remplir`, `portee_pan`, `pose_taille`… */
   libelle: (cle: string) => string;
   classes?: ClassesPose;
 }) {
   const plage = plageTaille(pose.mode);
-  const portees = porteesPour(zone);
+  const portees = porteesImposees ?? porteesPour(zone);
   const puce = (choisi: boolean) => (choisi ? classes.puceActive : classes.puce) ?? "";
+  const txt = (cle: string) => {
+    const v = libelle(cle);
+    return v && v !== cle ? v : DEFAUTS[cle] ?? cle;
+  };
+  /* Recolorer n'a de sens que sur un logo DÉTOURÉ : sur une image opaque, la
+     « forme » serait le rectangle entier, peint d'un aplat. */
+  const recolorable = visuelTransparent(pose.url);
 
   return (
     <div className={classes.conteneur ?? "mt-2 flex w-full flex-col gap-2"}>
@@ -83,6 +103,21 @@ export function ReglagesPose({
               {libelle(`portee_${portee}`)}
             </button>
           ))}
+        </div>
+      )}
+
+      {recolorable && (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className={`text-xs ${classes.discret ?? ""}`}>{txt("pose_couleur_logo")}</span>
+            <button type="button" aria-pressed={!pose.recolor}
+              onClick={() => onPose({ ...pose, recolor: undefined })}
+              className={puce(!pose.recolor)}>
+              {txt("pose_couleur_origine")}
+            </button>
+          </div>
+          <Nuancier valeur={pose.recolor ?? ""} onChoix={(cle) => onPose({ ...pose, recolor: cle })}
+            libelle={libelle} classes={classes.nuancier} nom={txt("pose_couleur_logo")} />
         </div>
       )}
 

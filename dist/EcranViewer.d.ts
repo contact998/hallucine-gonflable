@@ -1,4 +1,5 @@
 import type { GammeEcran3D } from "./ecran.js";
+import { type LibellesOutils } from "./OutilsVue.js";
 type Props = {
     /** Quel modèle montrer. Se lit sur le slug du catalogue (`gammeEcran3D`),
      *  jamais écrit à la main dans une page : un écran dessiné dans la mauvaise
@@ -18,11 +19,9 @@ type Props = {
     labelChargement?: string;
     /** Dit qu'un modèle manque plutôt que de montrer une scène amputée. */
     labelEchec?: string;
-    libellesOutils?: {
-        pleinEcran?: string;
-        quitter?: string;
-        imprimer?: string;
-    };
+    libellesOutils?: LibellesOutils;
+    /** Le nom du fichier que télécharge le bouton image. */
+    nomFichierImage?: string;
 };
-export default function EcranViewer({ gamme, toileLargeurM, baseImageM, silhouette, captureRef, labelChargement, labelEchec, libellesOutils, }: Props): import("react").JSX.Element;
+export default function EcranViewer({ gamme, toileLargeurM, baseImageM, silhouette, captureRef, labelChargement, labelEchec, libellesOutils, nomFichierImage, }: Props): import("react").JSX.Element;
 export {};

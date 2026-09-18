@@ -26,10 +26,18 @@ import { chargeurGLB } from "./chargeurGlb.js";
 import { FOND_SCENE, urlPersonne } from "./vue3d.js";
 import { chargerEcranGlb, poserTaille } from "./ecranGlb.js";
 import { OutilsVue } from "./OutilsVue.js";
+import { VUES, poseVue, dureeTransition, TransitionVue } from "./vuesCamera.js";
 const TAILLE_HOMME_M = 1.75;
-export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, silhouette = true, captureRef, labelChargement, labelEchec, libellesOutils, }) {
+/* La toile regarde −Y (le spectateur est au sud) : c'est d'ici que la caméra
+   voit l'écran de face. */
+const AZIMUT_FACE = -Math.PI / 2;
+export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, silhouette = true, captureRef, labelChargement, labelEchec, libellesOutils, nomFichierImage, }) {
     const hote = useRef(null);
     const captureInterne = useRef(null);
+    /* Les vues toutes prêtes — même mécanique que la tente et le lounge. */
+    const transition = useRef(new TransitionVue());
+    const vueFixee = useRef(null);
+    const allerVue = useRef(() => { });
     const [pret, setPret] = useState(false);
     const [echec, setEchec] = useState(false);
     const outils = useRef(null);
@@ -87,7 +95,42 @@ export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, s
             orbite.minDistance = rayon * 0.35;
             orbite.maxDistance = rayon * 3;
             orbite.update();
+            /* Une vue choisie survit au changement de taille et au plein écran. */
+            if (vueFixee.current)
+                appliquerVue(vueFixee.current, false);
         };
+        /* Cadrée sur ce qui se VOIT — l'écran et la silhouette —, jamais sur le sol
+           de 200 m, qui mettrait l'écran à l'horizon. */
+        const appliquerVue = (vue, anime) => {
+            const o = outils.current;
+            if (!o)
+                return;
+            const boite = new THREE.Box3().setFromObject(o.ecran.groupe);
+            if (o.homme.visible)
+                boite.union(new THREE.Box3().setFromObject(o.homme));
+            if (boite.isEmpty())
+                return;
+            const pose = poseVue(vue, boite, { azimutFace: AZIMUT_FACE, fov: cam.fov, aspect: cam.aspect });
+            orbite.minDistance = Math.min(orbite.minDistance, pose.distance * 0.9);
+            orbite.maxDistance = Math.max(orbite.maxDistance, pose.distance * 1.1);
+            vueFixee.current = vue;
+            const duree = anime ? dureeTransition() : 0;
+            if (duree > 0) {
+                transition.current.lancer({ position: cam.position.clone(), cible: orbite.target.clone() }, pose, performance.now(), duree);
+            }
+            else {
+                transition.current.annuler();
+                cam.position.copy(pose.position);
+                orbite.target.copy(pose.cible);
+                orbite.update();
+            }
+        };
+        allerVue.current = appliquerVue;
+        /* Le visiteur reprend la main : la vue choisie s'efface. */
+        orbite.addEventListener("start", () => {
+            transition.current.annuler();
+            vueFixee.current = null;
+        });
         const redimensionner = () => {
             const l = el.clientWidth || 1;
             const h = el.clientHeight || 1;
@@ -103,6 +146,11 @@ export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, s
         let raf = 0;
         const boucle = () => {
             raf = requestAnimationFrame(boucle);
+            const vue = transition.current.avancer(performance.now());
+            if (vue) {
+                cam.position.copy(vue.position);
+                orbite.target.copy(vue.cible);
+            }
             orbite.update();
             rendu.render(sc, cam);
         };
@@ -110,7 +158,7 @@ export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, s
         /* Capture pour la demande de devis : on redessine puis on recopie sur fond
            clair — le tampon WebGL n'est pas conservé entre deux images, et le JPEG
            ne connaît pas la transparence. Même recette que les autres scènes. */
-        const prendre = () => {
+        const prendre = (format = "image/jpeg") => {
             rendu.render(sc, cam);
             const c = document.createElement("canvas");
             c.width = rendu.domElement.width;
@@ -121,7 +169,7 @@ export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, s
             ctx.fillStyle = FOND_SCENE;
             ctx.fillRect(0, 0, c.width, c.height);
             ctx.drawImage(rendu.domElement, 0, 0);
-            return c.toDataURL("image/jpeg", 0.72);
+            return format === "image/png" ? c.toDataURL("image/png") : c.toDataURL("image/jpeg", 0.72);
         };
         captureInterne.current = prendre;
         if (captureRef)
@@ -212,5 +260,5 @@ export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, s
     return (
     /* Le fond du studio est peint ICI, par la scène : ce n'est pas une couleur
        de thème, et il ne suit ni le mode sombre du site ni celui du CRM. */
-    _jsxs("div", { ref: hote, className: "relative w-full h-full", style: { backgroundColor: FOND_SCENE }, children: [_jsx(OutilsVue, { hote: hote, capture: () => captureInterne.current?.() ?? null, libelles: libellesOutils }), !pret && !echec && labelChargement && (_jsx("span", { className: "absolute inset-0 flex items-center justify-center text-sm text-[#2E4A5E]/70", children: labelChargement })), echec && labelEchec && (_jsx("span", { className: "absolute inset-0 flex items-center justify-center px-4 text-center text-sm text-[#2E4A5E]/70", children: labelEchec }))] }));
+    _jsxs("div", { ref: hote, className: "relative w-full h-full", style: { backgroundColor: FOND_SCENE }, children: [_jsx(OutilsVue, { hote: hote, capture: (format) => captureInterne.current?.(format) ?? null, libelles: libellesOutils, vues: VUES.map((cle) => ({ cle, aller: () => allerVue.current(cle, true) })), nomFichier: nomFichierImage }), !pret && !echec && labelChargement && (_jsx("span", { className: "absolute inset-0 flex items-center justify-center text-sm text-[#2E4A5E]/70", children: labelChargement })), echec && labelEchec && (_jsx("span", { className: "absolute inset-0 flex items-center justify-center px-4 text-center text-sm text-[#2E4A5E]/70", children: labelEchec }))] }));
 }

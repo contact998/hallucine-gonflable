@@ -6,6 +6,8 @@ export type CoteTente = (typeof COTES_TENTE)[number];
 /** Ordre figé : la POSITION sert de code (en base 36, un seul caractère même
  *  au-delà de la dixième), ne jamais réordonner ni insérer au milieu. */
 export declare const IMPRESSIONS_TENTE: readonly ["imp_toit", "imp_zip", "imp_structure", "imp_pvc", "imp_paroi", "imp_courbe", "imp_auv_bandeau", "imp_auv_toile", "imp_auv_pied", "imp_auv_pvc", "imp_jonction", "imp_paroi_porte"];
+/** Ordre figé des zones dans le segment : ne jamais réordonner. */
+export declare const ZONES_CODE_TEINTE: readonly ["toit", "structure", "zip", "auvent"];
 export interface ConfigTente {
     /** Slug du modèle (`x`, `spider`, `n`, `v`). */
     modele: string;
@@ -20,6 +22,13 @@ export interface ConfigTente {
      *  tente seule. N'a de sens que sur une composition où `rangeePossible` :
      *  ailleurs il ne s'écrit pas et ne se relit pas. */
     nb?: number;
+    /** Teinte de chaque zone du socle et de l'auvent — clés de `couleurs.ts`.
+     *  Absente ou toile nue partout : rien ne s'écrit. */
+    couleurs?: Record<string, string>;
+    /** Teinte de chaque côté. */
+    couleursCote?: Record<string, string>;
+    /** Côtés imprimés — d'une teinte, ou d'un visuel sur toile nue. */
+    impCote?: Record<string, boolean>;
 }
 /** Composition → code d'URL. */
 export declare function encoderConfig(c: ConfigTente): string;

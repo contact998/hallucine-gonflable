@@ -63,7 +63,10 @@ export function poseInitiale(url, mode = "remplir") {
  * pour ne pas diverger sur la même question ; chacun y ajoute ce qui lui est
  * propre (le fond, le gabarit d'un pan) après ce préfixe commun.
  */
-export const cleVisuelPose = (pose) => `${pose.url}|${pose.mode}|${pose.taille}`;
+export const cleVisuelPose = (pose) => `${pose.url}|${pose.mode}|${pose.taille}|${pose.recolor ?? ""}`;
+/** L'image garde-t-elle de la transparence ? Les visuels transparents sortent
+ *  de `importerVisuel` en PNG, les autres en JPEG : le format le dit. */
+export const visuelTransparent = (url) => !!url && (url.startsWith("data:image/png") || /\.png(?:[?#]|$)/i.test(url));
 /** Changer de mode repart du défaut du mode visé plutôt que de traîner un
  *  chiffre qui n'y veut plus rien dire. */
 export function changerMode(pose, mode) {

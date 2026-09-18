@@ -20,19 +20,12 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
  */
 import { HABILLAGES_MOBILIER, HABILLAGE_MOBILIER_DEFAUT, habillageMobilier } from "./mobilier.js";
 import { MODES_POSE, changerMode } from "./pose.js";
-import { hexDeTeinte, TEINTE_NUE } from "./couleurs.js";
+import { Nuancier } from "./Nuancier.js";
 export function HabillageMobilier({ cle, onCle, visuel, onFichier, onPose, libelle, classes = {}, }) {
     const courant = habillageMobilier(cle);
-    const pastille = (choisi) => (choisi ? classes.pastilleActive : classes.pastille) ?? "";
     const bouton = (choisi) => (choisi ? classes.boutonActif : classes.bouton) ?? "";
-    return (_jsxs("div", { className: classes.conteneur ?? "mt-2 flex flex-wrap items-center gap-1.5", children: [HABILLAGES_MOBILIER.map((h) => {
-                const choisi = (cle || HABILLAGE_MOBILIER_DEFAUT) === h.cle;
-                const nom = h.perso ? libelle("habillage_perso") : libelle(h.label);
-                /* Le visuel client n'est pas une couleur : il porte son nom, pas une
-                   pastille — on ne connaît pas la maquette, lui en peindre une serait
-                   montrer un meuble que le client ne recevra pas. */
-                return h.perso ? (_jsx("button", { type: "button", "aria-pressed": choisi, onClick: () => onCle(h.cle), className: bouton(choisi), children: nom }, h.cle)) : (_jsx("button", { type: "button", title: nom, "aria-label": nom, "aria-pressed": choisi, onClick: () => onCle(h.cle), className: pastille(choisi), style: { backgroundColor: h.hex ?? hexDeTeinte(TEINTE_NUE) } }, h.cle));
-            }), courant.perso && (_jsxs("label", { className: bouton(false), style: { cursor: "pointer" }, children: [libelle(visuel ? "habillage_visuel_change" : "habillage_visuel_choisir"), _jsx("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: (e) => {
+    const perso = HABILLAGES_MOBILIER.find((h) => h.perso);
+    return (_jsxs("div", { className: classes.conteneur ?? "mt-2 flex flex-wrap items-center gap-1.5", children: [_jsx(Nuancier, { valeur: courant.perso ? "" : cle || HABILLAGE_MOBILIER_DEFAUT, onChoix: onCle, libelle: libelle, classes: { conteneur: "flex flex-wrap items-center gap-1.5", pastille: classes.pastille, pastilleActive: classes.pastilleActive, discret: classes.discret } }), _jsx("button", { type: "button", "aria-pressed": courant.perso, onClick: () => onCle(perso.cle), className: bouton(courant.perso), children: libelle("habillage_perso") }), courant.perso && (_jsxs("label", { className: bouton(false), style: { cursor: "pointer" }, children: [libelle(visuel ? "habillage_visuel_change" : "habillage_visuel_choisir"), _jsx("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: (e) => {
                             const f = e.target.files?.[0];
                             e.target.value = ""; // re-déposer le MÊME fichier doit refonctionner
                             if (f)

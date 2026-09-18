@@ -1,3 +1,4 @@
+import { type LibellesOutils } from "./OutilsVue.js";
 import { type VisuelPose } from "./pose.js";
 export interface TenteViewerProps {
     /** Choix courant de chaque côté (valeurs du configurateur). */
@@ -28,14 +29,13 @@ export interface TenteViewerProps {
      *  rangée dérivée par `rangeeTentes`. Absent ou 1 = la tente seule, avec la
      *  voisine fantôme (socle nu) si un côté est en jonction. */
     tentesReliees?: number;
-    /** Les mots des outils de vue (agrandir, imprimer). Le site les traduit en
-     *  six langues, le CRM n'en parle qu'une — d'où des mots injectés, pas écrits
-     *  ici. Absents : le français par défaut. */
-    libellesOutils?: {
-        pleinEcran?: string;
-        quitter?: string;
-        imprimer?: string;
-    };
+    /** Les mots des outils de vue (agrandir, imprimer, télécharger, les vues
+     *  toutes prêtes). Le site les traduit en six langues, le CRM n'en parle
+     *  qu'une — d'où des mots injectés, pas écrits ici. Absents : le français
+     *  par défaut. */
+    libellesOutils?: LibellesOutils;
+    /** Le nom du fichier que télécharge le bouton image. */
+    nomFichierImage?: string;
     /** Texte de remplacement pendant le chargement. */
     labelChargement: string;
     labelEchec?: string;
@@ -43,4 +43,4 @@ export interface TenteViewerProps {
     /** Reçoit la fonction de capture (JPEG data-URL) — jointe à la demande de devis. */
     captureRef?: React.MutableRefObject<(() => string | null) | null>;
 }
-export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, labelEchec, labelReessayer, captureRef, tentesReliees, libellesOutils }: TenteViewerProps): import("react").JSX.Element;
+export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, labelEchec, labelReessayer, captureRef, tentesReliees, libellesOutils, nomFichierImage }: TenteViewerProps): import("react").JSX.Element;

@@ -46,6 +46,11 @@ export { chargeurGLB } from "./chargeurGlb.js";
    les siens, on n'en embarque pas un deuxième exemplaire. */
 export { default as TenteViewer } from "./Viewer.js";
 export { ReglagesPose, type ClassesPose } from "./ReglagesPose.js";
+/* Le nuancier : teintes de l'atelier avec leur référence Pantone, et la couleur
+   sur mesure du client. Le même pour la tente, le mobilier, l'arche, le logo. */
+export { Nuancier, type ClassesNuancier } from "./Nuancier.js";
+/* Le détourage d'un logo sur fond uni — pur, sans navigateur. */
+export { detourerFondUni, aDeLaTransparence, TOLERANCE_FOND, type Detourage } from "./detourage.js";
 export { HabillageMobilier, type ClassesHabillage } from "./HabillageMobilier.js";
 
 /* Le mobilier : son moteur d'implantation et sa scène 3D. Ils étaient dans le
@@ -59,7 +64,18 @@ export { azimutPourCote, prochainAzimut, viser, viseeNeuve, type Visee } from ".
 /* L'écran étanche : sa scène, et la règle qui le met à n'importe quelle taille
    depuis l'unique modèle du fournisseur (voir ecran.ts). */
 export { default as EcranViewer } from "./EcranViewer.js";
-export { OutilsVue, imprimerImage } from "./OutilsVue.js";
+export { OutilsVue, imprimerImage, telechargerImage, NOM_IMAGE_DEFAUT, type LibellesOutils, type VueOutil } from "./OutilsVue.js";
+/* Les vues toutes prêtes (face, côté, dessus, ¾) : leur cadrage, calculé sur la
+   boîte de la scène — le même pour les trois visualiseurs. */
+export { VUES, poseVue, directionVue, interpolerPose, TransitionVue, dureeTransition, type Vue, type PoseCamera } from "./vuesCamera.js";
+
+/* L'arche seule, habillée — le configurateur d'arche du site. Sa scène 3D (la
+   droite, seule forme modélisée), et le plan coté des cinq formes, en SVG, qui
+   remplace la 3D là où aucun modèle n'existe. Le plan et la 3D lisent le même
+   canevas de face (`composerFaceArche`) : ils ne peuvent pas se contredire. */
+export { default as ArcheViewer } from "./ArcheViewer.js";
+export { PlanArche, type ClassesPlanArche } from "./PlanArche.js";
+export * from "./archePlan.js";
 export { PlanCotes, planDeVisee, type ClassesPlanCotes } from "./PlanCotes.js";
 export { ListeMobilier, type MeubleListe, type ClassesListe, type ListeMobilierProps } from "./ListeMobilier.js";
 export * from "./visuel.js";

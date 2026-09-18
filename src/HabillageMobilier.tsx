@@ -19,7 +19,7 @@
  */
 import { HABILLAGES_MOBILIER, HABILLAGE_MOBILIER_DEFAUT, habillageMobilier } from "./mobilier.js";
 import { MODES_POSE, changerMode, type VisuelPose } from "./pose.js";
-import { hexDeTeinte, TEINTE_NUE } from "./couleurs.js";
+import { Nuancier } from "./Nuancier.js";
 
 export interface ClassesHabillage {
   conteneur?: string;
@@ -56,28 +56,29 @@ export function HabillageMobilier({
   classes?: ClassesHabillage;
 }) {
   const courant = habillageMobilier(cle);
-  const pastille = (choisi: boolean) => (choisi ? classes.pastilleActive : classes.pastille) ?? "";
   const bouton = (choisi: boolean) => (choisi ? classes.boutonActif : classes.bouton) ?? "";
+
+  const perso = HABILLAGES_MOBILIER.find((h) => h.perso)!;
 
   return (
     <div className={classes.conteneur ?? "mt-2 flex flex-wrap items-center gap-1.5"}>
-      {HABILLAGES_MOBILIER.map((h) => {
-        const choisi = (cle || HABILLAGE_MOBILIER_DEFAUT) === h.cle;
-        const nom = h.perso ? libelle("habillage_perso") : libelle(h.label);
-        /* Le visuel client n'est pas une couleur : il porte son nom, pas une
-           pastille — on ne connaît pas la maquette, lui en peindre une serait
-           montrer un meuble que le client ne recevra pas. */
-        return h.perso ? (
-          <button key={h.cle} type="button" aria-pressed={choisi} onClick={() => onCle(h.cle)}
-            className={bouton(choisi)}>
-            {nom}
-          </button>
-        ) : (
-          <button key={h.cle} type="button" title={nom} aria-label={nom} aria-pressed={choisi}
-            onClick={() => onCle(h.cle)} className={pastille(choisi)}
-            style={{ backgroundColor: h.hex ?? hexDeTeinte(TEINTE_NUE) }} />
-        );
-      })}
+      {/* Les teintes passent par le nuancier commun : la référence Pantone se
+          lit, et la couleur de marque du client (« Votre couleur ») s'y choisit
+          comme sur la tente. */}
+      <Nuancier
+        valeur={courant.perso ? "" : cle || HABILLAGE_MOBILIER_DEFAUT}
+        onChoix={onCle}
+        libelle={libelle}
+        classes={{ conteneur: "flex flex-wrap items-center gap-1.5", pastille: classes.pastille, pastilleActive: classes.pastilleActive, discret: classes.discret }}
+      />
+
+      {/* Le visuel client n'est pas une couleur : il porte son nom, pas une
+          pastille — on ne connaît pas la maquette, lui en peindre une serait
+          montrer un meuble que le client ne recevra pas. */}
+      <button type="button" aria-pressed={courant.perso} onClick={() => onCle(perso.cle)}
+        className={bouton(courant.perso)}>
+        {libelle("habillage_perso")}
+      </button>
 
       {/* Le dépôt n'a de sens qu'en « mon visuel » : proposer une image quand on
           a choisi le rouge n'apprend rien. */}

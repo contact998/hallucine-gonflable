@@ -18,10 +18,22 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
  *    connaître les thèmes de ses consommateurs, et un `variant: "clair"` aurait
  *    fini par en énumérer quatre.
  */
-import { MODES_POSE, changerMode, plageTaille, porteesPour } from "./pose.js";
-export function ReglagesPose({ pose, onPose, zone, libelle, classes = {}, }) {
+import { MODES_POSE, changerMode, plageTaille, porteesPour, visuelTransparent } from "./pose.js";
+import { Nuancier } from "./Nuancier.js";
+const DEFAUTS = {
+    pose_couleur_logo: "Couleur du logo",
+    pose_couleur_origine: "Couleurs d'origine",
+};
+export function ReglagesPose({ pose, onPose, zone, portees: porteesImposees, libelle, classes = {}, }) {
     const plage = plageTaille(pose.mode);
-    const portees = porteesPour(zone);
+    const portees = porteesImposees ?? porteesPour(zone);
     const puce = (choisi) => (choisi ? classes.puceActive : classes.puce) ?? "";
-    return (_jsxs("div", { className: classes.conteneur ?? "mt-2 flex w-full flex-col gap-2", children: [_jsx("div", { className: "flex flex-wrap items-center gap-1.5", children: MODES_POSE.map((mode) => (_jsx("button", { type: "button", "aria-pressed": pose.mode === mode, onClick: () => onPose(changerMode(pose, mode)), className: puce(pose.mode === mode), children: libelle(`pose_${mode}`) }, mode))) }), portees.length > 1 && (_jsx("div", { className: "flex flex-wrap items-center gap-1.5", children: portees.map((portee) => (_jsx("button", { type: "button", "aria-pressed": pose.portee === portee, onClick: () => onPose({ ...pose, portee }), className: puce(pose.portee === portee), children: libelle(`portee_${portee}`) }, portee))) })), plage && (_jsxs("label", { className: "flex items-center gap-2.5", children: [_jsx("span", { className: `shrink-0 text-xs ${classes.discret ?? ""}`, children: libelle("pose_taille") }), _jsx("input", { type: "range", min: plage.min, max: plage.max, step: 5, value: pose.taille, onChange: (e) => onPose({ ...pose, taille: Number(e.target.value) }), className: classes.curseur ?? "h-1.5 flex-1", "aria-label": libelle("pose_taille") }), _jsxs("span", { className: `w-12 shrink-0 text-right font-mono text-xs tabular-nums ${classes.discret ?? ""}`, children: [pose.taille, " %"] })] }))] }));
+    const txt = (cle) => {
+        const v = libelle(cle);
+        return v && v !== cle ? v : DEFAUTS[cle] ?? cle;
+    };
+    /* Recolorer n'a de sens que sur un logo DÉTOURÉ : sur une image opaque, la
+       « forme » serait le rectangle entier, peint d'un aplat. */
+    const recolorable = visuelTransparent(pose.url);
+    return (_jsxs("div", { className: classes.conteneur ?? "mt-2 flex w-full flex-col gap-2", children: [_jsx("div", { className: "flex flex-wrap items-center gap-1.5", children: MODES_POSE.map((mode) => (_jsx("button", { type: "button", "aria-pressed": pose.mode === mode, onClick: () => onPose(changerMode(pose, mode)), className: puce(pose.mode === mode), children: libelle(`pose_${mode}`) }, mode))) }), portees.length > 1 && (_jsx("div", { className: "flex flex-wrap items-center gap-1.5", children: portees.map((portee) => (_jsx("button", { type: "button", "aria-pressed": pose.portee === portee, onClick: () => onPose({ ...pose, portee }), className: puce(pose.portee === portee), children: libelle(`portee_${portee}`) }, portee))) })), recolorable && (_jsxs("div", { className: "flex flex-col gap-1.5", children: [_jsxs("div", { className: "flex flex-wrap items-center gap-1.5", children: [_jsx("span", { className: `text-xs ${classes.discret ?? ""}`, children: txt("pose_couleur_logo") }), _jsx("button", { type: "button", "aria-pressed": !pose.recolor, onClick: () => onPose({ ...pose, recolor: undefined }), className: puce(!pose.recolor), children: txt("pose_couleur_origine") })] }), _jsx(Nuancier, { valeur: pose.recolor ?? "", onChoix: (cle) => onPose({ ...pose, recolor: cle }), libelle: libelle, classes: classes.nuancier, nom: txt("pose_couleur_logo") })] })), plage && (_jsxs("label", { className: "flex items-center gap-2.5", children: [_jsx("span", { className: `shrink-0 text-xs ${classes.discret ?? ""}`, children: libelle("pose_taille") }), _jsx("input", { type: "range", min: plage.min, max: plage.max, step: 5, value: pose.taille, onChange: (e) => onPose({ ...pose, taille: Number(e.target.value) }), className: classes.curseur ?? "h-1.5 flex-1", "aria-label": libelle("pose_taille") }), _jsxs("span", { className: `w-12 shrink-0 text-right font-mono text-xs tabular-nums ${classes.discret ?? ""}`, children: [pose.taille, " %"] })] }))] }));
 }

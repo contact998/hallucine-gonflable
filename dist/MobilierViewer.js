@@ -50,6 +50,7 @@ import { eclairerStudio, reculPourBoite, matiereTente } from "./renduStudio.js";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OutilsVue } from "./OutilsVue.js";
+import { VUES, poseVue, dureeTransition, TransitionVue } from "./vuesCamera.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { chargeurGLB } from "./chargeurGlb.js";
 import { coureursArche } from "./implantationMobilier.js";
@@ -486,7 +487,7 @@ const RECUL_ECRAN_M = 3;
    dizaines de centimètres de profondeur), pas un plan qui a besoin de recul
    pour se regarder — juste assez pour qu'on marche À TRAVERS, pas dedans. */
 const RECUL_ARCHE_M = 0.5;
-export default function MobilierViewer({ implantation, afficherSol = true, labelChargement, labelEchec = (n) => `${n} élément(s) de la scène n’ont pas pu être chargés.`, captureRef, abri, coteActif, ecran, arche, habillages, visuels, libellesOutils, effacerParois }) {
+export default function MobilierViewer({ implantation, afficherSol = true, labelChargement, labelEchec = (n) => `${n} élément(s) de la scène n’ont pas pu être chargés.`, captureRef, abri, coteActif, ecran, arche, habillages, visuels, libellesOutils, nomFichierImage, effacerParois }) {
     const hote = useRef(null);
     /* Lu par la boucle de rendu, montée une seule fois : un ref, pas une
        dépendance d'effet — changer d'avis ne remonte pas la scène. */
@@ -501,6 +502,14 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
     /* La capture, gardée par le composant : les outils de vue impriment la
        MÊME image que celle jointe au devis. */
     const captureInterne = useRef(null);
+    /* Les vues toutes prêtes — même mécanique que la tente et l'écran. La FACE
+       du lounge : depuis les assises vers l'écran quand il y en a un (c'est ce
+       qu'on vient voir), sinon depuis le nord, là où la tente s'ouvre. */
+    const transition = useRef(new TransitionVue());
+    const vueFixee = useRef(null);
+    const allerVue = useRef(() => { });
+    const avecEcran = useRef(false);
+    avecEcran.current = !!ecran;
     const [pret, setPret] = useState(false);
     /* Modèles qui n'ont pas pu être chargés — annoncés, jamais tus. */
     const [echecs, setEchecs] = useState(0);
@@ -552,6 +561,11 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
             const boite = new THREE.Box3().setFromObject(racine);
             if (boite.isEmpty())
                 return;
+            /* Une vue choisie survit au plein écran et aux recompositions. */
+            if (azimut === undefined && vueFixee.current) {
+                appliquerVue(vueFixee.current, false);
+                return;
+            }
             const centre = boite.getCenter(new THREE.Vector3());
             const off = cam.position.clone().sub(orbite.target);
             const az = azimut ?? (off.x || off.y ? Math.atan2(off.y, off.x) : -0.9);
@@ -563,6 +577,28 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
             orbite.maxDistance = recul * 2.4;
             orbite.update();
         };
+        const appliquerVue = (vue, anime) => {
+            const boite = new THREE.Box3().setFromObject(racine);
+            if (boite.isEmpty())
+                return;
+            const face = avecEcran.current ? Math.PI / 2 : -Math.PI / 2;
+            const pose = poseVue(vue, boite, { azimutFace: face, fov: cam.fov, aspect: cam.aspect });
+            orbite.minDistance = Math.min(orbite.minDistance, pose.distance * 0.9);
+            orbite.maxDistance = Math.max(orbite.maxDistance, pose.distance * 1.1);
+            vueFixee.current = vue;
+            visee.current.anime = false;
+            const duree = anime ? dureeTransition() : 0;
+            if (duree > 0) {
+                transition.current.lancer({ position: cam.position.clone(), cible: orbite.target.clone() }, pose, performance.now(), duree);
+            }
+            else {
+                transition.current.annuler();
+                cam.position.copy(pose.position);
+                orbite.target.copy(pose.cible);
+                orbite.update();
+            }
+        };
+        allerVue.current = appliquerVue;
         const dimensionner = () => {
             const larg = el.clientWidth || 1;
             const haut = el.clientHeight || 1;
@@ -578,6 +614,9 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
         let derniereAction = performance.now();
         const reveiller = () => { derniereAction = performance.now(); };
         orbite.addEventListener("start", reveiller);
+        /* Le visiteur reprend la main : la vue choisie s'efface. */
+        const reprendre = () => { transition.current.annuler(); vueFixee.current = null; };
+        orbite.addEventListener("start", reprendre);
         const Z_SOL = 0.05; // la caméra ne descend jamais sous 5 cm du sol
         let raf = 0;
         const boucle = () => {
@@ -598,14 +637,21 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
             const tourner = (az) => {
                 cam.position.set(orbite.target.x + rH * Math.cos(az), orbite.target.y + rH * Math.sin(az), cam.position.z);
             };
-            /* Le côté qu'on vient de cliquer passe AVANT la vitrine : une caméra
-               qui dérive pendant qu'elle vise n'arriverait jamais. */
-            const vise = prochainAzimut(visee.current, azCourant);
-            if (vise !== null) {
+            /* Un trajet vers une vue toute prête passe avant tout ; puis le côté
+               qu'on vient de cliquer, AVANT la vitrine : une caméra qui dérive
+               pendant qu'elle vise n'arriverait jamais. */
+            const versVue = transition.current.avancer(performance.now());
+            const vise = versVue ? null : prochainAzimut(visee.current, azCourant);
+            if (versVue) {
+                cam.position.copy(versVue.position);
+                orbite.target.copy(versVue.cible);
+                derniereAction = performance.now();
+            }
+            else if (vise !== null) {
                 tourner(vise);
                 derniereAction = performance.now();
             }
-            else if (effacerParoisRef.current && performance.now() - derniereAction > REPOS_MS) {
+            else if (effacerParoisRef.current && !vueFixee.current && performance.now() - derniereAction > REPOS_MS) {
                 tourner(azCourant + 0.0012);
             }
             orbite.update();
@@ -647,7 +693,7 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
            clair — le tampon WebGL n'est pas conservé entre deux images, et le JPEG
            ne connaît pas la transparence. Même recette que le viewer tente. */
         {
-            const prendre = () => {
+            const prendre = (format = "image/jpeg") => {
                 rendu.render(sc, cam);
                 const c = document.createElement("canvas");
                 c.width = rendu.domElement.width;
@@ -658,7 +704,7 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
                 ctx.fillStyle = "#F5F8FA";
                 ctx.fillRect(0, 0, c.width, c.height);
                 ctx.drawImage(rendu.domElement, 0, 0);
-                return c.toDataURL("image/jpeg", 0.72);
+                return format === "image/png" ? c.toDataURL("image/png") : c.toDataURL("image/jpeg", 0.72);
             };
             /* La MÊME capture sert au devis et à l'impression. */
             captureInterne.current = prendre;
@@ -693,6 +739,7 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
             cancelAnimationFrame(raf);
             ro.disconnect();
             orbite.removeEventListener("start", reveiller);
+            orbite.removeEventListener("start", reprendre);
             orbite.dispose();
             rendu.dispose();
             rendu.domElement.remove();
@@ -880,9 +927,13 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
             encore.cadrer();
             if (ecranCharge && !ecranOriente.current) {
                 ecranOriente.current = true;
+                /* L'arrivée d'un écran réoriente la scène : une vue choisie avant lui
+                   n'a plus de sens — la face vient de changer. */
+                vueFixee.current = null;
                 encore.regarderDepuisLesAssises();
             }
             else if (!ecranCharge && archeCharge && !archeOriente.current) {
+                vueFixee.current = null;
                 /* Priorité à l'écran s'il y en a un — c'est lui qu'on regarde, l'arche
                    n'est qu'une entrée. Sans écran (l'arrivée de course), l'arche EST
                    le sujet : le visiteur qui ouvre le scénario la voit de face. */
@@ -904,6 +955,9 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
         const m = modeleTente(abri.modele);
         if (!m.cotes.includes(coteActif))
             return;
+        /* Cliquer un côté, c'est demander ce côté : la vue toute prête s'efface. */
+        transition.current.annuler();
+        vueFixee.current = null;
         viser(visee.current, m, coteActif);
     }, [coteActif, abri, pret]);
     return (
@@ -912,5 +966,5 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
        hex-inline du CRM le refusait à juste titre. Ce n'est pas une couleur de
        thème : c'est le gris-bleu du fond de prise de vue, il ne suit ni le mode
        sombre du site ni celui du CRM. */
-    _jsxs("div", { ref: hote, className: "relative w-full h-full", style: { backgroundColor: FOND_SCENE }, children: [_jsx(OutilsVue, { hote: hote, capture: () => captureInterne.current?.() ?? null, libelles: libellesOutils }), !pret && labelChargement && (_jsx("span", { className: "absolute inset-0 flex items-center justify-center text-sm text-[#2E4A5E]/70", children: labelChargement })), pret && echecs > 0 && labelEchec && (_jsx("span", { className: "absolute bottom-2 left-2 right-2 rounded bg-[#2E4A5E]/85 px-3 py-1.5 text-center text-xs text-white", children: labelEchec(echecs) }))] }));
+    _jsxs("div", { ref: hote, className: "relative w-full h-full", style: { backgroundColor: FOND_SCENE }, children: [_jsx(OutilsVue, { hote: hote, capture: (format) => captureInterne.current?.(format) ?? null, libelles: libellesOutils, vues: VUES.map((cle) => ({ cle, aller: () => allerVue.current(cle, true) })), nomFichier: nomFichierImage }), !pret && labelChargement && (_jsx("span", { className: "absolute inset-0 flex items-center justify-center text-sm text-[#2E4A5E]/70", children: labelChargement })), pret && echecs > 0 && labelEchec && (_jsx("span", { className: "absolute bottom-2 left-2 right-2 rounded bg-[#2E4A5E]/85 px-3 py-1.5 text-center text-xs text-white", children: labelEchec(echecs) }))] }));
 }
