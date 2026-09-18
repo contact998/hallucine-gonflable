@@ -55,7 +55,10 @@ export { azimutPourCote, prochainAzimut, viser, viseeNeuve } from "./viseeCote.j
 /* L'écran étanche : sa scène, et la règle qui le met à n'importe quelle taille
    depuis l'unique modèle du fournisseur (voir ecran.ts). */
 export { default as EcranViewer } from "./EcranViewer.js";
-export { OutilsVue, imprimerImage } from "./OutilsVue.js";
+export { OutilsVue, imprimerImage, telechargerImage, NOM_IMAGE_DEFAUT } from "./OutilsVue.js";
+/* Les vues toutes prêtes (face, côté, dessus, ¾) : leur cadrage, calculé sur la
+   boîte de la scène — le même pour les trois visualiseurs. */
+export { VUES, poseVue, directionVue, interpolerPose, TransitionVue, dureeTransition } from "./vuesCamera.js";
 export { PlanCotes, planDeVisee } from "./PlanCotes.js";
 export { ListeMobilier } from "./ListeMobilier.js";
 export * from "./visuel.js";
