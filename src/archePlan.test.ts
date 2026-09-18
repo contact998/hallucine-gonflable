@@ -131,6 +131,13 @@ describe("geometrieArche — le dessin", () => {
     }
   });
 
+  it("la vue de côté ne fait pas fondre le texte : même part du cadre avec ou sans profil", () => {
+    const sans = geo({ ...PIEDS, hauteurPiedsCm: null });
+    const avec = geo(PIEDS);
+    const part = (g: ReturnType<typeof geo>) => g.police / g.viewBox.largeur;
+    expect(part(avec) / part(sans)).toBeGreaterThan(0.85);
+  });
+
   it("la police suit la taille de l'arche : une 12 m et une 4 m s'écrivent pareil à l'écran", () => {
     const petite = geo(DROITE);
     const grande = geo({ forme: "droite", largeurCm: 1200, hauteurCm: 580, profondeurCm: 90 });

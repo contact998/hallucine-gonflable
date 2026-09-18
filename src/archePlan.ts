@@ -142,7 +142,11 @@ export function geometrieArche(a: CotesArche): GeometrieArche | null {
   if (d * 2 >= l && forme !== "demi") return null; // pas d'ouverture : ce n'est pas une arche
 
   const colonne = forme === "demi" && l < COLONNE_MAX * d;
-  const police = Math.max(l, h) * 0.042;
+  /* La police suit la taille du DESSIN ENTIER — profil compris : mesurée sur
+     la seule arche, elle fondait à 7 px sur téléphone dès que la vue de côté
+     d'une arche à pieds élargissait le cadre (constaté le 18/09/2026). */
+  const avecProfil = forme === "pieds" && fini(a.hauteurPiedsCm);
+  const police = Math.max(l + (avecProfil ? a.hauteurPiedsCm! + 0.2 * l : 0), h) * 0.042;
   const ecart = police * 0.6; // de l'objet au début d'une ligne d'attache
 
   let contour: string;
@@ -202,8 +206,8 @@ export function geometrieArche(a: CotesArche): GeometrieArche | null {
      pied. Posée à droite, sur le même sol, à la même échelle. */
   let profil: GeometrieArche["profil"] = null;
   let droiteDessin = colonne ? l + 0.5 * police + 7 * police : l;
-  if (forme === "pieds" && fini(a.hauteurPiedsCm)) {
-    const lp = a.hauteurPiedsCm;
+  if (avecProfil) {
+    const lp = a.hauteurPiedsCm!;
     const x0 = l + 3.5 * police;
     const r = d / 2;
     const xm = x0 + lp / 2 - d / 2; // le montant, centré sur son pied
