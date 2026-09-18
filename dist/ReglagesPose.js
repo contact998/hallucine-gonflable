@@ -24,9 +24,9 @@ const DEFAUTS = {
     pose_couleur_logo: "Couleur du logo",
     pose_couleur_origine: "Couleurs d'origine",
 };
-export function ReglagesPose({ pose, onPose, zone, libelle, classes = {}, }) {
+export function ReglagesPose({ pose, onPose, zone, portees: porteesImposees, libelle, classes = {}, }) {
     const plage = plageTaille(pose.mode);
-    const portees = porteesPour(zone);
+    const portees = porteesImposees ?? porteesPour(zone);
     const puce = (choisi) => (choisi ? classes.puceActive : classes.puce) ?? "";
     const txt = (cle) => {
         const v = libelle(cle);

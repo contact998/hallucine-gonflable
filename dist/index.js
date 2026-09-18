@@ -64,6 +64,13 @@ export { OutilsVue, imprimerImage, telechargerImage, NOM_IMAGE_DEFAUT } from "./
 /* Les vues toutes prêtes (face, côté, dessus, ¾) : leur cadrage, calculé sur la
    boîte de la scène — le même pour les trois visualiseurs. */
 export { VUES, poseVue, directionVue, interpolerPose, TransitionVue, dureeTransition } from "./vuesCamera.js";
+/* L'arche seule, habillée — le configurateur d'arche du site. Sa scène 3D (la
+   droite, seule forme modélisée), et le plan coté des cinq formes, en SVG, qui
+   remplace la 3D là où aucun modèle n'existe. Le plan et la 3D lisent le même
+   canevas de face (`composerFaceArche`) : ils ne peuvent pas se contredire. */
+export { default as ArcheViewer } from "./ArcheViewer.js";
+export { PlanArche } from "./PlanArche.js";
+export * from "./archePlan.js";
 export { PlanCotes, planDeVisee } from "./PlanCotes.js";
 export { ListeMobilier } from "./ListeMobilier.js";
 export * from "./visuel.js";

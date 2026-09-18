@@ -21,6 +21,9 @@ export { azimutPourCote, prochainAzimut, viser, viseeNeuve, type Visee } from ".
 export { default as EcranViewer } from "./EcranViewer.js";
 export { OutilsVue, imprimerImage, telechargerImage, NOM_IMAGE_DEFAUT, type LibellesOutils, type VueOutil } from "./OutilsVue.js";
 export { VUES, poseVue, directionVue, interpolerPose, TransitionVue, dureeTransition, type Vue, type PoseCamera } from "./vuesCamera.js";
+export { default as ArcheViewer } from "./ArcheViewer.js";
+export { PlanArche, type ClassesPlanArche } from "./PlanArche.js";
+export * from "./archePlan.js";
 export { PlanCotes, planDeVisee, type ClassesPlanCotes } from "./PlanCotes.js";
 export { ListeMobilier, type MeubleListe, type ClassesListe, type ListeMobilierProps } from "./ListeMobilier.js";
 export * from "./visuel.js";
