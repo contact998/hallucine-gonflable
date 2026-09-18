@@ -59,6 +59,14 @@ export { azimutPourCote, prochainAzimut, viser, viseeNeuve, type Visee } from ".
 /* L'écran étanche : sa scène, et la règle qui le met à n'importe quelle taille
    depuis l'unique modèle du fournisseur (voir ecran.ts). */
 export { default as EcranViewer } from "./EcranViewer.js";
+
+/* L'arche seule, habillée — le configurateur d'arche du site. Sa scène 3D (la
+   droite, seule forme modélisée), et le plan coté des cinq formes, en SVG, qui
+   remplace la 3D là où aucun modèle n'existe. Le plan et la 3D lisent le même
+   canevas de face (`composerFaceArche`) : ils ne peuvent pas se contredire. */
+export { default as ArcheViewer } from "./ArcheViewer.js";
+export { PlanArche, type ClassesPlanArche } from "./PlanArche.js";
+export * from "./archePlan.js";
 export { OutilsVue, imprimerImage } from "./OutilsVue.js";
 export { PlanCotes, planDeVisee, type ClassesPlanCotes } from "./PlanCotes.js";
 export { ListeMobilier, type MeubleListe, type ClassesListe, type ListeMobilierProps } from "./ListeMobilier.js";

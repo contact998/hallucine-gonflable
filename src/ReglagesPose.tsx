@@ -17,7 +17,7 @@
  *    connaître les thèmes de ses consommateurs, et un `variant: "clair"` aurait
  *    fini par en énumérer quatre.
  */
-import { MODES_POSE, changerMode, plageTaille, porteesPour, type VisuelPose } from "./pose.js";
+import { MODES_POSE, changerMode, plageTaille, porteesPour, type Portee, type VisuelPose } from "./pose.js";
 
 /** Les classes que l'application fournit. Toutes optionnelles : sans elles le
  *  composant reste lisible, juste sans identité visuelle. */
@@ -36,6 +36,7 @@ export function ReglagesPose({
   pose,
   onPose,
   zone,
+  portees: porteesImposees,
   libelle,
   classes = {},
 }: {
@@ -44,12 +45,16 @@ export function ReglagesPose({
   /** Clé de zone — le toit propose un mode de plus : une image sur ses quatre
    *  pans. Absente pour une paroi, qui est d'un seul tenant. */
   zone?: string;
+  /** Les portées proposées, quand la zone ne suffit pas à les dire. Une arche
+   *  n'a qu'une face à la fois — ni pans ni tente autour de laquelle enrouler :
+   *  `["pan"]` y éteint la ligne des portées. Absent : `porteesPour(zone)`. */
+  portees?: readonly Portee[];
   /** Traduit `pose_remplir`, `portee_pan`, `pose_taille`… */
   libelle: (cle: string) => string;
   classes?: ClassesPose;
 }) {
   const plage = plageTaille(pose.mode);
-  const portees = porteesPour(zone);
+  const portees = porteesImposees ?? porteesPour(zone);
   const puce = (choisi: boolean) => (choisi ? classes.puceActive : classes.puce) ?? "";
 
   return (

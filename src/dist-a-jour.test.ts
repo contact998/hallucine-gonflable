@@ -43,5 +43,9 @@ describe("dist/ versionné", () => {
     } finally {
       rmSync(temoin, { recursive: true, force: true });
     }
-  });
+    /* Une compilation COMPLÈTE du module, lancée en parallèle des autres
+       fichiers de test : deux secondes seule, plus de cinq quand la machine est
+       chargée — le délai par défaut de vitest la faisait tomber sans que dist/
+       soit en cause (18/09/2026, en ajoutant l'arche). */
+  }, 60_000);
 });

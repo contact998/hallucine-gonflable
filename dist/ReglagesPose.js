@@ -19,9 +19,9 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
  *    fini par en énumérer quatre.
  */
 import { MODES_POSE, changerMode, plageTaille, porteesPour } from "./pose.js";
-export function ReglagesPose({ pose, onPose, zone, libelle, classes = {}, }) {
+export function ReglagesPose({ pose, onPose, zone, portees: porteesImposees, libelle, classes = {}, }) {
     const plage = plageTaille(pose.mode);
-    const portees = porteesPour(zone);
+    const portees = porteesImposees ?? porteesPour(zone);
     const puce = (choisi) => (choisi ? classes.puceActive : classes.puce) ?? "";
     return (_jsxs("div", { className: classes.conteneur ?? "mt-2 flex w-full flex-col gap-2", children: [_jsx("div", { className: "flex flex-wrap items-center gap-1.5", children: MODES_POSE.map((mode) => (_jsx("button", { type: "button", "aria-pressed": pose.mode === mode, onClick: () => onPose(changerMode(pose, mode)), className: puce(pose.mode === mode), children: libelle(`pose_${mode}`) }, mode))) }), portees.length > 1 && (_jsx("div", { className: "flex flex-wrap items-center gap-1.5", children: portees.map((portee) => (_jsx("button", { type: "button", "aria-pressed": pose.portee === portee, onClick: () => onPose({ ...pose, portee }), className: puce(pose.portee === portee), children: libelle(`portee_${portee}`) }, portee))) })), plage && (_jsxs("label", { className: "flex items-center gap-2.5", children: [_jsx("span", { className: `shrink-0 text-xs ${classes.discret ?? ""}`, children: libelle("pose_taille") }), _jsx("input", { type: "range", min: plage.min, max: plage.max, step: 5, value: pose.taille, onChange: (e) => onPose({ ...pose, taille: Number(e.target.value) }), className: classes.curseur ?? "h-1.5 flex-1", "aria-label": libelle("pose_taille") }), _jsxs("span", { className: `w-12 shrink-0 text-right font-mono text-xs tabular-nums ${classes.discret ?? ""}`, children: [pose.taille, " %"] })] }))] }));
 }
