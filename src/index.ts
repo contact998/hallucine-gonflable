@@ -46,6 +46,11 @@ export { chargeurGLB } from "./chargeurGlb.js";
    les siens, on n'en embarque pas un deuxième exemplaire. */
 export { default as TenteViewer } from "./Viewer.js";
 export { ReglagesPose, type ClassesPose } from "./ReglagesPose.js";
+/* Le nuancier : teintes de l'atelier avec leur référence Pantone, et la couleur
+   sur mesure du client. Le même pour la tente, le mobilier, l'arche, le logo. */
+export { Nuancier, type ClassesNuancier } from "./Nuancier.js";
+/* Le détourage d'un logo sur fond uni — pur, sans navigateur. */
+export { detourerFondUni, aDeLaTransparence, TOLERANCE_FOND, type Detourage } from "./detourage.js";
 export { HabillageMobilier, type ClassesHabillage } from "./HabillageMobilier.js";
 
 /* Le mobilier : son moteur d'implantation et sa scène 3D. Ils étaient dans le

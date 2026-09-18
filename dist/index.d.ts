@@ -12,6 +12,8 @@ export * from "./schemaEcran.js";
 export { chargeurGLB } from "./chargeurGlb.js";
 export { default as TenteViewer } from "./Viewer.js";
 export { ReglagesPose, type ClassesPose } from "./ReglagesPose.js";
+export { Nuancier, type ClassesNuancier } from "./Nuancier.js";
+export { detourerFondUni, aDeLaTransparence, TOLERANCE_FOND, type Detourage } from "./detourage.js";
 export { HabillageMobilier, type ClassesHabillage } from "./HabillageMobilier.js";
 export * from "./implantationMobilier.js";
 export { default as MobilierViewer, type EcranLounge, type ArcheLounge } from "./MobilierViewer.js";

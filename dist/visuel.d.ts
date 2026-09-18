@@ -1,4 +1,5 @@
 import { type VisuelPose } from "./pose.js";
+type SourceImage = HTMLImageElement | HTMLCanvasElement;
 /**
  * Compose le pan tel qu'il sera imprimé : un canevas AUX PROPORTIONS DU PAN,
  * rempli du fond, sur lequel le visuel est posé selon le mode.
@@ -8,7 +9,7 @@ import { type VisuelPose } from "./pose.js";
  * décrire comment tromper le moteur. La mosaïque et le logo centré n'auraient
  * pas de traduction honnête en répétitions d'UV.
  */
-export declare function composerPan(image: HTMLImageElement, pose: VisuelPose, ratioPan: number, fond: string, 
+export declare function composerPan(source: SourceImage, pose: VisuelPose, ratioPan: number, fond: string, 
 /** Où poser un visuel unique, en part du gabarit — le barycentre du TISSU,
  *  pas le centre du carré : celui d'un quart de toit est un trou. */
 centre?: {
@@ -32,10 +33,30 @@ export declare class ErreurVisuel extends Error {
     readonly cause_: EchecVisuel;
     constructor(cause_: EchecVisuel);
 }
+/** Côté maximal d'un visuel TRANSPARENT : le PNG pèse bien plus lourd que le
+ *  JPEG, et un logo n'a pas besoin de 1 280 px pour se lire sur une toile. */
+export declare const COTE_MAX_TRANSPARENT = 1024;
+export interface VisuelImporte {
+    /** Data-URL prête à servir de texture — PNG si transparente, JPEG sinon. */
+    url: string;
+    /** L'image porte de la transparence, d'origine ou après détourage. */
+    transparent: boolean;
+    /** Le fond uni a été retiré par le détourage automatique. */
+    detoure: boolean;
+}
+export interface OptionsImport {
+    /** Retirer le fond uni d'un logo (par défaut : oui). */
+    detourer?: boolean;
+}
 /**
- * Lit le fichier choisi, le réduit à 720p et le rend en data URL prête à servir
- * de texture. Rejette avec une `ErreurVisuel` dont la cause nomme le problème,
- * pour que l'appelant affiche le bon message traduit.
+ * Lit le fichier choisi, le réduit, retire le fond uni d'un logo, et rend une
+ * data-URL prête à servir de texture — avec ce qui a été fait, pour que
+ * l'appelant puisse le dire (« fond retiré — garder le fond »). Rejette avec
+ * une `ErreurVisuel` dont la cause nomme le problème.
  */
-export declare function importerVisuel(fichier: File): Promise<string>;
+export declare function importerVisuelDetaille(fichier: File, { detourer }?: OptionsImport): Promise<VisuelImporte>;
+/** La même chose, sans le compte rendu — la signature historique, que le CRM
+ *  et `ListeMobilier` appellent. */
+export declare function importerVisuel(fichier: File, options?: OptionsImport): Promise<string>;
 export declare function chargerImage(source: string): Promise<HTMLImageElement>;
+export {};

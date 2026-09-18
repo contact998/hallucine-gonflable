@@ -217,3 +217,62 @@ describe("Le nombre de tentes reliées", () => {
     expect(decoderConfig(encoderConfig(c))).toEqual(c);
   });
 });
+
+describe("Code de configuration tente — les teintes (18/09/2026)", () => {
+  const habillee = (): ConfigTente => ({
+    ...vide(),
+    cotes: { avant: "porte", droit: "paroi", arriere: "paroi", gauche: "vide" },
+    options: ["imp_toit", "imp_structure"],
+    couleurs: { toit: "rouge", structure: "#C8102E|186 C", zip: "blanc", auvent: "blanc" },
+    couleursCote: { avant: "blanc", droit: "gris", arriere: "blanc", gauche: "blanc" },
+    impCote: { avant: true, droit: true, arriere: false, gauche: false },
+  });
+
+  it("une tente sans couleur garde le code d'avant, au caractère près", () => {
+    const c = { ...vide(), couleurs: { toit: "blanc", structure: "blanc", zip: "blanc", auvent: "blanc" } };
+    expect(encoderConfig(c)).toBe(encoderConfig(vide()));
+  });
+
+  it("écrit un jeton par zone puis par côté, la teinte sur mesure et sa référence comprises", () => {
+    /* toit r · structure ~C8102E!186_C! · zip - · auvent - · avant * (visuel
+       sur toile nue) · droit g — les « - » de queue tombent. */
+    expect(encoderConfig(habillee())).toBe("4x4.opp-.02...r~C8102E!186_C!--*g");
+  });
+
+  it("aller-retour : les teintes, la référence Pantone et les côtés imprimés reviennent", () => {
+    const d = decoderConfig(encoderConfig(habillee()))!;
+    expect(d.couleurs).toEqual(habillee().couleurs);
+    expect(d.couleursCote).toEqual(habillee().couleursCote);
+    expect(d.impCote).toEqual(habillee().impCote);
+  });
+
+  it("un seul toit rouge s'écrit d'une lettre", () => {
+    const c = { ...vide(), options: ["imp_toit"], couleurs: { toit: "rouge" } };
+    expect(encoderConfig(c)).toBe("4x4.----.0...r");
+    expect(decoderConfig("4x4.----.0...r")!.couleurs!.toit).toBe("rouge");
+  });
+
+  it("vit à côté du nombre de tentes reliées sans le déranger", () => {
+    const c: ConfigTente = {
+      ...vide(),
+      cotes: { ...vide().cotes, avant: "jonction" },
+      nb: 3,
+      couleurs: { toit: "bleu" },
+    };
+    const code = encoderConfig(c);
+    expect(code).toBe("4x4.j---...3.b");
+    expect(decoderConfig(code)).toMatchObject({ nb: 3, couleurs: { toit: "bleu" } });
+  });
+
+  it("une teinte posée sur un côté ouvert ne s'imprime sur rien et tombe", () => {
+    const d = decoderConfig("4x4.----....----r")!;
+    expect(d.couleursCote!.avant).toBe("blanc");
+    expect(d.impCote!.avant).toBe(false);
+  });
+
+  it("un jeton illisible s'arrête net, sans rien inventer après lui", () => {
+    const d = decoderConfig("4x4.p---....r~ZZZZZZg")!;
+    expect(d.couleurs!.toit).toBe("rouge");
+    expect(d.couleurs!.structure).toBe("blanc");
+  });
+});

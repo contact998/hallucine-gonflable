@@ -6,22 +6,31 @@
  * zone concernée, avec son prix — c'est tout l'intérêt commercial du nuancier,
  * qui rend visible ce qu'une case à cocher laissait abstrait.
  *
- * ⚠️ À CONFIRMER AVEC BAYES : leur gabarit demande un « Printing Pantone NO. »,
- * ce qui laisse penser à une gamme fermée. Ces teintes sont des valeurs
- * courantes, choisies pour être reproductibles en quadrichromie ; si le
- * fournisseur impose une charte Pantone, remplacer les codes ici — et nulle
- * part ailleurs, c'est la source unique.
+ * PANTONE (tranché le 18/09/2026). L'atelier Bayes travaille en Pantone Coated :
+ * son outil de devis interne propose le piétement en Red 199 C, Grey 429 C,
+ * Black C ou White, et l'impression dans toute la gamme C. Chaque teinte de ce
+ * nuancier porte donc SA référence, qui part au devis ; le `hex` n'est qu'une
+ * approximation d'écran — la couleur imprimée suit le nuancier physique.
+ * Rouge, gris et noir SONT les trois teintes de stock de Bayes.
+ *
+ * TEINTE SUR MESURE. Une marque a sa couleur : le client la choisit au
+ * sélecteur et donne, s'il la connaît, sa référence Pantone. La clé porte les
+ * deux — `#C8102E` ou `#C8102E|186 C` — et voyage telle quelle dans la
+ * composition envoyée au CRM, qui la dessine avec ce même module. Aucune table
+ * Pantone → écran ici : le nuancier officiel n'est pas libre de droits, et un
+ * aperçu approximatif choisi par le client vaut mieux qu'une conversion
+ * approximative choisie par nous.
  */
 /** `blanc` = toile nue : aucune impression, donc aucun supplément. */
 export const TEINTES = [
-    { cle: "blanc", hex: "#F2F2EE", label: "teinte_blanc" },
-    { cle: "noir", hex: "#2B2E33", label: "teinte_noir" },
-    { cle: "rouge", hex: "#C8322B", label: "teinte_rouge" },
-    { cle: "bleu", hex: "#1F5FA8", label: "teinte_bleu" },
-    { cle: "vert", hex: "#2E7D4F", label: "teinte_vert" },
-    { cle: "jaune", hex: "#E8B531", label: "teinte_jaune" },
-    { cle: "orange", hex: "#D9682A", label: "teinte_orange" },
-    { cle: "gris", hex: "#6E7479", label: "teinte_gris" },
+    { cle: "blanc", hex: "#F2F2EE", label: "teinte_blanc", pantone: "" },
+    { cle: "noir", hex: "#2D2926", label: "teinte_noir", pantone: "Black C" },
+    { cle: "rouge", hex: "#D50032", label: "teinte_rouge", pantone: "199 C" },
+    { cle: "bleu", hex: "#0057B8", label: "teinte_bleu", pantone: "2935 C" },
+    { cle: "vert", hex: "#00843D", label: "teinte_vert", pantone: "348 C" },
+    { cle: "jaune", hex: "#FFC72C", label: "teinte_jaune", pantone: "123 C" },
+    { cle: "orange", hex: "#D86018", label: "teinte_orange", pantone: "1595 C" },
+    { cle: "gris", hex: "#A2AAAD", label: "teinte_gris", pantone: "429 C" },
 ];
 export const TEINTE_NUE = "blanc";
 /** Zones colorables du socle — les pièces toujours présentes — et l'option
@@ -48,4 +57,52 @@ export const ZONE_AUVENT = {
     impression: "imp_auv_toile",
     label: "choix_auvent",
 };
-export const hexDeTeinte = (cle) => TEINTES.find((t) => t.cle === cle)?.hex ?? TEINTES[0].hex;
+/* ── La teinte sur mesure ─────────────────────────────────────────────── */
+const MOTIF_SUR_MESURE = /^#([0-9A-Fa-f]{6})(?:\|(.{1,24}))?$/;
+/** Longueur maximale d'une référence Pantone saisie. « Cool Gray 11 C » tient
+ *  en 14 ; au-delà, c'est une phrase, pas une référence. */
+export const PANTONE_MAX = 24;
+/**
+ * Ce que le client a tapé, ramené à une référence présentable : espaces
+ * resserrés, préfixe « Pantone » retiré (on l'écrit nous-mêmes), rien que des
+ * lettres, des chiffres, des espaces et des tirets. Vide quand il ne reste rien.
+ */
+export function normaliserPantone(saisie) {
+    return (saisie ?? "")
+        .replace(/^\s*(pantone|pms)\s*/i, "")
+        .replace(/[^0-9A-Za-zÀ-ÿ -]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, PANTONE_MAX)
+        .trim();
+}
+/** La clé d'une teinte sur mesure : `#RRGGBB`, suivie de `|réf` quand le
+ *  client a donné sa référence Pantone. */
+export function teinteSurMesure(hex, pantone) {
+    const h = /^#?([0-9A-Fa-f]{6})$/.exec(hex.trim());
+    const base = `#${(h ? h[1] : "F2F2EE").toUpperCase()}`;
+    const ref = normaliserPantone(pantone);
+    return ref ? `${base}|${ref}` : base;
+}
+export const estTeinteSurMesure = (cle) => !!cle && MOTIF_SUR_MESURE.test(cle);
+/**
+ * Toujours une teinte. Une clé inconnue — un lien écrit par une version plus
+ * récente, une URL retouchée — retombe sur la toile nue : la couleur est un
+ * détail, le prix et la composition ne le sont pas.
+ */
+export function lireTeinte(cle) {
+    const m = cle ? MOTIF_SUR_MESURE.exec(cle) : null;
+    if (m) {
+        return { cle: cle, hex: `#${m[1].toUpperCase()}`, pantone: normaliserPantone(m[2]), surMesure: true, label: null };
+    }
+    const t = TEINTES.find((x) => x.cle === cle) ?? TEINTES[0];
+    return { cle: t.cle, hex: t.hex, pantone: t.pantone, surMesure: false, label: t.label };
+}
+export const hexDeTeinte = (cle) => lireTeinte(cle).hex;
+/** La référence à écrire sur un devis, « Pantone 199 C » — vide quand il n'y en
+ *  a pas (toile nue, ou teinte sur mesure dont le client n'a pas donné la
+ *  référence : le commercial la lui demandera). */
+export function pantoneDeTeinte(cle) {
+    const p = lireTeinte(cle).pantone;
+    return p ? `Pantone ${p}` : "";
+}

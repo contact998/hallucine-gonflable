@@ -18,6 +18,7 @@
  *    fini par en énumérer quatre.
  */
 import { type VisuelPose } from "./pose.js";
+import { type ClassesNuancier } from "./Nuancier.js";
 /** Les classes que l'application fournit. Toutes optionnelles : sans elles le
  *  composant reste lisible, juste sans identité visuelle. */
 export interface ClassesPose {
@@ -29,6 +30,8 @@ export interface ClassesPose {
     /** Les textes discrets : « Taille », le pourcentage. */
     discret?: string;
     curseur?: string;
+    /** Le nuancier du logo recoloré. */
+    nuancier?: ClassesNuancier;
 }
 export declare function ReglagesPose({ pose, onPose, zone, libelle, classes, }: {
     pose: VisuelPose;

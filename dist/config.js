@@ -12,6 +12,12 @@
  *   5. tentes reliées   le nombre, écrit SEULEMENT au-delà d'une tente
  *                       (ajouté le 25/08/2026 : sans lui, un devis de rangée
  *                       rouvrait le prix d'UNE tente)
+ *   6. teintes          ajouté le 18/09/2026 : sans lui, un lien rouvrait la
+ *                       tente en toile nue — le client partageait sa tente
+ *                       rouge et son associé la recevait blanche. Un jeton par
+ *                       zone (toit, structure, cache-zip, auvent) puis par
+ *                       côté ; écrit SEULEMENT quand une teinte est posée,
+ *                       donc un lien sans couleur reste identique à avant.
  *
  * Volontairement court et stable plutôt qu'un JSON encodé : ça tient dans un
  * SMS, ça survit aux retours à la ligne des logiciels de messagerie, et ça se
@@ -23,6 +29,7 @@
  * pointent dans le vide.
  */
 import { MODELES, MODELE_DEFAUT, modele as trouverModele, TAILLES, COTES, typePossible, demiMurPossible, typesDemiMur, rangeePossible, nbTentesRangee, } from "./composition.js";
+import { TEINTE_NUE, estTeinteSurMesure, lireTeinte, teinteSurMesure } from "./couleurs.js";
 /** Dérivées de la table des modèles — une seule source pour la gamme. */
 export const TAILLES_TENTE = TAILLES;
 export const COTES_TENTE = COTES;
@@ -73,6 +80,66 @@ const LETTRE_ACC = {
 };
 const ACC_LETTRE = Object.fromEntries(Object.entries(LETTRE_ACC).map(([l, v]) => [v, l]));
 /*
+ * Les teintes, segment 6.
+ *
+ * Une lettre par teinte du nuancier — attribuée une fois pour toutes, comme
+ * celles des côtés — et « - » pour la toile nue. La teinte sur mesure du client
+ * s'écrit « ~RRGGBB », suivie de « !réf! » quand il a donné sa référence
+ * Pantone (les espaces y deviennent « _ ») : le point d'exclamation FERME la
+ * référence, qui peut contenir des lettres du nuancier.
+ * Un côté imprimé d'un visuel sur toile nue s'écrit « * » : son impression se
+ * facture, même sans couleur, et le lien doit la rouvrir.
+ */
+const LETTRE_TEINTE = {
+    "-": TEINTE_NUE,
+    n: "noir",
+    r: "rouge",
+    b: "bleu",
+    v: "vert",
+    j: "jaune",
+    o: "orange",
+    g: "gris",
+};
+const TEINTE_LETTRE = Object.fromEntries(Object.entries(LETTRE_TEINTE).map(([l, v]) => [v, l]));
+/** Ordre figé des zones dans le segment : ne jamais réordonner. */
+export const ZONES_CODE_TEINTE = ["toit", "structure", "zip", "auvent"];
+function jetonTeinte(cle, imprime = false) {
+    if (cle && estTeinteSurMesure(cle)) {
+        const t = lireTeinte(cle);
+        const ref = t.pantone ? `!${t.pantone.replace(/ /g, "_")}!` : "";
+        return `~${t.hex.slice(1)}${ref}`;
+    }
+    const lettre = TEINTE_LETTRE[cle ?? TEINTE_NUE] ?? "-";
+    return lettre === "-" && imprime ? "*" : lettre;
+}
+/** Lit le segment des teintes en jetons ; s'arrête net sur l'illisible. */
+function lireJetons(segment) {
+    const jetons = [];
+    let i = 0;
+    while (i < segment.length) {
+        const c = segment[i];
+        if (c === "~") {
+            const hex = segment.slice(i + 1, i + 7);
+            if (!/^[0-9A-Fa-f]{6}$/.test(hex))
+                break;
+            i += 7;
+            let ref = "";
+            if (segment[i] === "!") {
+                const fin = segment.indexOf("!", i + 1);
+                if (fin < 0)
+                    break;
+                ref = segment.slice(i + 1, fin).replace(/_/g, " ");
+                i = fin + 1;
+            }
+            jetons.push(teinteSurMesure(hex, ref));
+            continue;
+        }
+        jetons.push(c === "*" ? "*" : LETTRE_TEINTE[c] ?? TEINTE_NUE);
+        i++;
+    }
+    return jetons;
+}
+/*
  * Le MODÈLE en tête, et seulement s'il n'est pas la tente X.
  *
  * Les codes émis avant l'ouverture de la gamme n'ont pas de modèle — ils sont
@@ -113,8 +180,14 @@ export function encoderConfig(c) {
        d'avant cette version — c'est ce qui garde les devis déjà partis valides. */
     const n = rangeePossible(m, c.cotes) ? nbTentesRangee(c.nb) : 1;
     const nb = n > 1 ? String(n) : "";
+    /* Les teintes : zones puis côtés du MODÈLE. Les « - » de queue tombent —
+       une tente au seul toit rouge s'écrit « r ». */
+    const teintes = [
+        ...ZONES_CODE_TEINTE.map((z) => jetonTeinte(c.couleurs?.[z])),
+        ...cotesModele.map((cote) => jetonTeinte(c.couleursCote?.[cote], !!c.impCote?.[cote])),
+    ].join("").replace(/-+$/, "");
     const tete = m.slug === MODELE_DEFAUT ? [] : [m.slug];
-    return [...tete, c.taille, cotes, imps, accs, nb].join(".").replace(/\.+$/, "");
+    return [...tete, c.taille, cotes, imps, accs, nb, teintes].join(".").replace(/\.+$/, "");
 }
 /** Code d'URL → composition. Rend `null` si le code est inexploitable :
  *  la page repart alors sur ses valeurs par défaut plutôt que sur du bancal. */
@@ -126,7 +199,7 @@ export function decoderConfig(code) {
        d'avant la gamme, donc une tente X. */
     const enTete = MODELES.some((m) => m.slug === segments[0]) ? segments.shift() : MODELE_DEFAUT;
     const m = trouverModele(enTete);
-    const [taille, cotesStr = "", imps = "", accs = "", nbStr = ""] = segments;
+    const [taille, cotesStr = "", imps = "", accs = "", nbStr = "", teintesStr = ""] = segments;
     if (!m.tailles.includes(taille))
         return null;
     const cotes = {};
@@ -177,5 +250,26 @@ export function decoderConfig(code) {
        retombe à une tente : mieux vaut chiffrer la tente qu'on voit que facturer
        une rangée que personne n'a composée. */
     const n = rangeePossible(m, cotes) ? nbTentesRangee(nbStr) : 1;
-    return { modele: m.slug, taille, cotes, auvents, demiMurs, options, ...(n > 1 ? { nb: n } : {}) };
+    /* Les teintes, quand le lien en porte. Un jeton absent = toile nue ; une
+       teinte sur un côté ouvert ne s'imprime sur rien et tombe. */
+    const jetons = lireJetons(teintesStr);
+    const teintes = teintesStr
+        ? (() => {
+            const couleurs = {};
+            ZONES_CODE_TEINTE.forEach((z, i) => {
+                const j = jetons[i];
+                couleurs[z] = j && j !== "*" ? j : TEINTE_NUE;
+            });
+            const couleursCote = {};
+            const impCote = {};
+            m.cotes.forEach((cote, i) => {
+                const j = jetons[ZONES_CODE_TEINTE.length + i] ?? TEINTE_NUE;
+                const imprimable = cotes[cote] !== "vide";
+                couleursCote[cote] = imprimable && j !== "*" ? j : TEINTE_NUE;
+                impCote[cote] = imprimable && j !== TEINTE_NUE;
+            });
+            return { couleurs, couleursCote, impCote };
+        })()
+        : {};
+    return { modele: m.slug, taille, cotes, auvents, demiMurs, options, ...(n > 1 ? { nb: n } : {}), ...teintes };
 }

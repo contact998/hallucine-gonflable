@@ -20,7 +20,7 @@
  * clé i18n. Le CRM est un outil interne francophone et lit `libelleFr`. Ce qui
  * ne doit jamais diverger, c'est la LISTE — pas la façon de l'écrire.
  */
-import { TEINTES, TEINTE_NUE } from "./couleurs.js";
+import { TEINTES, TEINTE_NUE, estTeinteSurMesure, lireTeinte } from "./couleurs.js";
 /** Le client fournit sa maquette : la housse est imprimée à son visuel. */
 export const HABILLAGE_MOBILIER_PERSO = "perso";
 /** L'habillage par défaut : la toile nue, comme les tentes. */
@@ -31,7 +31,7 @@ export const HABILLAGES_MOBILIER = [
         cle: t.cle,
         hex: t.hex,
         label: t.label,
-        libelleFr: t.cle === TEINTE_NUE ? null : majuscule(t.cle),
+        libelleFr: t.cle === TEINTE_NUE ? null : `${majuscule(t.cle)} (Pantone ${t.pantone})`,
         perso: false,
     })),
     {
@@ -49,16 +49,28 @@ const PAR_CLE = new Map(HABILLAGES_MOBILIER.map((h) => [h.cle, h]));
  * le panier et le prix ne le sont pas.
  */
 export function habillageMobilier(cle) {
+    /* La teinte sur mesure du client (`#RRGGBB|réf`) : une couleur comme les
+       autres, que la liste ne peut pas énumérer. Sa référence Pantone est ce que
+       le devis doit porter pour l'atelier. */
+    if (estTeinteSurMesure(cle)) {
+        const t = lireTeinte(cle);
+        return {
+            cle: t.cle,
+            hex: t.hex,
+            label: "teinte_sur_mesure",
+            libelleFr: t.pantone ? `Pantone ${t.pantone}` : `teinte sur mesure ${t.hex}`,
+            perso: false,
+        };
+    }
     return PAR_CLE.get(cle ?? "") ?? PAR_CLE.get(HABILLAGE_MOBILIER_DEFAUT);
 }
 /*
  * PAS DE FONCTION D'IMPORT D'IMAGE ICI, et c'est délibéré.
  *
  * `importerVisuel` de `visuel.ts` fait déjà exactement ce qu'il faut : contrôle
- * du format et du poids, réduction à 720p, aplatissement sur blanc — parce
- * qu'un PNG transparent posé sur du noir donnerait une housse noire là où le
- * client attend de la toile nue —, et des erreurs typées pour que l'appelant
- * traduise le bon message.
+ * du format et du poids, réduction à 720p, détourage du fond uni d'un logo —
+ * la housse le reçoit posé sur sa toile blanche —, et des erreurs typées pour
+ * que l'appelant traduise le bon message.
  *
  * Une housse de meuble et une toile de tente posent le même problème. J'en ai
  * écrit une deuxième version le 22/08/2026 avant de m'apercevoir que celle-ci
