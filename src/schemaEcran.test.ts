@@ -75,4 +75,25 @@ describe("PLAGE_GAMME", () => {
       expect(p.largeurDefautMm).toBeLessThanOrEqual(p.largeurMaxMm);
     }
   });
+
+  /* Les bornes sont des largeurs de TOILE et suivent le catalogue. La
+     soufflerie a porté 8000-24000 — l'ancien hors-tout arrondi — jusqu'au
+     20/09/2026, et la page du plan coté offrait un bouton « 24 m » sous une
+     légende « Largeur de la toile ». Ce test nomme les quatre bornes plutôt
+     que leur seul ordre, faute de quoi la prochaine dérive passera aussi. */
+  it("borne chaque gamme sur le catalogue : étanche 2-10 m, soufflerie 7-22 m", () => {
+    expect(PLAGE_GAMME.etanche.largeurMinMm).toBe(2000);
+    expect(PLAGE_GAMME.etanche.largeurMaxMm).toBe(10000);
+    expect(PLAGE_GAMME.soufflerie.largeurMinMm).toBe(7000);
+    expect(PLAGE_GAMME.soufflerie.largeurMaxMm).toBe(22000);
+  });
+
+  /* Le pas doit retomber pile sur la borne haute, sinon le dernier cran
+     offert n'est pas le plus grand écran de la gamme. */
+  it("laisse le pas retomber exactement sur la borne haute", () => {
+    for (const g of ["etanche", "soufflerie"] as const) {
+      const p = PLAGE_GAMME[g];
+      expect((p.largeurMaxMm - p.largeurMinMm) % p.largeurPasMm, g).toBe(0);
+    }
+  });
 });
