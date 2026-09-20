@@ -12,7 +12,20 @@ export declare const RATIO_REF: number;
  * l'écart. Zéro en 16/9, et zéro sur les formats plus hauts (4/3).
  */
 export declare function bandeauMasque(twMm: number, ratio: number): number;
-/** Plage des réglages par gamme : ce qu'un écran de cette famille sait faire. */
+/**
+ * Plage des réglages par gamme : ce qu'un écran de cette famille sait faire.
+ *
+ * Les bornes sont des largeurs de TOILE, et elles suivent le catalogue : la
+ * gamme étanche va du 2 m au 10 m, la soufflerie du 7 m au 22 m.
+ *
+ * ⚠️ La soufflerie a porté 8000-24000 jusqu'au 20/09/2026 — l'ancienne
+ * nomenclature, où un soufflerie se nommait par son hors-tout arrondi
+ * (« 8 m » = toile 7 m, « 24 m » = toile 22 m). La bascule du 08/09/2026 a
+ * renommé les produits, les slugs et les modèles, mais pas cette plage :
+ * l'étanche était déjà en toile, donc rien n'a bronché, et la page du plan
+ * coté a continué d'offrir un bouton « 24 m » sous une légende « Largeur de
+ * la toile » — une toile qui n'existe pas. Un chiffre ici est une toile.
+ */
 export declare const PLAGE_GAMME: Record<GammeSchema, {
     largeurMinMm: number;
     largeurMaxMm: number;

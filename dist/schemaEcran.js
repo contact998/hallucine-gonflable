@@ -33,10 +33,23 @@ export function bandeauMasque(twMm, ratio) {
         return 0;
     return Math.round(twMm / RATIO_REF - twMm / ratio);
 }
-/** Plage des réglages par gamme : ce qu'un écran de cette famille sait faire. */
+/**
+ * Plage des réglages par gamme : ce qu'un écran de cette famille sait faire.
+ *
+ * Les bornes sont des largeurs de TOILE, et elles suivent le catalogue : la
+ * gamme étanche va du 2 m au 10 m, la soufflerie du 7 m au 22 m.
+ *
+ * ⚠️ La soufflerie a porté 8000-24000 jusqu'au 20/09/2026 — l'ancienne
+ * nomenclature, où un soufflerie se nommait par son hors-tout arrondi
+ * (« 8 m » = toile 7 m, « 24 m » = toile 22 m). La bascule du 08/09/2026 a
+ * renommé les produits, les slugs et les modèles, mais pas cette plage :
+ * l'étanche était déjà en toile, donc rien n'a bronché, et la page du plan
+ * coté a continué d'offrir un bouton « 24 m » sous une légende « Largeur de
+ * la toile » — une toile qui n'existe pas. Un chiffre ici est une toile.
+ */
 export const PLAGE_GAMME = {
     etanche: { largeurMinMm: 2000, largeurMaxMm: 10000, largeurPasMm: 500, largeurDefautMm: 6000, basMinMm: 0, basMaxMm: 2000, basPasMm: 10 },
-    soufflerie: { largeurMinMm: 8000, largeurMaxMm: 24000, largeurPasMm: 500, largeurDefautMm: 10000, basMinMm: 200, basMaxMm: 3500, basPasMm: 50 },
+    soufflerie: { largeurMinMm: 7000, largeurMaxMm: 22000, largeurPasMm: 500, largeurDefautMm: 10000, basMinMm: 200, basMaxMm: 3500, basPasMm: 50 },
 };
 /**
  * Ø boudin de l'étanche (mm) selon la largeur de toile. Table de seuils : le
