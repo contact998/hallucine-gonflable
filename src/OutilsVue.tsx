@@ -129,6 +129,17 @@ export function OutilsVue({
   const [natif, setNatif] = useState(false);
   const [css, setCss] = useState(false);
   /* La vue choisie : la caméra démarre en ¾, et le bouton cliqué prend le bleu Hallucine. */
+  /* Le curseur de zoom pousse la molette de l'orbite : aucun visualiseur à
+     modifier, ils lisent tous la molette. Valeur relative, 0 = loin, 100 = près. */
+  const [zoom, setZoom] = useState(50);
+  const changerZoom = (v: number) => {
+    const canevas = hote.current?.querySelector("canvas");
+    const pas = Math.round(Math.abs(v - zoom) / 4);
+    for (let i = 0; i < pas; i++) {
+      canevas?.dispatchEvent(new WheelEvent("wheel", { deltaY: v > zoom ? -100 : 100, bubbles: true, cancelable: true }));
+    }
+    setZoom(v);
+  };
   const [vueCourante, setVueCourante] = useState<Vue>("troisQuarts");
   const plein = natif || css;
   const mot = {
@@ -210,13 +221,19 @@ export function OutilsVue({
           {vues.map(({ cle, aller }, i) => (
             <button key={cle} type="button" onClick={() => { setVueCourante(cle); aller(); }} title={nomVue[cle]}
               aria-pressed={vueCourante === cle}
-              style={vueCourante === cle ? { background: "#4169A8", color: "#fff" } : { background: "transparent" }}
+              style={vueCourante === cle ? { background: "#4169A8", color: "#fff" } : { background: "transparent", color: sombre ? "#fff" : "#2E4A5E" }}
               className={`${boutonVue}${i > 0 ? (sombre ? " border-l border-white/25" : " border-l border-[#2E4A5E]/20") : ""}`}>
               {nomVue[cle]}
             </button>
           ))}
         </div>
       )}
+      <div className={`absolute right-3 z-10 flex items-center gap-2 rounded-lg px-3 py-1.5 ${plein ? "top-14" : "top-3"} ${barreVues}`}>
+        <span aria-hidden="true">−</span>
+        <input type="range" min={0} max={100} step={4} value={zoom} aria-label="Zoom"
+          onChange={(e) => changerZoom(Number(e.target.value))} style={{ width: 96, accentColor: "#4169A8" }} />
+        <span aria-hidden="true">+</span>
+      </div>
       <div className="absolute bottom-3 right-3 z-10 flex gap-2">
         <button type="button" onClick={() => { const img = capture("image/png"); if (img) telechargerImage(img, nomFichier); }}
           title={mot.telecharger} aria-label={mot.telecharger} className={bouton}>
