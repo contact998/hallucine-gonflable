@@ -49,6 +49,8 @@ type Props = {
   silhouette?: boolean;
   /** Reçoit la fonction de capture (JPEG data-URL) — jointe à la demande de devis. */
   captureRef?: React.MutableRefObject<(() => string | null) | null>;
+  /** Fait tourner la scène doucement à l'ouverture ; le premier geste l'arrête. */
+  rotationAuto?: boolean;
   labelChargement?: string;
   /** Dit qu'un modèle manque plutôt que de montrer une scène amputée. */
   labelEchec?: string;
@@ -59,7 +61,7 @@ type Props = {
 
 export default function EcranViewer({
   gamme, toileLargeurM, baseImageM = null, silhouette = true,
-  captureRef, labelChargement, labelEchec, libellesOutils, nomFichierImage,
+  captureRef, labelChargement, labelEchec, libellesOutils, nomFichierImage, rotationAuto,
 }: Props) {
   const hote = useRef<HTMLDivElement>(null);
   const captureInterne = useRef<((format?: "image/jpeg" | "image/png") => string | null) | null>(null);
@@ -119,6 +121,12 @@ export default function EcranViewer({
 
     const orbite = new OrbitControls(cam, rendu.domElement);
     orbite.enableDamping = true;
+    // Rotation lente à l'ouverture, arrêtée au premier geste du visiteur.
+    if (rotationAuto) {
+      orbite.autoRotate = true;
+      orbite.autoRotateSpeed = 1.5;
+      orbite.addEventListener("start", () => { orbite.autoRotate = false; });
+    }
     orbite.dampingFactor = 0.08;
     // Jamais sous le plancher : on regarde un écran, pas ses sangles par en dessous.
     orbite.maxPolarAngle = Math.PI * 0.495;

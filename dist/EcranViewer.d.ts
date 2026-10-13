@@ -16,6 +16,8 @@ type Props = {
     silhouette?: boolean;
     /** Reçoit la fonction de capture (JPEG data-URL) — jointe à la demande de devis. */
     captureRef?: React.MutableRefObject<(() => string | null) | null>;
+    /** Fait tourner la scène doucement à l'ouverture ; le premier geste l'arrête. */
+    rotationAuto?: boolean;
     labelChargement?: string;
     /** Dit qu'un modèle manque plutôt que de montrer une scène amputée. */
     labelEchec?: string;
@@ -23,5 +25,5 @@ type Props = {
     /** Le nom du fichier que télécharge le bouton image. */
     nomFichierImage?: string;
 };
-export default function EcranViewer({ gamme, toileLargeurM, baseImageM, silhouette, captureRef, labelChargement, labelEchec, libellesOutils, nomFichierImage, }: Props): import("react").JSX.Element;
+export default function EcranViewer({ gamme, toileLargeurM, baseImageM, silhouette, captureRef, labelChargement, labelEchec, libellesOutils, nomFichierImage, rotationAuto, }: Props): import("react").JSX.Element;
 export {};

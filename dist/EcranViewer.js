@@ -31,7 +31,7 @@ const TAILLE_HOMME_M = 1.75;
 /* La toile regarde −Y (le spectateur est au sud) : c'est d'ici que la caméra
    voit l'écran de face. */
 const AZIMUT_FACE = -Math.PI / 2;
-export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, silhouette = true, captureRef, labelChargement, labelEchec, libellesOutils, nomFichierImage, }) {
+export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, silhouette = true, captureRef, labelChargement, labelEchec, libellesOutils, nomFichierImage, rotationAuto, }) {
     const hote = useRef(null);
     const captureInterne = useRef(null);
     /* Les vues toutes prêtes — même mécanique que la tente et le lounge. */
@@ -76,6 +76,12 @@ export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, s
         sc.add(homme);
         const orbite = new OrbitControls(cam, rendu.domElement);
         orbite.enableDamping = true;
+        // Rotation lente à l'ouverture, arrêtée au premier geste du visiteur.
+        if (rotationAuto) {
+            orbite.autoRotate = true;
+            orbite.autoRotateSpeed = 1.5;
+            orbite.addEventListener("start", () => { orbite.autoRotate = false; });
+        }
         orbite.dampingFactor = 0.08;
         // Jamais sous le plancher : on regarde un écran, pas ses sangles par en dessous.
         orbite.maxPolarAngle = Math.PI * 0.495;

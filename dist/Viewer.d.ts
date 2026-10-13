@@ -36,6 +36,8 @@ export interface TenteViewerProps {
     libellesOutils?: LibellesOutils;
     /** Le nom du fichier que télécharge le bouton image. */
     nomFichierImage?: string;
+    /** Fait tourner la scène doucement à l'ouverture ; le premier geste l'arrête. */
+    rotationAuto?: boolean;
     /** Texte de remplacement pendant le chargement. */
     labelChargement: string;
     labelEchec?: string;
@@ -43,4 +45,4 @@ export interface TenteViewerProps {
     /** Reçoit la fonction de capture (JPEG data-URL) — jointe à la demande de devis. */
     captureRef?: React.MutableRefObject<(() => string | null) | null>;
 }
-export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, labelEchec, labelReessayer, captureRef, tentesReliees, libellesOutils, nomFichierImage }: TenteViewerProps): import("react").JSX.Element;
+export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, labelEchec, labelReessayer, captureRef, tentesReliees, libellesOutils, nomFichierImage, rotationAuto }: TenteViewerProps): import("react").JSX.Element;

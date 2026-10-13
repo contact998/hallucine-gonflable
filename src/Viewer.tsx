@@ -251,6 +251,8 @@ export interface TenteViewerProps {
   /** Le nom du fichier que télécharge le bouton image. */
   nomFichierImage?: string;
 
+  /** Fait tourner la scène doucement à l'ouverture ; le premier geste l'arrête. */
+  rotationAuto?: boolean;
   /** Texte de remplacement pendant le chargement. */
   labelChargement: string;
   labelEchec?: string;
@@ -259,7 +261,7 @@ export interface TenteViewerProps {
   captureRef?: React.MutableRefObject<(() => string | null) | null>;
 }
 
-export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, labelEchec = "Vue 3D incomplète : un élément n’a pas pu être chargé.", labelReessayer = "Réessayer", captureRef, tentesReliees, libellesOutils, nomFichierImage }: TenteViewerProps) {
+export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, labelEchec = "Vue 3D incomplète : un élément n’a pas pu être chargé.", labelReessayer = "Réessayer", captureRef, tentesReliees, libellesOutils, nomFichierImage, rotationAuto }: TenteViewerProps) {
   const M = trouverModele(modele);
   const VUE = vue3d(M);
 
@@ -331,6 +333,12 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
 
     const orbite = new OrbitControls(cam, rendu.domElement);
     orbite.enableDamping = true;
+    // Rotation lente à l'ouverture, arrêtée au premier geste du visiteur.
+    if (rotationAuto) {
+      orbite.autoRotate = true;
+      orbite.autoRotateSpeed = 1.5;
+      orbite.addEventListener("start", () => { orbite.autoRotate = false; });
+    }
     orbite.enablePan = false;
     orbite.minDistance = 4.5;
     orbite.maxDistance = 14;

@@ -210,7 +210,7 @@ function charger(loader, m, nom) {
     }
     return p.then((s) => s.clone(true));
 }
-export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, labelEchec = "Vue 3D incomplète : un élément n’a pas pu être chargé.", labelReessayer = "Réessayer", captureRef, tentesReliees, libellesOutils, nomFichierImage }) {
+export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, labelEchec = "Vue 3D incomplète : un élément n’a pas pu être chargé.", labelReessayer = "Réessayer", captureRef, tentesReliees, libellesOutils, nomFichierImage, rotationAuto }) {
     const M = trouverModele(modele);
     const VUE = vue3d(M);
     const hote = useRef(null);
@@ -276,6 +276,12 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
         eclairerStudio(sc);
         const orbite = new OrbitControls(cam, rendu.domElement);
         orbite.enableDamping = true;
+        // Rotation lente à l'ouverture, arrêtée au premier geste du visiteur.
+        if (rotationAuto) {
+            orbite.autoRotate = true;
+            orbite.autoRotateSpeed = 1.5;
+            orbite.addEventListener("start", () => { orbite.autoRotate = false; });
+        }
         orbite.enablePan = false;
         orbite.minDistance = 4.5;
         orbite.maxDistance = 14;
