@@ -94,6 +94,17 @@ export function OutilsVue({ hote, capture, libelles, sombre = false, vues, nomFi
     const [natif, setNatif] = useState(false);
     const [css, setCss] = useState(false);
     /* La vue choisie : la caméra démarre en ¾, et le bouton cliqué prend le bleu Hallucine. */
+    /* Le curseur de zoom pousse la molette de l'orbite : aucun visualiseur à
+       modifier, ils lisent tous la molette. Valeur relative, 0 = loin, 100 = près. */
+    const [zoom, setZoom] = useState(50);
+    const changerZoom = (v) => {
+        const canevas = hote.current?.querySelector("canvas");
+        const pas = Math.round(Math.abs(v - zoom) / 4);
+        for (let i = 0; i < pas; i++) {
+            canevas?.dispatchEvent(new WheelEvent("wheel", { deltaY: v > zoom ? -100 : 100, bubbles: true, cancelable: true }));
+        }
+        setZoom(v);
+    };
     const [vueCourante, setVueCourante] = useState("troisQuarts");
     const plein = natif || css;
     const mot = {
@@ -169,7 +180,7 @@ export function OutilsVue({ hote, capture, libelles, sombre = false, vues, nomFi
             /* En haut à gauche : le coin que les pages laissent libre (la taille
                s'affiche à droite, l'aide « faites tourner » en bas). En plein
                écran, la sortie prend ce coin — les vues descendent d'un cran. */
-            _jsx("div", { role: "group", "aria-label": mot.vues, className: `absolute left-3 z-10 ${plein ? "top-14" : "top-3"} ${barreVues}`, children: vues.map(({ cle, aller }, i) => (_jsx("button", { type: "button", onClick: () => { setVueCourante(cle); aller(); }, title: nomVue[cle], "aria-pressed": vueCourante === cle, style: vueCourante === cle ? { background: "#4169A8", color: "#fff" } : { background: "transparent" }, className: `${boutonVue}${i > 0 ? (sombre ? " border-l border-white/25" : " border-l border-[#2E4A5E]/20") : ""}`, children: nomVue[cle] }, cle))) })), _jsxs("div", { className: "absolute bottom-3 right-3 z-10 flex gap-2", children: [_jsx("button", { type: "button", onClick: () => { const img = capture("image/png"); if (img)
+            _jsx("div", { role: "group", "aria-label": mot.vues, className: `absolute left-3 z-10 ${plein ? "top-14" : "top-3"} ${barreVues}`, children: vues.map(({ cle, aller }, i) => (_jsx("button", { type: "button", onClick: () => { setVueCourante(cle); aller(); }, title: nomVue[cle], "aria-pressed": vueCourante === cle, style: vueCourante === cle ? { background: "#4169A8", color: "#fff" } : { background: "transparent", color: sombre ? "#fff" : "#2E4A5E" }, className: `${boutonVue}${i > 0 ? (sombre ? " border-l border-white/25" : " border-l border-[#2E4A5E]/20") : ""}`, children: nomVue[cle] }, cle))) })), _jsxs("div", { className: `absolute right-3 z-10 flex items-center gap-2 rounded-lg px-3 py-1.5 ${plein ? "top-14" : "top-3"} ${barreVues}`, children: [_jsx("span", { "aria-hidden": "true", children: "\u2212" }), _jsx("input", { type: "range", min: 0, max: 100, step: 4, value: zoom, "aria-label": "Zoom", onChange: (e) => changerZoom(Number(e.target.value)), style: { width: 96, accentColor: "#4169A8" } }), _jsx("span", { "aria-hidden": "true", children: "+" })] }), _jsxs("div", { className: "absolute bottom-3 right-3 z-10 flex gap-2", children: [_jsx("button", { type: "button", onClick: () => { const img = capture("image/png"); if (img)
                             telechargerImage(img, nomFichier); }, title: mot.telecharger, "aria-label": mot.telecharger, className: bouton, children: _jsxs("svg", { width: "14", height: "14", viewBox: "0 0 16 16", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", children: [_jsx("path", { d: "M8 1.5v8.5M4.5 6.5L8 10l3.5-3.5" }), _jsx("path", { d: "M2 11.5v2A1.5 1.5 0 003.5 15h9a1.5 1.5 0 001.5-1.5v-2" })] }) }), _jsx("button", { type: "button", onClick: () => { const img = capture(); if (img)
                             imprimerImage(img, mot.imprimer); }, title: mot.imprimer, "aria-label": mot.imprimer, className: bouton, children: _jsxs("svg", { width: "14", height: "14", viewBox: "0 0 16 16", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinejoin: "round", children: [_jsx("path", { d: "M4.5 6V1.5h7V6" }), _jsx("path", { d: "M4.5 12H2.5A1.5 1.5 0 011 10.5v-3A1.5 1.5 0 012.5 6h11A1.5 1.5 0 0115 7.5v3a1.5 1.5 0 01-1.5 1.5h-2" }), _jsx("path", { d: "M4.5 10h7v4.5h-7z" })] }) }), _jsx("button", { type: "button", onClick: basculer, title: plein ? mot.quitter : mot.pleinEcran, "aria-label": plein ? mot.quitter : mot.pleinEcran, className: bouton, children: _jsx("svg", { width: "14", height: "14", viewBox: "0 0 14 14", fill: "none", stroke: "currentColor", strokeWidth: "1.6", strokeLinecap: "round", children: plein ? _jsx("path", { d: "M5 1v4H1M9 1v4h4M5 13V9H1M9 13V9h4" }) : _jsx("path", { d: "M1 5V1h4M13 5V1H9M1 9v4h4M13 9v4H9" }) }) })] })] }));
 }
