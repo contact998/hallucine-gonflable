@@ -128,6 +128,8 @@ export function OutilsVue({
 }) {
   const [natif, setNatif] = useState(false);
   const [css, setCss] = useState(false);
+  /* La vue choisie : la caméra démarre en ¾, et le bouton cliqué prend le bleu Hallucine. */
+  const [vueCourante, setVueCourante] = useState<Vue>("troisQuarts");
   const plein = natif || css;
   const mot = {
     pleinEcran: libelles?.pleinEcran ?? "Plein écran",
@@ -206,7 +208,9 @@ export function OutilsVue({
            écran, la sortie prend ce coin — les vues descendent d'un cran. */
         <div role="group" aria-label={mot.vues} className={`absolute left-3 z-10 ${plein ? "top-14" : "top-3"} ${barreVues}`}>
           {vues.map(({ cle, aller }, i) => (
-            <button key={cle} type="button" onClick={aller} title={nomVue[cle]}
+            <button key={cle} type="button" onClick={() => { setVueCourante(cle); aller(); }} title={nomVue[cle]}
+              aria-pressed={vueCourante === cle}
+              style={vueCourante === cle ? { background: "#4169A8", color: "#fff" } : { background: "transparent" }}
               className={`${boutonVue}${i > 0 ? (sombre ? " border-l border-white/25" : " border-l border-[#2E4A5E]/20") : ""}`}>
               {nomVue[cle]}
             </button>
