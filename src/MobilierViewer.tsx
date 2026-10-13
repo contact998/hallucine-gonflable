@@ -547,6 +547,8 @@ type Props = {
   implantation: Implantation;
   /** Les fiches produit cadrent le meuble seul, sans surface de sol. */
   afficherSol?: boolean;
+  /** Fait tourner la scène doucement à l'ouverture ; le premier geste l'arrête. */
+  rotationAuto?: boolean;
   labelChargement?: string;
   /** Message quand des modèles n'ont pas pu être chargés — reçoit leur nombre. */
   labelEchec?: (n: number) => string;
@@ -586,7 +588,7 @@ type Props = {
   effacerParois?: boolean;
 };
 
-export default function MobilierViewer({ implantation, afficherSol = true, labelChargement, labelEchec = (n: number) => `${n} élément(s) de la scène n’ont pas pu être chargés.`, captureRef, abri, coteActif, ecran, arche, habillages, visuels, libellesOutils, nomFichierImage, effacerParois }: Props) {
+export default function MobilierViewer({ implantation, afficherSol = true, labelChargement, labelEchec = (n: number) => `${n} élément(s) de la scène n’ont pas pu être chargés.`, captureRef, abri, coteActif, ecran, arche, habillages, visuels, libellesOutils, nomFichierImage, effacerParois, rotationAuto }: Props) {
   const hote = useRef<HTMLDivElement>(null);
   /* Lu par la boucle de rendu, montée une seule fois : un ref, pas une
      dépendance d'effet — changer d'avis ne remonte pas la scène. */
@@ -652,6 +654,12 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
 
     const orbite = new OrbitControls(cam, rendu.domElement);
     orbite.enableDamping = true;
+    // Rotation lente à l'ouverture, arrêtée au premier geste du visiteur.
+    if (rotationAuto) {
+      orbite.autoRotate = true;
+      orbite.autoRotateSpeed = 1.5;
+      orbite.addEventListener("start", () => { orbite.autoRotate = false; });
+    }
     orbite.enablePan = false;
 
     const racine = new THREE.Group();

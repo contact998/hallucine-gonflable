@@ -487,7 +487,7 @@ const RECUL_ECRAN_M = 3;
    dizaines de centimètres de profondeur), pas un plan qui a besoin de recul
    pour se regarder — juste assez pour qu'on marche À TRAVERS, pas dedans. */
 const RECUL_ARCHE_M = 0.5;
-export default function MobilierViewer({ implantation, afficherSol = true, labelChargement, labelEchec = (n) => `${n} élément(s) de la scène n’ont pas pu être chargés.`, captureRef, abri, coteActif, ecran, arche, habillages, visuels, libellesOutils, nomFichierImage, effacerParois }) {
+export default function MobilierViewer({ implantation, afficherSol = true, labelChargement, labelEchec = (n) => `${n} élément(s) de la scène n’ont pas pu être chargés.`, captureRef, abri, coteActif, ecran, arche, habillages, visuels, libellesOutils, nomFichierImage, effacerParois, rotationAuto }) {
     const hote = useRef(null);
     /* Lu par la boucle de rendu, montée une seule fois : un ref, pas une
        dépendance d'effet — changer d'avis ne remonte pas la scène. */
@@ -541,6 +541,12 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
         eclairerStudio(sc);
         const orbite = new OrbitControls(cam, rendu.domElement);
         orbite.enableDamping = true;
+        // Rotation lente à l'ouverture, arrêtée au premier geste du visiteur.
+        if (rotationAuto) {
+            orbite.autoRotate = true;
+            orbite.autoRotateSpeed = 1.5;
+            orbite.addEventListener("start", () => { orbite.autoRotate = false; });
+        }
         orbite.enablePan = false;
         const racine = new THREE.Group();
         sc.add(racine);

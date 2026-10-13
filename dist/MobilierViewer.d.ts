@@ -78,6 +78,8 @@ type Props = {
     implantation: Implantation;
     /** Les fiches produit cadrent le meuble seul, sans surface de sol. */
     afficherSol?: boolean;
+    /** Fait tourner la scène doucement à l'ouverture ; le premier geste l'arrête. */
+    rotationAuto?: boolean;
     labelChargement?: string;
     /** Message quand des modèles n'ont pas pu être chargés — reçoit leur nombre. */
     labelEchec?: (n: number) => string;
@@ -116,5 +118,5 @@ type Props = {
      *  site, où la tente doit se montrer telle qu'elle sera construite. */
     effacerParois?: boolean;
 };
-export default function MobilierViewer({ implantation, afficherSol, labelChargement, labelEchec, captureRef, abri, coteActif, ecran, arche, habillages, visuels, libellesOutils, nomFichierImage, effacerParois }: Props): import("react").JSX.Element;
+export default function MobilierViewer({ implantation, afficherSol, labelChargement, labelEchec, captureRef, abri, coteActif, ecran, arche, habillages, visuels, libellesOutils, nomFichierImage, effacerParois, rotationAuto }: Props): import("react").JSX.Element;
 export {};
