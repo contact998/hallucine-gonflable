@@ -41,6 +41,7 @@ import { vue3d, urlPiece, echelle, angleCote, pieceDeCote, pieceDemiMur, porteLi
 import { composerPan, chargerImage } from "./visuel.js";
 import { enroulerAutourDeLaTente } from "./enrouler.js";
 import { ratioGabarit, centreDuTissu, QUART_DE_TOUR, orienter } from "./gabarit.js";
+import { creerRendu, SansWebgl, LABEL_SANS_WEBGL } from "./SansWebgl.js";
 const RAD = Math.PI / 180;
 const MM_EN_M = 0.001;
 /* Pièces amovibles : un liseré sombre court sur leur pourtour — c'est la
@@ -210,7 +211,7 @@ function charger(loader, m, nom) {
     }
     return p.then((s) => s.clone(true));
 }
-export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, labelEchec = "Vue 3D incomplète : un élément n’a pas pu être chargé.", labelReessayer = "Réessayer", captureRef, tentesReliees, libellesOutils, nomFichierImage, rotationAuto }) {
+export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, labelEchec = "Vue 3D incomplète : un élément n’a pas pu être chargé.", labelReessayer = "Réessayer", labelSansWebgl = LABEL_SANS_WEBGL, captureRef, tentesReliees, libellesOutils, nomFichierImage, rotationAuto }) {
     const M = trouverModele(modele);
     const VUE = vue3d(M);
     const hote = useRef(null);
@@ -250,6 +251,7 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
     const azimut = useRef(viseeNeuve(-1.0));
     const [pret, setPret] = useState(false);
     const [echec, setEchec] = useState(false);
+    const [sansWebgl, setSansWebgl] = useState(false);
     const [essai, setEssai] = useState(0);
     /* ── Mise en place : une seule fois ─────────────────────────────────── */
     useEffect(() => {
@@ -267,7 +269,11 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
            tourne autour du mauvais axe et la tente s'affiche couchée. */
         cam.up.set(0, 0, 1);
         cam.position.set(5.2, -6.4, 3.4);
-        const rendu = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        const rendu = creerRendu({ antialias: true, alpha: true });
+        if (!rendu) {
+            setSansWebgl(true);
+            return;
+        }
         rendu.setPixelRatio(Math.min(devicePixelRatio, 2));
         rendu.outputColorSpace = THREE.SRGBColorSpace;
         rendu.shadowMap.enabled = false;
@@ -869,5 +875,5 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
                 o.visible = cotes[cote] === parCote.avecChoix;
         });
     }, [cotes, pret]);
-    return (_jsxs("div", { ref: hote, className: "relative w-full h-full min-h-[300px]", children: [_jsx(OutilsVue, { hote: hote, capture: (format) => captureInterne.current?.(format) ?? null, libelles: libellesOutils, vues: VUES.map((cle) => ({ cle, aller: () => allerVue.current(cle, true) })), nomFichier: nomFichierImage }), echec && (_jsxs("div", { role: "alert", className: "absolute bottom-12 inset-x-3 rounded bg-white/95 p-3 text-sm text-slate-800", children: [_jsx("p", { children: labelEchec }), _jsx("button", { type: "button", onClick: () => setEssai((n) => n + 1), className: "underline mt-2", children: labelReessayer })] })), !pret && !echec && (_jsx("div", { className: "absolute inset-0 grid place-items-center pointer-events-none", children: _jsx("p", { className: "text-[#2E4A5E]/60 text-sm", children: labelChargement }) }))] }));
+    return (_jsxs("div", { ref: hote, className: "relative w-full h-full min-h-[300px]", children: [_jsx(OutilsVue, { hote: hote, capture: (format) => captureInterne.current?.(format) ?? null, libelles: libellesOutils, vues: VUES.map((cle) => ({ cle, aller: () => allerVue.current(cle, true) })), nomFichier: nomFichierImage }), echec && (_jsxs("div", { role: "alert", className: "absolute bottom-12 inset-x-3 rounded bg-white/95 p-3 text-sm text-slate-800", children: [_jsx("p", { children: labelEchec }), _jsx("button", { type: "button", onClick: () => setEssai((n) => n + 1), className: "underline mt-2", children: labelReessayer })] })), sansWebgl && _jsx(SansWebgl, { label: labelSansWebgl }), !pret && !echec && !sansWebgl && (_jsx("div", { className: "absolute inset-0 grid place-items-center pointer-events-none", children: _jsx("p", { className: "text-[#2E4A5E]/60 text-sm", children: labelChargement }) }))] }));
 }

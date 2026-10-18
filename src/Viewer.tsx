@@ -41,6 +41,7 @@ import { vue3d, urlPiece, echelle, angleCote, pieceDeCote, pieceDemiMur, porteLi
 import { composerPan, chargerImage } from "./visuel.js";
 import { enroulerAutourDeLaTente } from "./enrouler.js";
 import { ratioGabarit, centreDuTissu, QUART_DE_TOUR, orienter } from "./gabarit.js";
+import { creerRendu, SansWebgl, LABEL_SANS_WEBGL } from "./SansWebgl.js";
 
 const RAD = Math.PI / 180;
 const MM_EN_M = 0.001;
@@ -256,12 +257,14 @@ export interface TenteViewerProps {
   /** Texte de remplacement pendant le chargement. */
   labelChargement: string;
   labelEchec?: string;
+  /** Affiché à la place de la scène quand le navigateur refuse WebGL. */
+  labelSansWebgl?: string;
   labelReessayer?: string;
   /** Reçoit la fonction de capture (JPEG data-URL) — jointe à la demande de devis. */
   captureRef?: React.MutableRefObject<(() => string | null) | null>;
 }
 
-export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, labelEchec = "Vue 3D incomplète : un élément n’a pas pu être chargé.", labelReessayer = "Réessayer", captureRef, tentesReliees, libellesOutils, nomFichierImage, rotationAuto }: TenteViewerProps) {
+export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, labelEchec = "Vue 3D incomplète : un élément n’a pas pu être chargé.", labelReessayer = "Réessayer", labelSansWebgl = LABEL_SANS_WEBGL, captureRef, tentesReliees, libellesOutils, nomFichierImage, rotationAuto }: TenteViewerProps) {
   const M = trouverModele(modele);
   const VUE = vue3d(M);
 
@@ -302,6 +305,7 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
   const azimut = useRef(viseeNeuve(-1.0));
   const [pret, setPret] = useState(false);
   const [echec, setEchec] = useState(false);
+  const [sansWebgl, setSansWebgl] = useState(false);
   const [essai, setEssai] = useState(0);
 
   /* ── Mise en place : une seule fois ─────────────────────────────────── */
@@ -322,7 +326,8 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
     cam.up.set(0, 0, 1);
     cam.position.set(5.2, -6.4, 3.4);
 
-    const rendu = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const rendu = creerRendu({ antialias: true, alpha: true });
+    if (!rendu) { setSansWebgl(true); return; }
     rendu.setPixelRatio(Math.min(devicePixelRatio, 2));
     rendu.outputColorSpace = THREE.SRGBColorSpace;
     rendu.shadowMap.enabled = false;
@@ -938,7 +943,8 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
           <button type="button" onClick={() => setEssai((n) => n + 1)} className="underline mt-2">{labelReessayer}</button>
         </div>
       )}
-      {!pret && !echec && (
+      {sansWebgl && <SansWebgl label={labelSansWebgl} />}
+      {!pret && !echec && !sansWebgl && (
         <div className="absolute inset-0 grid place-items-center pointer-events-none">
           <p className="text-[#2E4A5E]/60 text-sm">{labelChargement}</p>
         </div>

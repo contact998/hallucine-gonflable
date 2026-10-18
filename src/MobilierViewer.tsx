@@ -91,6 +91,7 @@ import { TEINTE_NUE, hexDeTeinte } from "./couleurs.js";
 import { marquerVitre, estVitre } from "./vitre.js";
 import { enroulerAutourDeLaTente } from "./enrouler.js";
 import { ratioGabarit, centreDuTissu, QUART_DE_TOUR, orienter } from "./gabarit.js";
+import { creerRendu, SansWebgl, LABEL_SANS_WEBGL } from "./SansWebgl.js";
 
 const MM_EN_M = 0.001;
 const RAD = Math.PI / 180;
@@ -552,6 +553,8 @@ type Props = {
   labelChargement?: string;
   /** Message quand des modèles n'ont pas pu être chargés — reçoit leur nombre. */
   labelEchec?: (n: number) => string;
+  /** Affiché à la place de la scène quand le navigateur refuse WebGL. */
+  labelSansWebgl?: string;
   /** Reçoit la fonction de capture (JPEG data-URL) — jointe à la demande de devis. */
   captureRef?: React.MutableRefObject<(() => string | null) | null>;
   /** L'abri au-dessus du lounge — construit si `config` voyage avec lui, nu
@@ -588,7 +591,7 @@ type Props = {
   effacerParois?: boolean;
 };
 
-export default function MobilierViewer({ implantation, afficherSol = true, labelChargement, labelEchec = (n: number) => `${n} élément(s) de la scène n’ont pas pu être chargés.`, captureRef, abri, coteActif, ecran, arche, habillages, visuels, libellesOutils, nomFichierImage, effacerParois, rotationAuto }: Props) {
+export default function MobilierViewer({ implantation, afficherSol = true, labelChargement, labelEchec = (n: number) => `${n} élément(s) de la scène n’ont pas pu être chargés.`, labelSansWebgl = LABEL_SANS_WEBGL, captureRef, abri, coteActif, ecran, arche, habillages, visuels, libellesOutils, nomFichierImage, effacerParois, rotationAuto }: Props) {
   const hote = useRef<HTMLDivElement>(null);
   /* Lu par la boucle de rendu, montée une seule fois : un ref, pas une
      dépendance d'effet — changer d'avis ne remonte pas la scène. */
@@ -614,6 +617,7 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
   const [pret, setPret] = useState(false);
   /* Modèles qui n'ont pas pu être chargés — annoncés, jamais tus. */
   const [echecs, setEchecs] = useState(0);
+  const [sansWebgl, setSansWebgl] = useState(false);
   /* Posés par l'effet de mise en place, consommés par l'effet de composition. */
   /* L'écran n'oriente la caméra qu'à son ARRIVÉE : changer sa taille ensuite
      ne doit pas ramener de force le visiteur à l'angle par défaut. */
@@ -644,7 +648,8 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
     cam.up.set(0, 0, 1); // Z vertical AVANT l'orbite, sinon tout est couché
     cam.position.set(3, -4, 2.2);
 
-    const rendu = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const rendu = creerRendu({ antialias: true, alpha: true });
+    if (!rendu) { setSansWebgl(true); return; }
     rendu.setPixelRatio(Math.min(devicePixelRatio, 2));
     rendu.outputColorSpace = THREE.SRGBColorSpace;
     el.appendChild(rendu.domElement);
@@ -1112,7 +1117,8 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
           un dossier, exactement comme la tente. */}
       <OutilsVue hote={hote} capture={(format) => captureInterne.current?.(format) ?? null} libelles={libellesOutils}
         vues={VUES.map((cle) => ({ cle, aller: () => allerVue.current(cle, true) }))} nomFichier={nomFichierImage} />
-      {!pret && labelChargement && (
+      {sansWebgl && <SansWebgl label={labelSansWebgl} />}
+      {!pret && !sansWebgl && labelChargement && (
         <span className="absolute inset-0 flex items-center justify-center text-sm text-[#2E4A5E]/70">
           {labelChargement}
         </span>

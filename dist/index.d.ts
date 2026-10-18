@@ -19,6 +19,7 @@ export * from "./implantationMobilier.js";
 export { default as MobilierViewer, type EcranLounge, type ArcheLounge } from "./MobilierViewer.js";
 export { azimutPourCote, prochainAzimut, viser, viseeNeuve, type Visee } from "./viseeCote.js";
 export { default as EcranViewer } from "./EcranViewer.js";
+export { creerRendu, SansWebgl, LABEL_SANS_WEBGL } from "./SansWebgl.js";
 export { OutilsVue, imprimerImage, telechargerImage, NOM_IMAGE_DEFAUT, type LibellesOutils, type VueOutil } from "./OutilsVue.js";
 export { VUES, poseVue, directionVue, interpolerPose, TransitionVue, dureeTransition, type Vue, type PoseCamera } from "./vuesCamera.js";
 export { default as ArcheViewer } from "./ArcheViewer.js";

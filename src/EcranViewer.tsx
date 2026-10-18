@@ -27,6 +27,7 @@ import { chargerEcranGlb, poserTaille, type EcranCharge } from "./ecranGlb.js";
 import type { GammeEcran3D } from "./ecran.js";
 import { OutilsVue, type LibellesOutils } from "./OutilsVue.js";
 import { VUES, poseVue, dureeTransition, TransitionVue, type Vue } from "./vuesCamera.js";
+import { creerRendu, SansWebgl, LABEL_SANS_WEBGL } from "./SansWebgl.js";
 
 const TAILLE_HOMME_M = 1.75;
 /* La toile regarde −Y (le spectateur est au sud) : c'est d'ici que la caméra
@@ -54,6 +55,8 @@ type Props = {
   labelChargement?: string;
   /** Dit qu'un modèle manque plutôt que de montrer une scène amputée. */
   labelEchec?: string;
+  /** Affiché à la place de la scène quand le navigateur refuse WebGL. */
+  labelSansWebgl?: string;
   libellesOutils?: LibellesOutils;
   /** Le nom du fichier que télécharge le bouton image. */
   nomFichierImage?: string;
@@ -61,7 +64,7 @@ type Props = {
 
 export default function EcranViewer({
   gamme, toileLargeurM, baseImageM = null, silhouette = true,
-  captureRef, labelChargement, labelEchec, libellesOutils, nomFichierImage, rotationAuto,
+  captureRef, labelChargement, labelEchec, labelSansWebgl = LABEL_SANS_WEBGL, libellesOutils, nomFichierImage, rotationAuto,
 }: Props) {
   const hote = useRef<HTMLDivElement>(null);
   const captureInterne = useRef<((format?: "image/jpeg" | "image/png") => string | null) | null>(null);
@@ -71,6 +74,7 @@ export default function EcranViewer({
   const allerVue = useRef<(vue: Vue, anime: boolean) => void>(() => {});
   const [pret, setPret] = useState(false);
   const [echec, setEchec] = useState(false);
+  const [sansWebgl, setSansWebgl] = useState(false);
 
   const outils = useRef<{
     ecran: EcranCharge;
@@ -93,7 +97,8 @@ export default function EcranViewer({
     appoint.position.set(0, -8, 2);
     sc.add(appoint);
 
-    const rendu = new THREE.WebGLRenderer({ antialias: true });
+    const rendu = creerRendu({ antialias: true });
+    if (!rendu) { setSansWebgl(true); return; }
     rendu.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     /* Le canevas prend sa taille du CSS, pas de ses pixels : `setSize` plus bas
        ne touche QUE la résolution (`updateStyle` à false). Sans ces deux lignes,
@@ -317,7 +322,8 @@ export default function EcranViewer({
     <div ref={hote} className="relative w-full h-full" style={{ backgroundColor: FOND_SCENE }}>
       <OutilsVue hote={hote} capture={(format) => captureInterne.current?.(format) ?? null} libelles={libellesOutils}
         vues={VUES.map((cle) => ({ cle, aller: () => allerVue.current(cle, true) }))} nomFichier={nomFichierImage} />
-      {!pret && !echec && labelChargement && (
+      {sansWebgl && <SansWebgl label={labelSansWebgl} />}
+      {!pret && !echec && !sansWebgl && labelChargement && (
         <span className="absolute inset-0 flex items-center justify-center text-sm text-[#2E4A5E]/70">
           {labelChargement}
         </span>

@@ -26,6 +26,8 @@ type Props = {
     labelChargement?: string;
     /** Dit que la 3D manque — forme sans modèle, ou fichier injoignable. */
     labelEchec?: string;
+    /** Affiché à la place de la scène quand le navigateur refuse WebGL. */
+    labelSansWebgl?: string;
     /** Le libellé du bouton qui relance un chargement raté. Absent : pas de bouton. */
     labelReessayer?: string;
     libellesOutils?: {
@@ -34,5 +36,5 @@ type Props = {
         imprimer?: string;
     };
 };
-export default function ArcheViewer({ forme, largeurM, hauteurM, profondeurM, teinte, visuelAvant, visuelArriere, face, silhouette, captureRef, labelChargement, labelEchec, labelReessayer, libellesOutils, }: Props): import("react").JSX.Element;
+export default function ArcheViewer({ forme, largeurM, hauteurM, profondeurM, teinte, visuelAvant, visuelArriere, face, silhouette, captureRef, labelChargement, labelEchec, labelReessayer, labelSansWebgl, libellesOutils, }: Props): import("react").JSX.Element;
 export {};

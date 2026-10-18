@@ -83,6 +83,8 @@ type Props = {
     labelChargement?: string;
     /** Message quand des modèles n'ont pas pu être chargés — reçoit leur nombre. */
     labelEchec?: (n: number) => string;
+    /** Affiché à la place de la scène quand le navigateur refuse WebGL. */
+    labelSansWebgl?: string;
     /** Reçoit la fonction de capture (JPEG data-URL) — jointe à la demande de devis. */
     captureRef?: React.MutableRefObject<(() => string | null) | null>;
     /** L'abri au-dessus du lounge — construit si `config` voyage avec lui, nu
@@ -118,5 +120,5 @@ type Props = {
      *  site, où la tente doit se montrer telle qu'elle sera construite. */
     effacerParois?: boolean;
 };
-export default function MobilierViewer({ implantation, afficherSol, labelChargement, labelEchec, captureRef, abri, coteActif, ecran, arche, habillages, visuels, libellesOutils, nomFichierImage, effacerParois, rotationAuto }: Props): import("react").JSX.Element;
+export default function MobilierViewer({ implantation, afficherSol, labelChargement, labelEchec, labelSansWebgl, captureRef, abri, coteActif, ecran, arche, habillages, visuels, libellesOutils, nomFichierImage, effacerParois, rotationAuto }: Props): import("react").JSX.Element;
 export {};
