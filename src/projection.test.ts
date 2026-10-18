@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   LUMENS_M2_CINEMA, LUMENS_M2_MINIMUM, PROJECTEURS_DCP,
-  besoinLumens, dcpPourCible, lireLumens,
+  besoinLumens, dcpPourCible, lireLumens, reculSpectateurs,
 } from "./projection.js";
 
 describe("besoinLumens", () => {
@@ -53,5 +53,15 @@ describe("PROJECTEURS_DCP", () => {
 
   it("rend vide au-delà du mono-projecteur courant", () => {
     expect(dcpPourCible(30000)).toEqual([]);
+  });
+});
+
+describe("recul des spectateurs — 1,5 fois à 8 fois la largeur d'image", () => {
+  it("donne premier et dernier rang pour une toile", () => {
+    expect(reculSpectateurs(8)).toEqual({ premierRangM: 12, dernierRangM: 64 });
+    expect(reculSpectateurs(7)).toEqual({ premierRangM: 10.5, dernierRangM: 56 });
+  });
+  it("ne rend jamais de distance négative", () => {
+    expect(reculSpectateurs(-3)).toEqual({ premierRangM: 0, dernierRangM: 0 });
   });
 });
