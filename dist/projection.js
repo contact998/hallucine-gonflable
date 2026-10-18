@@ -23,6 +23,21 @@
 export const LUMENS_M2_CINEMA = 150;
 /** Plancher plein air par nuit noire : en dessous de ~100 lm/m², image délavée. */
 export const LUMENS_M2_MINIMUM = 100;
+/*
+ * Le RECUL des spectateurs, en multiples de la largeur de l'IMAGE. Règle tranchée
+ * par Daniel le 18/10/2026 : trois versions se contredisaient sur le site (6 fois,
+ * 6 à 8 fois, 1 m d'écran pour 10 à 15 m). Premier rang à 1,5 fois au moins — plus
+ * près, l'image fatigue la nuque ; dernier rang à 8 fois au plus. Le site et le
+ * guide PDF du CRM lisent ces deux nombres ici, nulle part ailleurs.
+ */
+export const RECUL_PREMIER_RANG = 1.5;
+export const RECUL_DERNIER_RANG = 8;
+/** Recul conseillé pour une largeur d'image en mètres, arrondi au demi-mètre. */
+export function reculSpectateurs(largeurImageM) {
+    const l = Math.max(largeurImageM, 0);
+    const demi = (n) => Math.round(n * 2) / 2;
+    return { premierRangM: demi(l * RECUL_PREMIER_RANG), dernierRangM: demi(l * RECUL_DERNIER_RANG) };
+}
 /** Besoin en lumens pour une surface d'IMAGE (pas la toile hors-tout), en m². */
 export function besoinLumens(surfaceM2) {
     const s = Math.max(surfaceM2, 0);

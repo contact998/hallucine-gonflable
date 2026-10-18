@@ -2,6 +2,16 @@
 export declare const LUMENS_M2_CINEMA = 150;
 /** Plancher plein air par nuit noire : en dessous de ~100 lm/m², image délavée. */
 export declare const LUMENS_M2_MINIMUM = 100;
+export declare const RECUL_PREMIER_RANG = 1.5;
+export declare const RECUL_DERNIER_RANG = 8;
+export interface ReculSpectateurs {
+    /** Distance minimale écran → premier rang, en mètres. */
+    premierRangM: number;
+    /** Distance maximale écran → dernier rang, en mètres. */
+    dernierRangM: number;
+}
+/** Recul conseillé pour une largeur d'image en mètres, arrondi au demi-mètre. */
+export declare function reculSpectateurs(largeurImageM: number): ReculSpectateurs;
 export interface BesoinLumens {
     /** Plancher nuit noire (LUMENS_M2_MINIMUM × surface), arrondi à la centaine. */
     minimum: number;
