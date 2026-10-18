@@ -18,6 +18,20 @@ export function creerRendu(parametres: THREE.WebGLRendererParameters): THREE.Web
   }
 }
 
+/**
+ * Rend le contexte WebGL au navigateur, tout de suite.
+ *
+ * `dispose()` libère les objets de three.js mais laisse le CONTEXTE vivant
+ * jusqu'au ramasse-miettes. Les vues se remontent à chaque gamme, chaque
+ * modèle, chaque page : les contextes s'empilaient jusqu'à ce que le
+ * navigateur refuse le suivant — « WebGL indisponible » sur une machine qui
+ * l'a très bien (configurateur d'écran, 19/10/2026).
+ */
+export function libererRendu(rendu: THREE.WebGLRenderer): void {
+  rendu.dispose();
+  rendu.forceContextLoss();
+}
+
 export const LABEL_SANS_WEBGL = "La vue 3D ne peut pas s’afficher sur ce navigateur (WebGL indisponible).";
 
 /** Ce qui tient la place de la scène quand `creerRendu` a rendu `null`. */

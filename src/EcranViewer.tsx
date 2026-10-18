@@ -27,7 +27,7 @@ import { chargerEcranGlb, poserTaille, type EcranCharge } from "./ecranGlb.js";
 import type { GammeEcran3D } from "./ecran.js";
 import { OutilsVue, type LibellesOutils } from "./OutilsVue.js";
 import { VUES, poseVue, dureeTransition, TransitionVue, type Vue } from "./vuesCamera.js";
-import { creerRendu, SansWebgl, LABEL_SANS_WEBGL } from "./SansWebgl.js";
+import { creerRendu, libererRendu, SansWebgl, LABEL_SANS_WEBGL } from "./SansWebgl.js";
 
 const TAILLE_HOMME_M = 1.75;
 /* La toile regarde −Y (le spectateur est au sud) : c'est d'ici que la caméra
@@ -272,7 +272,7 @@ export default function EcranViewer({
       cancelAnimationFrame(raf);
       ro.disconnect();
       orbite.dispose();
-      rendu.dispose();
+      libererRendu(rendu);
       rendu.domElement.remove();
       outils.current = null;
       captureInterne.current = null;

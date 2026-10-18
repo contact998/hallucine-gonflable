@@ -68,7 +68,7 @@ import { TEINTE_NUE, hexDeTeinte } from "./couleurs.js";
 import { marquerVitre, estVitre } from "./vitre.js";
 import { enroulerAutourDeLaTente } from "./enrouler.js";
 import { ratioGabarit, centreDuTissu, QUART_DE_TOUR, orienter } from "./gabarit.js";
-import { creerRendu, SansWebgl, LABEL_SANS_WEBGL } from "./SansWebgl.js";
+import { creerRendu, libererRendu, SansWebgl, LABEL_SANS_WEBGL } from "./SansWebgl.js";
 const MM_EN_M = 0.001;
 const RAD = Math.PI / 180;
 /* Cache module : survit aux montages/démontages du composant. La clé est
@@ -753,7 +753,7 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
             orbite.removeEventListener("start", reveiller);
             orbite.removeEventListener("start", reprendre);
             orbite.dispose();
-            rendu.dispose();
+            libererRendu(rendu);
             rendu.domElement.remove();
             outils.current = null;
             // Pas de dispose() sur les géométries/matériaux des meubles : ils sont

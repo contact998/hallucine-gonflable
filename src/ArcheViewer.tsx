@@ -33,7 +33,7 @@ import { hexDeTeinte } from "./couleurs.js";
 import { cleVisuelPose, type VisuelPose } from "./pose.js";
 import { chargerImage } from "./visuel.js";
 import { OutilsVue } from "./OutilsVue.js";
-import { creerRendu, SansWebgl, LABEL_SANS_WEBGL } from "./SansWebgl.js";
+import { creerRendu, libererRendu, SansWebgl, LABEL_SANS_WEBGL } from "./SansWebgl.js";
 
 const TAILLE_HOMME_M = 1.75;
 
@@ -266,7 +266,7 @@ export default function ArcheViewer({
       ro.disconnect();
       orbite.dispose();
       for (const m of [flanc, avant, arriere]) { m.map?.dispose(); m.dispose(); }
-      rendu.dispose();
+      libererRendu(rendu);
       rendu.domElement.remove();
       outils.current = null;
       captureInterne.current = null;

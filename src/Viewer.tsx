@@ -41,7 +41,7 @@ import { vue3d, urlPiece, echelle, angleCote, pieceDeCote, pieceDemiMur, porteLi
 import { composerPan, chargerImage } from "./visuel.js";
 import { enroulerAutourDeLaTente } from "./enrouler.js";
 import { ratioGabarit, centreDuTissu, QUART_DE_TOUR, orienter } from "./gabarit.js";
-import { creerRendu, SansWebgl, LABEL_SANS_WEBGL } from "./SansWebgl.js";
+import { creerRendu, libererRendu, SansWebgl, LABEL_SANS_WEBGL } from "./SansWebgl.js";
 
 const RAD = Math.PI / 180;
 const MM_EN_M = 0.001;
@@ -551,7 +551,7 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
       cancelAnimationFrame(raf);
       ro.disconnect();
       orbite.dispose();
-      rendu.dispose();
+      libererRendu(rendu);
       el.removeChild(rendu.domElement);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
