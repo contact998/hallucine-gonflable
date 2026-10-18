@@ -34,7 +34,7 @@ import { hexDeTeinte } from "./couleurs.js";
 import { cleVisuelPose } from "./pose.js";
 import { chargerImage } from "./visuel.js";
 import { OutilsVue } from "./OutilsVue.js";
-import { creerRendu, SansWebgl, LABEL_SANS_WEBGL } from "./SansWebgl.js";
+import { creerRendu, libererRendu, SansWebgl, LABEL_SANS_WEBGL } from "./SansWebgl.js";
 const TAILLE_HOMME_M = 1.75;
 /* L'angle de présentation : de trois quarts, un peu au-dessus — celui de
    l'écran, qui montre la face ET l'épaisseur du boudin. La face arrière se
@@ -209,7 +209,7 @@ export default function ArcheViewer({ forme, largeurM, hauteurM, profondeurM, te
                 m.map?.dispose();
                 m.dispose();
             }
-            rendu.dispose();
+            libererRendu(rendu);
             rendu.domElement.remove();
             outils.current = null;
             captureInterne.current = null;
