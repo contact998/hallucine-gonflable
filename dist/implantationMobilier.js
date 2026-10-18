@@ -43,6 +43,11 @@ const CIRCULATION_M = 0.6;
  * 324 pièces — avec de la marge. Le rangement coûte moins d'une milliseconde,
  * la recherche de capacité 13 ms au pire (contre 1 ms à 120) : le calcul n'est
  * pas le sujet. Le rendu l'est, et les GLB clonés partagent leur géométrie.
+ *
+ * ⚠️ Ces couverts datent d'AVANT la marge du pied de structure (16/09/2026) :
+ * le même rangeur rend aujourd'hui 32 couverts sous une 8×8, pas 72. Le tableau
+ * justifie le plafond, il ne donne pas une capacité. La capacité d'une tente
+ * (debout, assis, à table) est une donnée de sa fiche CRM depuis le 18/10/2026.
  */
 const PLAFOND_EXEMPLAIRES = 400;
 /** Le sol demandé se rend en 4:3, largeur sur profondeur. */
