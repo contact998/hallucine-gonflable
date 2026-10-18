@@ -21,9 +21,11 @@ type Props = {
     labelChargement?: string;
     /** Dit qu'un modèle manque plutôt que de montrer une scène amputée. */
     labelEchec?: string;
+    /** Affiché à la place de la scène quand le navigateur refuse WebGL. */
+    labelSansWebgl?: string;
     libellesOutils?: LibellesOutils;
     /** Le nom du fichier que télécharge le bouton image. */
     nomFichierImage?: string;
 };
-export default function EcranViewer({ gamme, toileLargeurM, baseImageM, silhouette, captureRef, labelChargement, labelEchec, libellesOutils, nomFichierImage, rotationAuto, }: Props): import("react").JSX.Element;
+export default function EcranViewer({ gamme, toileLargeurM, baseImageM, silhouette, captureRef, labelChargement, labelEchec, labelSansWebgl, libellesOutils, nomFichierImage, rotationAuto, }: Props): import("react").JSX.Element;
 export {};

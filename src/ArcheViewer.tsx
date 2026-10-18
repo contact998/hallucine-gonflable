@@ -33,6 +33,7 @@ import { hexDeTeinte } from "./couleurs.js";
 import { cleVisuelPose, type VisuelPose } from "./pose.js";
 import { chargerImage } from "./visuel.js";
 import { OutilsVue } from "./OutilsVue.js";
+import { creerRendu, SansWebgl, LABEL_SANS_WEBGL } from "./SansWebgl.js";
 
 const TAILLE_HOMME_M = 1.75;
 
@@ -68,6 +69,8 @@ type Props = {
   labelChargement?: string;
   /** Dit que la 3D manque — forme sans modèle, ou fichier injoignable. */
   labelEchec?: string;
+  /** Affiché à la place de la scène quand le navigateur refuse WebGL. */
+  labelSansWebgl?: string;
   /** Le libellé du bouton qui relance un chargement raté. Absent : pas de bouton. */
   labelReessayer?: string;
   libellesOutils?: { pleinEcran?: string; quitter?: string; imprimer?: string };
@@ -86,12 +89,13 @@ type Outils = {
 export default function ArcheViewer({
   forme, largeurM, hauteurM, profondeurM, teinte = "blanc",
   visuelAvant = null, visuelArriere = null, face = "avant", silhouette = true,
-  captureRef, labelChargement, labelEchec, labelReessayer, libellesOutils,
+  captureRef, labelChargement, labelEchec, labelReessayer, labelSansWebgl = LABEL_SANS_WEBGL, libellesOutils,
 }: Props) {
   const hote = useRef<HTMLDivElement>(null);
   const captureInterne = useRef<(() => string | null) | null>(null);
   const [pret, setPret] = useState(false);
   const [echec, setEchec] = useState(false);
+  const [sansWebgl, setSansWebgl] = useState(false);
   /* Relancer après un échec : un compteur qui remonte la scène. */
   const [essai, setEssai] = useState(0);
   const outils = useRef<Outils | null>(null);
@@ -117,7 +121,8 @@ export default function ArcheViewer({
     appointArriere.position.set(2, 8, 3);
     sc.add(appoint, appointArriere);
 
-    const rendu = new THREE.WebGLRenderer({ antialias: true });
+    const rendu = creerRendu({ antialias: true });
+    if (!rendu) { setSansWebgl(true); return; }
     rendu.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     rendu.outputColorSpace = THREE.SRGBColorSpace;
     /* Taille prise du CSS, jamais des pixels — voir EcranViewer : sans ça le
@@ -347,7 +352,8 @@ export default function ArcheViewer({
       {modelisee && (
         <OutilsVue hote={hote} capture={() => captureInterne.current?.() ?? null} libelles={libellesOutils} />
       )}
-      {!pret && !echec && labelChargement && (
+      {sansWebgl && <SansWebgl label={labelSansWebgl} />}
+      {!pret && !echec && !sansWebgl && labelChargement && (
         <span className="absolute inset-0 flex items-center justify-center text-sm text-[#2E4A5E]/70">
           {labelChargement}
         </span>

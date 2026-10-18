@@ -27,11 +27,12 @@ import { FOND_SCENE, urlPersonne } from "./vue3d.js";
 import { chargerEcranGlb, poserTaille } from "./ecranGlb.js";
 import { OutilsVue } from "./OutilsVue.js";
 import { VUES, poseVue, dureeTransition, TransitionVue } from "./vuesCamera.js";
+import { creerRendu, SansWebgl, LABEL_SANS_WEBGL } from "./SansWebgl.js";
 const TAILLE_HOMME_M = 1.75;
 /* La toile regarde −Y (le spectateur est au sud) : c'est d'ici que la caméra
    voit l'écran de face. */
 const AZIMUT_FACE = -Math.PI / 2;
-export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, silhouette = true, captureRef, labelChargement, labelEchec, libellesOutils, nomFichierImage, rotationAuto, }) {
+export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, silhouette = true, captureRef, labelChargement, labelEchec, labelSansWebgl = LABEL_SANS_WEBGL, libellesOutils, nomFichierImage, rotationAuto, }) {
     const hote = useRef(null);
     const captureInterne = useRef(null);
     /* Les vues toutes prêtes — même mécanique que la tente et le lounge. */
@@ -40,6 +41,7 @@ export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, s
     const allerVue = useRef(() => { });
     const [pret, setPret] = useState(false);
     const [echec, setEchec] = useState(false);
+    const [sansWebgl, setSansWebgl] = useState(false);
     const outils = useRef(null);
     /* ── Mise en place : une seule fois ─────────────────────────────────── */
     useEffect(() => {
@@ -55,7 +57,11 @@ export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, s
         const appoint = new THREE.DirectionalLight(0xffffff, 0.85);
         appoint.position.set(0, -8, 2);
         sc.add(appoint);
-        const rendu = new THREE.WebGLRenderer({ antialias: true });
+        const rendu = creerRendu({ antialias: true });
+        if (!rendu) {
+            setSansWebgl(true);
+            return;
+        }
         rendu.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         /* Le canevas prend sa taille du CSS, pas de ses pixels : `setSize` plus bas
            ne touche QUE la résolution (`updateStyle` à false). Sans ces deux lignes,
@@ -266,5 +272,5 @@ export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, s
     return (
     /* Le fond du studio est peint ICI, par la scène : ce n'est pas une couleur
        de thème, et il ne suit ni le mode sombre du site ni celui du CRM. */
-    _jsxs("div", { ref: hote, className: "relative w-full h-full", style: { backgroundColor: FOND_SCENE }, children: [_jsx(OutilsVue, { hote: hote, capture: (format) => captureInterne.current?.(format) ?? null, libelles: libellesOutils, vues: VUES.map((cle) => ({ cle, aller: () => allerVue.current(cle, true) })), nomFichier: nomFichierImage }), !pret && !echec && labelChargement && (_jsx("span", { className: "absolute inset-0 flex items-center justify-center text-sm text-[#2E4A5E]/70", children: labelChargement })), echec && labelEchec && (_jsx("span", { className: "absolute inset-0 flex items-center justify-center px-4 text-center text-sm text-[#2E4A5E]/70", children: labelEchec }))] }));
+    _jsxs("div", { ref: hote, className: "relative w-full h-full", style: { backgroundColor: FOND_SCENE }, children: [_jsx(OutilsVue, { hote: hote, capture: (format) => captureInterne.current?.(format) ?? null, libelles: libellesOutils, vues: VUES.map((cle) => ({ cle, aller: () => allerVue.current(cle, true) })), nomFichier: nomFichierImage }), sansWebgl && _jsx(SansWebgl, { label: labelSansWebgl }), !pret && !echec && !sansWebgl && labelChargement && (_jsx("span", { className: "absolute inset-0 flex items-center justify-center text-sm text-[#2E4A5E]/70", children: labelChargement })), echec && labelEchec && (_jsx("span", { className: "absolute inset-0 flex items-center justify-center px-4 text-center text-sm text-[#2E4A5E]/70", children: labelEchec }))] }));
 }

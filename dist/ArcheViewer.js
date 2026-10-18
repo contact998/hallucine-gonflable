@@ -34,17 +34,19 @@ import { hexDeTeinte } from "./couleurs.js";
 import { cleVisuelPose } from "./pose.js";
 import { chargerImage } from "./visuel.js";
 import { OutilsVue } from "./OutilsVue.js";
+import { creerRendu, SansWebgl, LABEL_SANS_WEBGL } from "./SansWebgl.js";
 const TAILLE_HOMME_M = 1.75;
 /* L'angle de présentation : de trois quarts, un peu au-dessus — celui de
    l'écran, qui montre la face ET l'épaisseur du boudin. La face arrière se
    présente du côté opposé, symétriquement. */
 const AZIMUT_AVANT = THREE.MathUtils.degToRad(-24);
 const POLAIRE = THREE.MathUtils.degToRad(78);
-export default function ArcheViewer({ forme, largeurM, hauteurM, profondeurM, teinte = "blanc", visuelAvant = null, visuelArriere = null, face = "avant", silhouette = true, captureRef, labelChargement, labelEchec, labelReessayer, libellesOutils, }) {
+export default function ArcheViewer({ forme, largeurM, hauteurM, profondeurM, teinte = "blanc", visuelAvant = null, visuelArriere = null, face = "avant", silhouette = true, captureRef, labelChargement, labelEchec, labelReessayer, labelSansWebgl = LABEL_SANS_WEBGL, libellesOutils, }) {
     const hote = useRef(null);
     const captureInterne = useRef(null);
     const [pret, setPret] = useState(false);
     const [echec, setEchec] = useState(false);
+    const [sansWebgl, setSansWebgl] = useState(false);
     /* Relancer après un échec : un compteur qui remonte la scène. */
     const [essai, setEssai] = useState(0);
     const outils = useRef(null);
@@ -71,7 +73,11 @@ export default function ArcheViewer({ forme, largeurM, hauteurM, profondeurM, te
         const appointArriere = new THREE.DirectionalLight(0xffffff, 0.45);
         appointArriere.position.set(2, 8, 3);
         sc.add(appoint, appointArriere);
-        const rendu = new THREE.WebGLRenderer({ antialias: true });
+        const rendu = creerRendu({ antialias: true });
+        if (!rendu) {
+            setSansWebgl(true);
+            return;
+        }
         rendu.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         rendu.outputColorSpace = THREE.SRGBColorSpace;
         /* Taille prise du CSS, jamais des pixels — voir EcranViewer : sans ça le
@@ -288,5 +294,5 @@ export default function ArcheViewer({ forme, largeurM, hauteurM, profondeurM, te
     }, [pret, teinte, cleAvant, cleArriere, forme, largeurM, hauteurM, profondeurM]);
     return (
     /* Le fond du studio est peint ICI, par la scène : il ne suit pas le thème. */
-    _jsxs("div", { ref: hote, className: "relative w-full h-full", style: { backgroundColor: FOND_SCENE }, children: [modelisee && (_jsx(OutilsVue, { hote: hote, capture: () => captureInterne.current?.() ?? null, libelles: libellesOutils })), !pret && !echec && labelChargement && (_jsx("span", { className: "absolute inset-0 flex items-center justify-center text-sm text-[#2E4A5E]/70", children: labelChargement })), echec && (labelEchec || labelReessayer) && (_jsxs("span", { className: "absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 text-center text-sm text-[#2E4A5E]/70", children: [labelEchec, modelisee && labelReessayer && (_jsx("button", { type: "button", onClick: () => setEssai((n) => n + 1), className: "rounded-lg border border-[#2E4A5E]/30 bg-white/70 px-3 py-1.5 text-[#2E4A5E] transition-colors hover:bg-[#2E4A5E]/10", children: labelReessayer }))] }))] }));
+    _jsxs("div", { ref: hote, className: "relative w-full h-full", style: { backgroundColor: FOND_SCENE }, children: [modelisee && (_jsx(OutilsVue, { hote: hote, capture: () => captureInterne.current?.() ?? null, libelles: libellesOutils })), sansWebgl && _jsx(SansWebgl, { label: labelSansWebgl }), !pret && !echec && !sansWebgl && labelChargement && (_jsx("span", { className: "absolute inset-0 flex items-center justify-center text-sm text-[#2E4A5E]/70", children: labelChargement })), echec && (labelEchec || labelReessayer) && (_jsxs("span", { className: "absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 text-center text-sm text-[#2E4A5E]/70", children: [labelEchec, modelisee && labelReessayer && (_jsx("button", { type: "button", onClick: () => setEssai((n) => n + 1), className: "rounded-lg border border-[#2E4A5E]/30 bg-white/70 px-3 py-1.5 text-[#2E4A5E] transition-colors hover:bg-[#2E4A5E]/10", children: labelReessayer }))] }))] }));
 }

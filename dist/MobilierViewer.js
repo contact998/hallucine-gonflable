@@ -68,6 +68,7 @@ import { TEINTE_NUE, hexDeTeinte } from "./couleurs.js";
 import { marquerVitre, estVitre } from "./vitre.js";
 import { enroulerAutourDeLaTente } from "./enrouler.js";
 import { ratioGabarit, centreDuTissu, QUART_DE_TOUR, orienter } from "./gabarit.js";
+import { creerRendu, SansWebgl, LABEL_SANS_WEBGL } from "./SansWebgl.js";
 const MM_EN_M = 0.001;
 const RAD = Math.PI / 180;
 /* Cache module : survit aux montages/démontages du composant. La clé est
@@ -487,7 +488,7 @@ const RECUL_ECRAN_M = 3;
    dizaines de centimètres de profondeur), pas un plan qui a besoin de recul
    pour se regarder — juste assez pour qu'on marche À TRAVERS, pas dedans. */
 const RECUL_ARCHE_M = 0.5;
-export default function MobilierViewer({ implantation, afficherSol = true, labelChargement, labelEchec = (n) => `${n} élément(s) de la scène n’ont pas pu être chargés.`, captureRef, abri, coteActif, ecran, arche, habillages, visuels, libellesOutils, nomFichierImage, effacerParois, rotationAuto }) {
+export default function MobilierViewer({ implantation, afficherSol = true, labelChargement, labelEchec = (n) => `${n} élément(s) de la scène n’ont pas pu être chargés.`, labelSansWebgl = LABEL_SANS_WEBGL, captureRef, abri, coteActif, ecran, arche, habillages, visuels, libellesOutils, nomFichierImage, effacerParois, rotationAuto }) {
     const hote = useRef(null);
     /* Lu par la boucle de rendu, montée une seule fois : un ref, pas une
        dépendance d'effet — changer d'avis ne remonte pas la scène. */
@@ -513,6 +514,7 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
     const [pret, setPret] = useState(false);
     /* Modèles qui n'ont pas pu être chargés — annoncés, jamais tus. */
     const [echecs, setEchecs] = useState(0);
+    const [sansWebgl, setSansWebgl] = useState(false);
     /* Posés par l'effet de mise en place, consommés par l'effet de composition. */
     /* L'écran n'oriente la caméra qu'à son ARRIVÉE : changer sa taille ensuite
        ne doit pas ramener de force le visiteur à l'angle par défaut. */
@@ -533,7 +535,11 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
         const cam = new THREE.PerspectiveCamera(38, 1, 0.02, 300);
         cam.up.set(0, 0, 1); // Z vertical AVANT l'orbite, sinon tout est couché
         cam.position.set(3, -4, 2.2);
-        const rendu = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        const rendu = creerRendu({ antialias: true, alpha: true });
+        if (!rendu) {
+            setSansWebgl(true);
+            return;
+        }
         rendu.setPixelRatio(Math.min(devicePixelRatio, 2));
         rendu.outputColorSpace = THREE.SRGBColorSpace;
         el.appendChild(rendu.domElement);
@@ -972,5 +978,5 @@ export default function MobilierViewer({ implantation, afficherSol = true, label
        hex-inline du CRM le refusait à juste titre. Ce n'est pas une couleur de
        thème : c'est le gris-bleu du fond de prise de vue, il ne suit ni le mode
        sombre du site ni celui du CRM. */
-    _jsxs("div", { ref: hote, className: "relative w-full h-full", style: { backgroundColor: FOND_SCENE }, children: [_jsx(OutilsVue, { hote: hote, capture: (format) => captureInterne.current?.(format) ?? null, libelles: libellesOutils, vues: VUES.map((cle) => ({ cle, aller: () => allerVue.current(cle, true) })), nomFichier: nomFichierImage }), !pret && labelChargement && (_jsx("span", { className: "absolute inset-0 flex items-center justify-center text-sm text-[#2E4A5E]/70", children: labelChargement })), pret && echecs > 0 && labelEchec && (_jsx("span", { className: "absolute bottom-2 left-2 right-2 rounded bg-[#2E4A5E]/85 px-3 py-1.5 text-center text-xs text-white", children: labelEchec(echecs) }))] }));
+    _jsxs("div", { ref: hote, className: "relative w-full h-full", style: { backgroundColor: FOND_SCENE }, children: [_jsx(OutilsVue, { hote: hote, capture: (format) => captureInterne.current?.(format) ?? null, libelles: libellesOutils, vues: VUES.map((cle) => ({ cle, aller: () => allerVue.current(cle, true) })), nomFichier: nomFichierImage }), sansWebgl && _jsx(SansWebgl, { label: labelSansWebgl }), !pret && !sansWebgl && labelChargement && (_jsx("span", { className: "absolute inset-0 flex items-center justify-center text-sm text-[#2E4A5E]/70", children: labelChargement })), pret && echecs > 0 && labelEchec && (_jsx("span", { className: "absolute bottom-2 left-2 right-2 rounded bg-[#2E4A5E]/85 px-3 py-1.5 text-center text-xs text-white", children: labelEchec(echecs) }))] }));
 }

@@ -64,6 +64,7 @@ export { azimutPourCote, prochainAzimut, viser, viseeNeuve, type Visee } from ".
 /* L'écran étanche : sa scène, et la règle qui le met à n'importe quelle taille
    depuis l'unique modèle du fournisseur (voir ecran.ts). */
 export { default as EcranViewer } from "./EcranViewer.js";
+export { creerRendu, SansWebgl, LABEL_SANS_WEBGL } from "./SansWebgl.js";
 export { OutilsVue, imprimerImage, telechargerImage, NOM_IMAGE_DEFAUT, type LibellesOutils, type VueOutil } from "./OutilsVue.js";
 /* Les vues toutes prêtes (face, côté, dessus, ¾) : leur cadrage, calculé sur la
    boîte de la scène — le même pour les trois visualiseurs. */

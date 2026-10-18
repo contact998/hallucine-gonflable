@@ -41,8 +41,10 @@ export interface TenteViewerProps {
     /** Texte de remplacement pendant le chargement. */
     labelChargement: string;
     labelEchec?: string;
+    /** Affiché à la place de la scène quand le navigateur refuse WebGL. */
+    labelSansWebgl?: string;
     labelReessayer?: string;
     /** Reçoit la fonction de capture (JPEG data-URL) — jointe à la demande de devis. */
     captureRef?: React.MutableRefObject<(() => string | null) | null>;
 }
-export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, labelEchec, labelReessayer, captureRef, tentesReliees, libellesOutils, nomFichierImage, rotationAuto }: TenteViewerProps): import("react").JSX.Element;
+export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, labelEchec, labelReessayer, labelSansWebgl, captureRef, tentesReliees, libellesOutils, nomFichierImage, rotationAuto }: TenteViewerProps): import("react").JSX.Element;
