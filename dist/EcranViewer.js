@@ -28,11 +28,22 @@ import { chargerEcranGlb, poserTaille } from "./ecranGlb.js";
 import { OutilsVue } from "./OutilsVue.js";
 import { VUES, poseVue, dureeTransition, TransitionVue } from "./vuesCamera.js";
 import { creerRendu, libererRendu, SansWebgl, LABEL_SANS_WEBGL } from "./SansWebgl.js";
+import { creerNuit } from "./nuitEcran.js";
 const TAILLE_HOMME_M = 1.75;
 /* La toile regarde −Y (le spectateur est au sud) : c'est d'ici que la caméra
    voit l'écran de face. */
 const AZIMUT_FACE = -Math.PI / 2;
-export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, silhouette = true, captureRef, labelChargement, labelEchec, labelSansWebgl = LABEL_SANS_WEBGL, libellesOutils, nomFichierImage, rotationAuto, }) {
+/** Les mailles de la toile de projection (matière nommée par le convertisseur). */
+function maillesToile(groupe) {
+    const sortie = [];
+    groupe.traverse((o) => {
+        const m = o;
+        if (m.isMesh && m.material.name === "toile")
+            sortie.push(m);
+    });
+    return sortie;
+}
+export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, silhouette = true, captureRef, labelChargement, labelEchec, labelSansWebgl = LABEL_SANS_WEBGL, libellesOutils, nomFichierImage, rotationAuto, nuit = false, imageToile = null, }) {
     const hote = useRef(null);
     const captureInterne = useRef(null);
     /* Les vues toutes prêtes — même mécanique que la tente et le lounge. */
@@ -156,8 +167,12 @@ export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, s
         const ro = new ResizeObserver(redimensionner);
         ro.observe(el);
         let raf = 0;
+        const animations = new Set();
         const boucle = () => {
             raf = requestAnimationFrame(boucle);
+            const maintenant = performance.now();
+            for (const a of animations)
+                a(maintenant);
             const vue = transition.current.avancer(performance.now());
             if (vue) {
                 cam.position.copy(vue.position);
@@ -215,7 +230,7 @@ export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, s
             .then(([e]) => {
             if (!vivant)
                 return;
-            outils.current = { ecran: e, homme, cadrer };
+            outils.current = { ecran: e, homme, cadrer, sc, sol, animations };
             setPret(true);
         })
             .catch(() => { if (vivant)
@@ -269,6 +284,88 @@ export default function EcranViewer({ gamme, toileLargeurM, baseImageM = null, s
         }
         o.cadrer(taille.hauteurM, taille.largeurM);
     }, [pret, toileLargeurM, baseImageM, silhouette]);
+    /* ── La séance de nuit ─────────────────────────────────────────────────
+       Après l'effet de taille (même ordre de déclaration) : la nuit se cale sur
+       la toile MESURÉE, déjà à la bonne taille. Tout ce qu'elle touche — fond,
+       lumières, sol, toile — est remis tel quel à l'extinction. */
+    useEffect(() => {
+        const o = outils.current;
+        if (!pret || !o || !nuit)
+            return;
+        const toiles = maillesToile(o.ecran.groupe);
+        const b = new THREE.Box3();
+        for (const m of toiles)
+            b.union(new THREE.Box3().setFromObject(m));
+        if (b.isEmpty())
+            return;
+        const n = creerNuit({ toileLargeurM, baseM: b.min.z, hautM: b.max.z, toileYM: b.min.y });
+        o.sc.add(n.groupe);
+        const fondAvant = o.sc.background;
+        o.sc.background = new THREE.Color(0x070b1f);
+        const lumieres = [];
+        o.sc.traverse((x) => {
+            const l = x;
+            if (l.isLight) {
+                lumieres.push([l, l.intensity]);
+                l.intensity *= 0.18;
+            }
+        });
+        const matSol = o.sol.material;
+        const solAvant = matSol.color.clone();
+        matSol.color.set(0x15182a);
+        const toileAvant = [...new Set(toiles.map((m) => m.material))]
+            .map((mat) => [mat, mat.emissive.clone(), mat.emissiveIntensity]);
+        for (const [mat] of toileAvant) {
+            mat.emissive.set(0xfff6e6);
+            mat.emissiveIntensity = 0.85;
+        }
+        o.animations.add(n.animer);
+        return () => {
+            o.animations.delete(n.animer);
+            n.liberer();
+            o.sc.background = fondAvant;
+            for (const [l, i] of lumieres)
+                l.intensity = i;
+            matSol.color.copy(solAvant);
+            for (const [mat, e, i] of toileAvant) {
+                mat.emissive.copy(e);
+                mat.emissiveIntensity = i;
+            }
+        };
+    }, [pret, nuit, toileLargeurM, baseImageM]);
+    /* ── Une image vivante sur la toile (webcam, bande-annonce) ──────────── */
+    useEffect(() => {
+        const o = outils.current;
+        if (!pret || !o || !imageToile)
+            return;
+        const texture = imageToile instanceof HTMLVideoElement
+            ? new THREE.VideoTexture(imageToile)
+            : new THREE.CanvasTexture(imageToile);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        const avant = [...new Set(maillesToile(o.ecran.groupe).map((m) => m.material))]
+            .map((mat) => [mat, mat.map, mat.emissiveMap, mat.emissive.clone(), mat.emissiveIntensity]);
+        for (const [mat] of avant) {
+            mat.map = texture;
+            mat.emissiveMap = texture;
+            mat.emissive.set(0xffffff);
+            mat.emissiveIntensity = 0.9;
+            mat.needsUpdate = true;
+        }
+        const relire = () => { if (!(texture instanceof THREE.VideoTexture))
+            texture.needsUpdate = true; };
+        o.animations.add(relire);
+        return () => {
+            o.animations.delete(relire);
+            for (const [mat, map, emap, e, i] of avant) {
+                mat.map = map;
+                mat.emissiveMap = emap;
+                mat.emissive.copy(e);
+                mat.emissiveIntensity = i;
+                mat.needsUpdate = true;
+            }
+            texture.dispose();
+        };
+    }, [pret, imageToile]);
     return (
     /* Le fond du studio est peint ICI, par la scène : ce n'est pas une couleur
        de thème, et il ne suit ni le mode sombre du site ni celui du CRM. */
