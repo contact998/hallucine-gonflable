@@ -35,6 +35,9 @@ export * from "./projection.js";
 /* La géométrie cotée de l'écran : les mêmes cotes au CRM et sur le site, sans
    aucune donnée d'atelier (voir schemaEcran.ts). */
 export * from "./schemaEcran.js";
+/* L écran à sa vraie taille, en GLB Y-haut, pour la réalité augmentée du
+   téléphone (voir realiteAugmentee.ts). L affichage AR reste à l application. */
+export * from "./realiteAugmentee.js";
 /* Le chargeur de modèles. Exporté parce que le site monte une scène de mobilier
    qui n'est pas celle d'ici : sans lui, elle construirait un `GLTFLoader` nu et
    n'afficherait plus rien depuis que les fichiers de R2 sont repliés. */
