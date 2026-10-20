@@ -28,6 +28,7 @@ import type { GammeEcran3D } from "./ecran.js";
 import { OutilsVue, type LibellesOutils } from "./OutilsVue.js";
 import { VUES, poseVue, dureeTransition, TransitionVue, type Vue } from "./vuesCamera.js";
 import { creerRendu, libererRendu, SansWebgl, LABEL_SANS_WEBGL } from "./SansWebgl.js";
+import { creerNuit } from "./nuitEcran.js";
 
 const TAILLE_HOMME_M = 1.75;
 /* La toile regarde −Y (le spectateur est au sud) : c'est d'ici que la caméra
@@ -60,11 +61,28 @@ type Props = {
   libellesOutils?: LibellesOutils;
   /** Le nom du fichier que télécharge le bouton image. */
   nomFichierImage?: string;
+  /** La séance de nuit : ciel étoilé, faisceau du projecteur, lucioles, toile
+   *  allumée (nuitEcran.ts). Faux par défaut : le studio de jour. */
+  nuit?: boolean;
+  /** Une image VIVANTE projetée sur la toile — la webcam du visiteur, une
+   *  bande-annonce. Un canevas est relu à chaque image. `null` : toile blanche. */
+  imageToile?: HTMLCanvasElement | HTMLVideoElement | null;
 };
+
+/** Les mailles de la toile de projection (matière nommée par le convertisseur). */
+function maillesToile(groupe: THREE.Object3D): THREE.Mesh[] {
+  const sortie: THREE.Mesh[] = [];
+  groupe.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (m.isMesh && (m.material as THREE.Material).name === "toile") sortie.push(m);
+  });
+  return sortie;
+}
 
 export default function EcranViewer({
   gamme, toileLargeurM, baseImageM = null, silhouette = true,
   captureRef, labelChargement, labelEchec, labelSansWebgl = LABEL_SANS_WEBGL, libellesOutils, nomFichierImage, rotationAuto,
+  nuit = false, imageToile = null,
 }: Props) {
   const hote = useRef<HTMLDivElement>(null);
   const captureInterne = useRef<((format?: "image/jpeg" | "image/png") => string | null) | null>(null);
@@ -80,6 +98,10 @@ export default function EcranViewer({
     ecran: EcranCharge;
     homme: THREE.Group;
     cadrer: (hauteurM: number, largeurM: number) => void;
+    sc: THREE.Scene;
+    sol: THREE.Mesh;
+    /** Appelées à chaque image : la nuit qui s'anime, le canevas de la webcam. */
+    animations: Set<(ms: number) => void>;
   } | null>(null);
 
   /* ── Mise en place : une seule fois ─────────────────────────────────── */
@@ -202,8 +224,11 @@ export default function EcranViewer({
     ro.observe(el);
 
     let raf = 0;
+    const animations = new Set<(ms: number) => void>();
     const boucle = () => {
       raf = requestAnimationFrame(boucle);
+      const maintenant = performance.now();
+      for (const a of animations) a(maintenant);
       const vue = transition.current.avancer(performance.now());
       if (vue) {
         cam.position.copy(vue.position);
@@ -262,7 +287,7 @@ export default function EcranViewer({
     void Promise.all([chargerEcran, chargerHomme.catch(() => null)])
       .then(([e]) => {
         if (!vivant) return;
-        outils.current = { ecran: e, homme, cadrer };
+        outils.current = { ecran: e, homme, cadrer, sc, sol, animations };
         setPret(true);
       })
       .catch(() => { if (vivant) setEchec(true); });
@@ -315,6 +340,75 @@ export default function EcranViewer({
     }
     o.cadrer(taille.hauteurM, taille.largeurM);
   }, [pret, toileLargeurM, baseImageM, silhouette]);
+
+  /* ── La séance de nuit ─────────────────────────────────────────────────
+     Après l'effet de taille (même ordre de déclaration) : la nuit se cale sur
+     la toile MESURÉE, déjà à la bonne taille. Tout ce qu'elle touche — fond,
+     lumières, sol, toile — est remis tel quel à l'extinction. */
+  useEffect(() => {
+    const o = outils.current;
+    if (!pret || !o || !nuit) return;
+    const toiles = maillesToile(o.ecran.groupe);
+    const b = new THREE.Box3();
+    for (const m of toiles) b.union(new THREE.Box3().setFromObject(m));
+    if (b.isEmpty()) return;
+    const n = creerNuit({ toileLargeurM, baseM: b.min.z, hautM: b.max.z, toileYM: b.min.y });
+    o.sc.add(n.groupe);
+    const fondAvant = o.sc.background;
+    o.sc.background = new THREE.Color(0x070b1f);
+    const lumieres: [THREE.Light, number][] = [];
+    o.sc.traverse((x) => {
+      const l = x as THREE.Light;
+      if (l.isLight) { lumieres.push([l, l.intensity]); l.intensity *= 0.18; }
+    });
+    const matSol = o.sol.material as THREE.MeshStandardMaterial;
+    const solAvant = matSol.color.clone();
+    matSol.color.set(0x15182a);
+    const toileAvant = [...new Set(toiles.map((m) => m.material as THREE.MeshStandardMaterial))]
+      .map((mat) => [mat, mat.emissive.clone(), mat.emissiveIntensity] as const);
+    for (const [mat] of toileAvant) { mat.emissive.set(0xfff6e6); mat.emissiveIntensity = 0.85; }
+    o.animations.add(n.animer);
+    return () => {
+      o.animations.delete(n.animer);
+      n.liberer();
+      o.sc.background = fondAvant;
+      for (const [l, i] of lumieres) l.intensity = i;
+      matSol.color.copy(solAvant);
+      for (const [mat, e, i] of toileAvant) { mat.emissive.copy(e); mat.emissiveIntensity = i; }
+    };
+  }, [pret, nuit, toileLargeurM, baseImageM]);
+
+  /* ── Une image vivante sur la toile (webcam, bande-annonce) ──────────── */
+  useEffect(() => {
+    const o = outils.current;
+    if (!pret || !o || !imageToile) return;
+    const texture = imageToile instanceof HTMLVideoElement
+      ? new THREE.VideoTexture(imageToile)
+      : new THREE.CanvasTexture(imageToile);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    const avant = [...new Set(maillesToile(o.ecran.groupe).map((m) => m.material as THREE.MeshStandardMaterial))]
+      .map((mat) => [mat, mat.map, mat.emissiveMap, mat.emissive.clone(), mat.emissiveIntensity] as const);
+    for (const [mat] of avant) {
+      mat.map = texture;
+      mat.emissiveMap = texture;
+      mat.emissive.set(0xffffff);
+      mat.emissiveIntensity = 0.9;
+      mat.needsUpdate = true;
+    }
+    const relire = () => { if (!(texture instanceof THREE.VideoTexture)) texture.needsUpdate = true; };
+    o.animations.add(relire);
+    return () => {
+      o.animations.delete(relire);
+      for (const [mat, map, emap, e, i] of avant) {
+        mat.map = map;
+        mat.emissiveMap = emap;
+        mat.emissive.copy(e);
+        mat.emissiveIntensity = i;
+        mat.needsUpdate = true;
+      }
+      texture.dispose();
+    };
+  }, [pret, imageToile]);
 
   return (
     /* Le fond du studio est peint ICI, par la scène : ce n'est pas une couleur

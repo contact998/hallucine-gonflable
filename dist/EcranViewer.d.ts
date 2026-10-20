@@ -26,6 +26,12 @@ type Props = {
     libellesOutils?: LibellesOutils;
     /** Le nom du fichier que télécharge le bouton image. */
     nomFichierImage?: string;
+    /** La séance de nuit : ciel étoilé, faisceau du projecteur, lucioles, toile
+     *  allumée (nuitEcran.ts). Faux par défaut : le studio de jour. */
+    nuit?: boolean;
+    /** Une image VIVANTE projetée sur la toile — la webcam du visiteur, une
+     *  bande-annonce. Un canevas est relu à chaque image. `null` : toile blanche. */
+    imageToile?: HTMLCanvasElement | HTMLVideoElement | null;
 };
-export default function EcranViewer({ gamme, toileLargeurM, baseImageM, silhouette, captureRef, labelChargement, labelEchec, labelSansWebgl, libellesOutils, nomFichierImage, rotationAuto, }: Props): import("react").JSX.Element;
+export default function EcranViewer({ gamme, toileLargeurM, baseImageM, silhouette, captureRef, labelChargement, labelEchec, labelSansWebgl, libellesOutils, nomFichierImage, rotationAuto, nuit, imageToile, }: Props): import("react").JSX.Element;
 export {};

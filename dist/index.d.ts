@@ -10,6 +10,7 @@ export * from "./arche.js";
 export * from "./projection.js";
 export * from "./schemaEcran.js";
 export * from "./realiteAugmentee.js";
+export * from "./nuitEcran.js";
 export { chargeurGLB } from "./chargeurGlb.js";
 export { default as TenteViewer } from "./Viewer.js";
 export { ReglagesPose, type ClassesPose } from "./ReglagesPose.js";
