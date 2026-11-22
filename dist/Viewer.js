@@ -211,7 +211,7 @@ function charger(loader, m, nom) {
     }
     return p.then((s) => s.clone(true));
 }
-export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, labelEchec = "Vue 3D incomplète : un élément n’a pas pu être chargé.", labelReessayer = "Réessayer", labelSansWebgl = LABEL_SANS_WEBGL, captureRef, tentesReliees, libellesOutils, nomFichierImage, rotationAuto }) {
+export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, labelEchec = "Vue 3D incomplète : un élément n’a pas pu être chargé.", labelReessayer = "Réessayer", labelSansWebgl = LABEL_SANS_WEBGL, captureRef, captureTransparenteRef, tentesReliees, libellesOutils, nomFichierImage, rotationAuto }) {
     const M = trouverModele(modele);
     const VUE = vue3d(M);
     const hote = useRef(null);
@@ -251,6 +251,8 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
     const azimut = useRef(viseeNeuve(-1.0));
     const [pret, setPret] = useState(false);
     const [echec, setEchec] = useState(false);
+    const capturePrete = useRef(false);
+    capturePrete.current = pret && !echec;
     const [sansWebgl, setSansWebgl] = useState(false);
     const [essai, setEssai] = useState(0);
     /* ── Mise en place : une seule fois ─────────────────────────────────── */
@@ -461,6 +463,13 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
             captureInterne.current = prendre;
             if (captureRef)
                 captureRef.current = prendre;
+            if (captureTransparenteRef)
+                captureTransparenteRef.current = () => {
+                    if (!capturePrete.current)
+                        return null;
+                    rendu.render(sc, cam);
+                    return rendu.domElement.toDataURL("image/png");
+                };
         }
         orbite.addEventListener("start", () => {
             azimut.current.anime = false;
@@ -492,6 +501,8 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
             vivant = false;
             if (captureRef)
                 captureRef.current = null;
+            if (captureTransparenteRef)
+                captureTransparenteRef.current = null;
             cancelAnimationFrame(raf);
             ro.disconnect();
             orbite.dispose();

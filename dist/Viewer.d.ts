@@ -46,5 +46,7 @@ export interface TenteViewerProps {
     labelReessayer?: string;
     /** Reçoit la fonction de capture (JPEG data-URL) — jointe à la demande de devis. */
     captureRef?: React.MutableRefObject<(() => string | null) | null>;
+    /** Capture PNG transparente de la tente réellement composée. */
+    captureTransparenteRef?: React.MutableRefObject<(() => string | null) | null>;
 }
-export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, labelEchec, labelReessayer, labelSansWebgl, captureRef, tentesReliees, libellesOutils, nomFichierImage, rotationAuto }: TenteViewerProps): import("react").JSX.Element;
+export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, labelEchec, labelReessayer, labelSansWebgl, captureRef, captureTransparenteRef, tentesReliees, libellesOutils, nomFichierImage, rotationAuto }: TenteViewerProps): import("react").JSX.Element;

@@ -262,9 +262,11 @@ export interface TenteViewerProps {
   labelReessayer?: string;
   /** Reçoit la fonction de capture (JPEG data-URL) — jointe à la demande de devis. */
   captureRef?: React.MutableRefObject<(() => string | null) | null>;
+  /** Capture PNG transparente de la tente réellement composée. */
+  captureTransparenteRef?: React.MutableRefObject<(() => string | null) | null>;
 }
 
-export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, labelEchec = "Vue 3D incomplète : un élément n’a pas pu être chargé.", labelReessayer = "Réessayer", labelSansWebgl = LABEL_SANS_WEBGL, captureRef, tentesReliees, libellesOutils, nomFichierImage, rotationAuto }: TenteViewerProps) {
+export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleursCote, visuels, visuelsCote, modele, taille, actif, labelChargement, labelEchec = "Vue 3D incomplète : un élément n’a pas pu être chargé.", labelReessayer = "Réessayer", labelSansWebgl = LABEL_SANS_WEBGL, captureRef, captureTransparenteRef, tentesReliees, libellesOutils, nomFichierImage, rotationAuto }: TenteViewerProps) {
   const M = trouverModele(modele);
   const VUE = vue3d(M);
 
@@ -305,6 +307,8 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
   const azimut = useRef(viseeNeuve(-1.0));
   const [pret, setPret] = useState(false);
   const [echec, setEchec] = useState(false);
+  const capturePrete = useRef(false);
+  capturePrete.current = pret && !echec;
   const [sansWebgl, setSansWebgl] = useState(false);
   const [essai, setEssai] = useState(0);
 
@@ -516,6 +520,11 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
          rendu auraient fini par diverger sur le fond ou la qualité. */
       captureInterne.current = prendre;
       if (captureRef) captureRef.current = prendre;
+      if (captureTransparenteRef) captureTransparenteRef.current = () => {
+        if (!capturePrete.current) return null;
+        rendu.render(sc, cam);
+        return rendu.domElement.toDataURL("image/png");
+      };
     }
 
     orbite.addEventListener("start", () => {
@@ -548,6 +557,7 @@ export default function TenteViewer({ cotes, auvents, demiMurs, couleurs, couleu
     return () => {
       vivant = false;
       if (captureRef) captureRef.current = null;
+      if (captureTransparenteRef) captureTransparenteRef.current = null;
       cancelAnimationFrame(raf);
       ro.disconnect();
       orbite.dispose();
