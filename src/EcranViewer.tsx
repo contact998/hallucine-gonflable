@@ -382,6 +382,23 @@ export default function EcranViewer({
   useEffect(() => {
     const o = outils.current;
     if (!pret || !o || !imageToile) return;
+    // Reconstituer les coordonnées absentes de certains modèles publiés.
+    for (const maille of maillesToile(o.ecran.groupe)) {
+      const geometrie = maille.geometry;
+      if (!geometrie.getAttribute("uv")) {
+        geometrie.computeBoundingBox();
+        const boite = geometrie.boundingBox!;
+        const positions = geometrie.getAttribute("position");
+        const uv = new Float32Array(positions.count * 2);
+        const largeur = boite.max.x - boite.min.x || 1;
+        const hauteur = boite.max.z - boite.min.z || 1;
+        for (let i = 0; i < positions.count; i++) {
+          uv[i * 2] = (positions.getX(i) - boite.min.x) / largeur;
+          uv[i * 2 + 1] = (positions.getZ(i) - boite.min.z) / hauteur;
+        }
+        geometrie.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+      }
+    }
     const texture = imageToile instanceof HTMLVideoElement
       ? new THREE.VideoTexture(imageToile)
       : new THREE.CanvasTexture(imageToile);
